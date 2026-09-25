@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026/4e858f54-ea4e-47a8-9815-7766aca9830d/scratchpad/femticPy/scripts/fix_output1.py", line 17, in <module>
+    ele1 = pd.read_csv('%s/%s'%(file_dir,file_name), 
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: read_csv() got an unexpected keyword argument 'delim_whitespace'

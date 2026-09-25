@@ -1,0 +1,15 @@
+femticPy patch 0003-read_MTdata-snap-first-row
+
+Rationale: the 'freq == 0' guard appended the first frequency of EVERY file without the tolerance test, so a slightly different first band became a new band; the guard is meant for the empty list.
+
+--- a/src/femticPy.py
++++ b/src/femticPy.py
+@@ -145,7 +145,7 @@
+                     # edi_data, so the snapped values reach the tables that prep_data filters on
+                     for freq in range(len(edi_data['FREQ'].values)):
+                         if not edi_data['FREQ'].values[freq] in freq_list:
+-                            if freq == 0:
++                            if len(freq_list) == 0:   # [patch 0003] was 'freq == 0'
+                                 freq_list.append(edi_data['FREQ'].values[freq])
+                             else:
+                                 if min(np.abs(np.log10(freq_list) - np.log10(edi_data['FREQ'].values[freq]))) < 0.01:

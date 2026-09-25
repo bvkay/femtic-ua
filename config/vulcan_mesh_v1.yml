@@ -1,0 +1,190 @@
+# =====================================================================================================
+# config/vulcan_mesh_v1.yml
+#
+# Configuration for scripts/prep_vulcan.py, which writes, for the Vulcan survey:
+#   <run_dir>/inversion/  observe.dat (impedance only) and FEMTIC's inversion control.dat
+#   <run_dir>/files/      the mesh-chain inputs (makeTetraMesh, makeMtr, tetgen seeds, TetGen2Femtic)
+#   <run_dir>/README.md   what was written: sites, frequencies, data counts, error floors, tables, checks
+#
+#   python scripts/prep_vulcan.py config/vulcan_mesh_v1.yml [--out DIR] [--force]
+#
+# Every choice you may want to change lives in this file. Units: km, ohm-m, Hz, degrees.
+# FEMTIC frame: x = north, y = east, z positive DOWN, origin at sites.origin (below).
+# The mesh defaults are the "vulcan_first_guess" set of docs/mesh_tetra_pipeline.md (section 8); the
+# reasoning behind each value is there. None of it has been forward-tested: run the section 9 half-space
+# test on the mesh before inverting.
+# =====================================================================================================
+
+schema: prep_vulcan/1
+name: vulcan_v1
+
+paths:                               # relative paths resolve against 'root'; 'root' is relative to THIS file
+  root: ..
+  edi_dir: Vulcan/Processed_Data     # read only; every *.edi in it is used (femticPy DataGen.read_MTdata)
+  coords_file: Vulcan/site_coords_femticpy.txt
+  femticpy_src: external/femticPy/src   # the vendored, patched femticPy (external/femticPy/UPSTREAM.txt)
+  run_dir: mesh/vulcan_v1            # default output directory; --out overrides it
+
+sites:
+  # coords_file: one site per line "id east_km north_km elev_km" (no header; '#' comments allowed).
+  # It is the ONLY trusted coordinate source: the EDI headers have a DMS sign bug and three INFO blocks
+  # are wrong (Vulcan/edi_inventory.md). The EDI coordinates are never used.
+  utm_zone: 53                       # informational: coords_file is already UTM (km); nothing is reprojected
+  hemisphere: S
+  datum: WGS84
+  expected_count: 120                # abort unless the EDIs and the table hold exactly this many, identical, ids
+  origin: bbox_centre                # 'bbox_centre' = centre of the site bounding box, as femticPy
+                                     # DataGen.center_data does (697.384 E, 6697.44045 N for Vulcan),
+                                     # or an explicit [east_km, north_km]
+
+data:
+  invert_Z: true
+  invert_VTF: false                  # the Vulcan EDIs hold no tipper; true aborts
+  # Error floor per impedance component, order [Zxx, Zxy, Zyx, Zyy]. femticPy DataGen.apply_error_floor
+  # computes, for every site and frequency:
+  #     floor_i = error_floor_Z[i] * sqrt(|Zxy| * |Zyx|)
+  #     SE_i    = max(sqrt(VAR_i), floor_i)
+  # VAR_i is the EDI ZXX.VAR ... ZYY.VAR (variance of the complex estimate; Geotools' own rho errors are
+  # 2 rho sqrt(VAR)/|Z|). SE_i is written as the standard error of BOTH Re(Z_i) and Im(Z_i).
+  # With [0.2, 0.05, 0.05, 0.2] the off-diagonal floor is 5 % of the geometric-mean off-diagonal
+  # magnitude, and the diagonal floor is 20 % of it.
+  error_floor_Z: [0.20, 0.05, 0.05, 0.20]
+  error_floor_VTF: 0.05              # absolute; unused while invert_VTF is false
+
+frequencies:
+  # Candidates: the bands present (unmasked) at every site when require_all_sites is true (53 bands for
+  # Vulcan, 200 Hz to 1.2553e-3 Hz), restricted to fmin_hz <= f <= fmax_hz.
+  # Rule: targets t_k = fmax_hz * 10**(-k/per_decade), k = 0, 1, ... while t_k >= fmin_hz; each target
+  # takes the candidate nearest to it in log10(f), if that candidate lies within half a target step;
+  # duplicates are dropped. The chosen list is printed in <run_dir>/inversion/README.md.
+  require_all_sites: true
+  fmax_hz: 100.0
+  fmin_hz: 0.001
+  per_decade: 4
+  explicit_hz: null                  # a list of Hz values replaces the rule; each must match a candidate band
+
+mesh:
+  analysis_domain_km:                # must straddle 0 on every axis (TetGen2Femtic labels faces by sign)
+    x: [-500.0, 500.0]               # about 4 skin depths at 1000 s in 60 ohm-m
+    y: [-500.0, 500.0]
+    z: [-500.0, 500.0]               # z min = top of the air, z max = bottom
+  center_km: [0.0, 0.0, 0.0]         # common centre of the control, makeMtr and resistivity_attr ellipsoids.
+                                     # Set explicitly: femticPy's MeshGen default z has the wrong sign.
+  rotation_deg: 0.0                  # azimuth of the long ellipsoid axis, from north towards east
+
+  topography:
+    # flat: sites at z = 0 and femticPy's dummy topography.dat (0 km on a 10 km grid). Vulcan's steepest
+    #       inter-site slope is 1.2 deg (elevations 65-124 m), far below what a 5 % floor can see.
+    # dem : dem_file ("x_north_km y_east_km altitude_km", centred frame above, km, altitude positive up)
+    #       is copied to files/topography.dat and each site's mesh z is -elev_km from coords_file.
+    mode: flat
+    dem_file: null
+
+  control:                           # makeTetraMesh control.dat: sizes of the Earth-surface triangles
+    num_threads: 8                   # OpenMP threads for makeTetraMesh step 3
+    surf_mesh: true                  # triangulate the walls, top and bottom with the ellipsoid sizes too
+    iter_max: [60, 0]                # refinement sweeps; the default 30 can stop short of 15 m edges silently
+    # rows: radius_x_km, max_edge_km, oblateness_horizontal, oblateness_below_centre (Earth),
+    #       oblateness_above_centre (air). Column 4 is the Earth side and column 5 the air side (code,
+    #       not the PDF). Semi-axes: r, r(1-fh), r(1-fb) down, r(1-fa) up. Rows must nest outwards.
+    ellipsoids:
+      - [10.5,   0.2,  0.0, 0.952, 0.99]    # core: 0.2 km edges to 0.5 km depth, 0.1 km into the air
+      - [11.5,   0.35, 0.0, 0.87,  0.965]
+      - [13.0,   0.6,  0.0, 0.73,  0.92]
+      - [17.0,   1.2,  0.0, 0.53,  0.82]
+      - [25.0,   3.0,  0.0, 0.28,  0.6]
+      - [50.0,   8.0,  0.0, 0.1,   0.4]
+      - [120.0, 20.0,  0.0, 0.0,   0.25]
+      - [300.0, 50.0,  0.0, 0.0,   0.0]
+      - [800.0, 100.0, 0.0, 0.0,   0.0]
+    interpolate: {search_radius_km: 100.0, max_points: 3, eps_km: 1.0e-6}   # topography IDW
+    altitude: {min_km: 0.0, max_km: 1.0e10}   # land heights are clamped to [min, max]
+    sea_depth: null                  # land only: no SEA_DEPTH block. files/bathymetry.dat is still written
+                                     # (femticPy dummy) but nothing reads it. For sea: {min_km, max_km}.
+
+  observing_sites:                   # observing_site.dat: surface-triangle circles around every site
+    # rows: radius_km, max_edge_km (2-D, linear ramp between circles). These trace the effective
+    # obs_site.dat profile so the frozen surface is never coarser than the volume below it.
+    circles:
+      - [0.03, 0.015]                # 15 m triangles within 30 m: about delta_min/4 at 200 Hz, 3 ohm-m
+      - [0.1,  0.027]
+      - [0.3,  0.068]
+      - [0.6,  0.14]
+      - [0.8,  0.2]
+
+  obs_sites:                         # obs_site.dat: volume (makeMtr) spheres around every site
+    # rows: radius_km, max_edge_km, vertical_oblateness (vertical semi-axis = r(1-f), up and down)
+    spheres:
+      - [0.03, 0.015, 0.0]
+      - [0.1,  0.04,  0.3]
+      - [0.3,  0.1,   0.6]
+      - [0.6,  0.2,   0.6]
+
+  mtr:                               # makeMtr.param: volume tetrahedron sizes (same columns as control)
+    ellipsoids:
+      - [10.5,   0.2,  0.0, 0.952, 0.99]
+      - [11.5,   0.35, 0.0, 0.87,  0.965]
+      - [13.0,   0.6,  0.0, 0.73,  0.92]
+      - [17.0,   1.2,  0.0, 0.53,  0.82]
+      - [25.0,   3.0,  0.0, 0.28,  0.6]
+      - [50.0,   8.0,  0.0, 0.1,   0.4]
+      - [120.0, 20.0,  0.0, 0.0,   0.25]
+      - [300.0, 50.0,  0.0, 0.0,   0.0]
+      - [800.0, 100.0, 0.0, 0.0,   0.0]
+
+  resistivity_attr:                  # resistivity_attr.dat (TetGen2Femtic): regions and parameter cells
+    air:   {attribute: 10, resistivity_ohmm: 1.0e9, ndiv: -1, fixed: 1}   # must stay first, ndiv < 0
+    earth: {attribute: 20, ndiv: 0, fixed: 0}   # ndiv 0: the ellipsoids alone set the cell sizes
+    # rows: radius_x_km, max_cell_length_km, oblateness_horizontal, oblateness_vertical (one value, both
+    # sides). Cells come out about 0.9 x the length; keep them 1.5-2 x the local tetrahedron size.
+    ellipsoids:
+      - [10.5,   0.3,  0.0, 0.952]
+      - [11.5,   0.6,  0.0, 0.87]
+      - [13.0,   1.2,  0.0, 0.73]
+      - [17.0,   2.4,  0.0, 0.53]
+      - [25.0,   6.0,  0.0, 0.28]
+      - [50.0,  16.0,  0.0, 0.1]
+      - [120.0, 40.0,  0.0, 0.0]
+      - [300.0, 100.0, 0.0, 0.0]
+      - [800.0, 300.0, 0.0, 0.0]
+
+  resistivity_attr_sites:            # resistivity_attr.dat site spheres (3-D distance from the site)
+    # rows: radius_km, max_cell_length_km. Two rows avoid TetGen2Femtic's min-over-segments oddity.
+    circles:
+      - [0.25, 0.15]
+      - [0.8,  0.3]
+
+  starting_resistivity_ohmm: 20.0    # earth start model: geometric mean of det apparent resistivity,
+                                     # 0.005-1000 s, all 120 EDIs (median 22). femticPy's default is 100.
+
+  region_seeds:                      # files/region_seeds.dat for scripts/run_mesh_chain.sh (tetgen -A)
+    # rows: x_km, y_km, z_km (positive down), attribute, max_volume_km3 (1e9 = no limit). One seed per
+    # closed region, well inside it; the attribute set must equal resistivity_attr's.
+    - [0.0, 0.0, -250.0, 10, 1.0e9]  # air
+    - [0.0, 0.0,  250.0, 20, 1.0e9]  # earth
+
+inversion:
+  # FEMTIC control.dat, written by femticPy DataGen.write_inversion_control. femticPy also writes, fixed:
+  # MESH_TYPE 1, OUTPUT_PARAM_VTK 2 / 0 4 (resistivity, sensitivity), OFILE_TYPE 0 (VTK ASCII),
+  # BOTTOM_ROUGHNING_FACTOR 1.0, OUTPUT_OPTION 0 0, RETRIAL 2, STEP_LENGTH 0.5 0.1 1.0 / 3 / 0.5 1.25.
+  NUM_THREADS: 8                     # OpenMP threads per MPI rank (ranks x threads <= physical cores)
+  # INV_METHOD 0 = model-space Gauss-Newton (normal matrix N_cells^2), 1 = data-space (N_data^2).
+  # With the default 21 bands N_data = 120 x 21 x 8 = 20 160 (3.3 GB for the data-space matrix). N_cells
+  # is only known after TetGen2Femtic: estimated 21 000 (10 000-42 000; guide 8.4), i.e. 3.5 GB
+  # (0.8-14 GB) for the model-space matrix. The guide's INV_METHOD 0 assumed all 53 bands
+  # (50 880 data). Data space is the bounded choice; once resistivity_block_iter0.dat gives N_cells,
+  # switch to 0 if N_cells is clearly below N_data.
+  INV_METHOD: 1
+  TRADE_OFF_PARAM: [3.0]             # one value for DISTORTION 0; two for 1 or 3; three for 2.
+                                     # Fixed per run: bracket it (e.g. 1, 3, 10, 30) for an L-curve.
+  ITERATION: 10                      # written as '0 10': start from resistivity_block_iter0.dat, stop at 10
+  CONVERGE: 0.2                      # % change of the objective function that ends the iterations
+  ALPHA_WEIGHT: [1.0, 1.0, 1.0]      # roughness weights in x (north), y (east), z
+  DISTORTION: 0                      # 0 none; 1 C-I; 2 gains and rotations; 3 gains only
+  BOTTOM_RESISTIVITY: 100.0          # ohm-m below the mesh bottom; regularises the roughening matrix
+                                     # (needed by the data-space method). femticPy's default.
+  # OWNER_ELEMENT -1: E from the element below the surface, H from the element above it, via a dummy VTF
+  # station (0 frequencies) at every site (FEMTIC manual, "How to improve response functions at high
+  # frequencies"). The design sizes the site triangles for this setting. 0 = FEMTIC default (E and H
+  # both from the element below); null = keyword not written (same as 0).
+  OWNER_ELEMENT: -1

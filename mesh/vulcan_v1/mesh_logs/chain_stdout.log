@@ -1,0 +1,34 @@
+region seeds (x y z attr maxvol):
+  0 0 -250 10 1000000000
+  0 0 250 20 1000000000
+[14:35:18] stp1 rc=0 (0.01 s wall, 4800 KB maxrss)
+[14:35:24] stp2 rc=0 (5.58 s wall, 24648 KB maxrss)
+[14:35:24] stp3 rc=0 (0.84 s wall, 25136 KB maxrss)
+[14:35:25] stp4 rc=0 (0.44 s wall, 37272 KB maxrss)
+[14:35:43] tetgen_1 rc=0 (17.52 s wall, 460780 KB maxrss)
+tetgen: Found 2 subdomains.
+output.1.ele region attributes:
+  attr 10 : 263927 elements
+  attr 20 : 264118 elements
+output.1: 855 elements touch the top plane (0 not air), 855 touch the bottom plane (0 air)
+[14:35:44] makeMtr_1 rc=0 (0.26 s wall, 41600 KB maxrss)
+[14:36:11] tetgen_r1 rc=0 (27.74 s wall, 484072 KB maxrss)
+[14:36:12] makeMtr_2 rc=0 (0.87 s wall, 95360 KB maxrss)
+[14:36:54] tetgen_r2 rc=0 (41.75 s wall, 598264 KB maxrss)
+[14:36:56] makeMtr_3 rc=0 (1.55 s wall, 112000 KB maxrss)
+[14:37:42] tetgen_r3 rc=0 (46.16 s wall, 588048 KB maxrss)
+[14:37:43] makeMtr_4 rc=0 (1.28 s wall, 107360 KB maxrss)
+[14:38:32] tetgen_r4 rc=0 (49.13 s wall, 596856 KB maxrss)
+[14:38:34] makeMtr_5 rc=0 (1.31 s wall, 111680 KB maxrss)
+[14:39:19] tetgen_r5 rc=0 (45.37 s wall, 595472 KB maxrss)
+output.6: 1185 elements touch the top plane (0 not air), 1179 touch the bottom plane (0 air)
+[14:39:31] t2f rc=0 (8.80 s wall, 164412 KB maxrss)
+run_dir            : /home/tara/femtic_wsl/mesh_runs/vulcan_v1
+refinement rounds  : 5  (final mesh output.6)
+region seeds       : 0 0 -250 10 1000000000;0 0 250 20 1000000000;
+region attributes  : {10 20} in output.1.ele and output.6.ele (resistivity_attr.dat: {10 20}, air 10)
+nodes / elements   : 251875 / 1534902
+parameter cells    : 55993 (cell 0 = air)
+volume check       : sum |V| = 1.000000000e+09 km^3, box = 1.000000000e+09 km^3, rel err 5.46e-14
+total wall time    : 257.5 s
+CHAIN OK

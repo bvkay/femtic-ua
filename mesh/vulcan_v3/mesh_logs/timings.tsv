@@ -1,0 +1,17 @@
+step	rc	wall_s	time_report
+stp1	0	0.03	0.02 s wall, 4800 KB maxrss
+stp2	0	17.39	17.38 s wall, 30200 KB maxrss
+stp3	0	4.86	4.85 s wall, 31592 KB maxrss
+stp4	0	1.07	1.06 s wall, 63112 KB maxrss
+tetgen_1	0	90.16	90.15 s wall, 825472 KB maxrss
+makeMtr_1	0	2.01	2.00 s wall, 70880 KB maxrss
+tetgen_r1	0	106.68	106.68 s wall, 905020 KB maxrss
+makeMtr_2	0	6.87	6.86 s wall, 183680 KB maxrss
+tetgen_r2	0	223.08	223.07 s wall, 1240300 KB maxrss
+makeMtr_3	0	5.54	5.53 s wall, 235040 KB maxrss
+tetgen_r3	0	155.54	155.53 s wall, 1180560 KB maxrss
+makeMtr_4	0	4.08	4.07 s wall, 208640 KB maxrss
+tetgen_r4	0	165.09	165.08 s wall, 1228004 KB maxrss
+makeMtr_5	0	8.37	8.36 s wall, 232480 KB maxrss
+tetgen_r5	0	176.73	176.72 s wall, 1194968 KB maxrss
+t2f	0	19.45	19.44 s wall, 320388 KB maxrss

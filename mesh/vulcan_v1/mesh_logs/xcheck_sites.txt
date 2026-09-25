@@ -1,0 +1,4 @@
+sites: 120; trifinder found 120; same triangle as mesh_stats: 120
+negative control, point (600, 0) km outside the domain: trifinder -> -1 (expect -1)
+max edge of the containing triangle: sites median 12.2 m, max 12.6 m; 2000 random points in the array box median 114.7 m, max 220.0 m
+XCHECK PASS

@@ -1,0 +1,1 @@
+note: no region_seeds.dat; land-only default seeds (air 10 above, earth 20 below)

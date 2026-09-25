@@ -1,0 +1,16 @@
+rho 100 ohm-m, columns Cal, 4 run dir(s), 960 site-frequency rows, complete True
+convention from Cal: median arg Zxy -45.03 deg -> exp(-i omega t); Re Zxy>0 1.000, Im Zxy<0 1.000, Re Zyx<0 1.000, Im Zyx>0 1.000
+      f Hz delta km max|rho|%  mean%  std% max|ph|   mean   std  diag% fail r/p/d  fwd s np x nt PARDISO MB  source
+       200    0.356      3.34  +1.36  0.74    0.69  +0.07  0.21   1.25      0/0/0    185     1x8      16465  b1  PASS
+    62.896    0.634      2.09  +0.92  0.44    0.47  +0.14  0.12   0.71      0/0/0    264     1x8      16465  b1  PASS
+    19.985    1.125      1.19  +0.47  0.26    0.29  +0.12  0.07   0.42      0/0/0    167     1x8      16465  b2  PASS
+    6.2974    2.004      0.65  +0.20  0.15    0.18  +0.08  0.04   0.25      0/0/0    184     1x8      16465  b2  PASS
+    1.9961    3.560      0.40  +0.07  0.09    0.10  +0.04  0.02   0.15      0/0/0    163     1x8      16465  b3  PASS
+   0.63033    6.336      0.24  -0.03  0.06    0.05  +0.02  0.01   0.08      0/0/0    213     1x8      16465  b3  PASS
+  0.063033   20.035      0.32  +0.14  0.04    0.07  -0.05  0.01   0.04      0/0/0    153     1x8      16465  b4  PASS
+ 0.0063033   63.355      0.49  +0.42  0.02    0.05  -0.04  0.00   0.02      0/0/0    212     1x8      16465  b4  PASS
+run /home/tara/femtic_wsl/mesh_runs/acc_v1_100/b1: rc 0 watchdog no; np 1 x nt 8 (NUM_THREADS 8); wall 457.87 s, user 3502.94 s, CPU 775%; max single RSS 19707436 kB; peak summed RSS 19496888.0 kB (5 s sampler (femtic+prterun+mpirun)), min MemAvailable 102601400.0 kB, swap 0.0 kB, NI ['10']; misfit csv 9.127285e+05 cnv 912728.5 rel 7.459507321074574e-09; neq [1788054, 1784220]
+run /home/tara/femtic_wsl/mesh_runs/acc_v1_100/b2: rc 0 watchdog no; np 1 x nt 8 (NUM_THREADS 8); wall 359.3 s, user 2700.32 s, CPU 764%; max single RSS 19707520 kB; peak summed RSS 19564436.0 kB (5 s sampler (femtic+prterun+mpirun)), min MemAvailable 102609656.0 kB, swap 0.0 kB, NI ['10']; misfit csv 9.021175e+05 cnv 902117.5 rel 1.9086627647964e-08; neq [1788054, 1784220]
+run /home/tara/femtic_wsl/mesh_runs/acc_v1_100/b3: rc 0 watchdog no; np 1 x nt 8 (NUM_THREADS 8); wall 385.1 s, user 2916.66 s, CPU 770%; max single RSS 19707288 kB; peak summed RSS 19718440.0 kB (5 s sampler (femtic+prterun+mpirun)), min MemAvailable 102379576.0 kB, swap 0.0 kB, NI ['10']; misfit csv 8.979353e+05 cnv 897935.3 rel 2.659246497931464e-08; neq [1788054, 1784220]
+run /home/tara/femtic_wsl/mesh_runs/acc_v1_100/b4: rc 0 watchdog no; np 1 x nt 8 (NUM_THREADS 8); wall 371.19 s, user 2811.06 s, CPU 773%; max single RSS 19791428 kB; peak summed RSS 19803680.0 kB (5 s sampler (femtic+prterun+mpirun)), min MemAvailable 102317024.0 kB, swap 0.0 kB, NI ['0', '10']; misfit csv 9.013799e+05 cnv 901379.9 rel 5.198504752437852e-08; neq [1788054, 1784220]
+RESULT: PASS

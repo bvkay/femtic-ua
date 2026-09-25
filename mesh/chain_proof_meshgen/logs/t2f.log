@@ -1,0 +1,75 @@
+Total number of threas is 1
+Read node data from output.6.node
+Total number of nodes : 70324
+Read element data from output.6.ele
+Total number of elements : 418186
+Read neighboors of elements from output.6.neigh
+Read face data from output.6.face
+Total number of faces : 47678
+Read relationship between resisitivity and region from resistivity_attr.dat.
+Number of different resisitivities : 2
+Resistivity data 0 is the air or the sea because its division number is negative.
+First resistivity data must be the air layer.
+Therefore, the resisitivity of the air is set to be 1e+09 [Ohm-m]
+Center coorinate of the spheres [m] : (X,Y,Z) = (0, 0, -0)
+Rotation angle of horizontal ellipsoid [deg] : 0
+Total number of spheres : 9
+<Radius[m]> <Edge Length[m]> <OblatenessHorizontal> <Oblateness>
+   2.000000e+04   2.000000e+03   0.000000e+00   7.000000e-01
+   2.250000e+04   3.000000e+03   0.000000e+00   7.000000e-01
+   2.500000e+04   5.000000e+03   0.000000e+00   7.000000e-01
+   3.000000e+04   1.000000e+04   0.000000e+00   6.000000e-01
+   5.000000e+04   1.000000e+05   0.000000e+00   5.000000e-01
+   1.000000e+05   2.000000e+05   0.000000e+00   3.000000e-01
+   1.500000e+05   3.000000e+05   0.000000e+00   2.000000e-01
+   2.500000e+05   5.000000e+05   0.000000e+00   1.000000e-01
+   5.000000e+05   1.000000e+06   0.000000e+00   0.000000e+00
+Total number of observed site : 9
+Locations of site [m] :
+  -5.000000e+03  -5.000000e+03   0.000000e+00
+              2
+   3.000000e+03   2.000000e+03
+   5.000000e+03   3.000000e+03
+Locations of site [m] :
+  -5.000000e+03   0.000000e+00   0.000000e+00
+              2
+   3.000000e+03   2.000000e+03
+   5.000000e+03   3.000000e+03
+Locations of site [m] :
+  -5.000000e+03   5.000000e+03   0.000000e+00
+              2
+   3.000000e+03   2.000000e+03
+   5.000000e+03   3.000000e+03
+Locations of site [m] :
+   0.000000e+00  -5.000000e+03   0.000000e+00
+              2
+   3.000000e+03   2.000000e+03
+   5.000000e+03   3.000000e+03
+Locations of site [m] :
+   0.000000e+00   0.000000e+00   0.000000e+00
+              2
+   3.000000e+03   2.000000e+03
+   5.000000e+03   3.000000e+03
+Locations of site [m] :
+   0.000000e+00   5.000000e+03   0.000000e+00
+              2
+   3.000000e+03   2.000000e+03
+   5.000000e+03   3.000000e+03
+Locations of site [m] :
+   5.000000e+03  -5.000000e+03   0.000000e+00
+              2
+   3.000000e+03   2.000000e+03
+   5.000000e+03   3.000000e+03
+Locations of site [m] :
+   5.000000e+03   0.000000e+00   0.000000e+00
+              2
+   3.000000e+03   2.000000e+03
+   5.000000e+03   3.000000e+03
+Locations of site [m] :
+   5.000000e+03   5.000000e+03   0.000000e+00
+              2
+   3.000000e+03   2.000000e+03
+   5.000000e+03   3.000000e+03
+Output mesh data to mesh.dat .
+Output mesh data to resistivity_block_iter0.dat .
+Output mesh data to output.6.femtic.vtk

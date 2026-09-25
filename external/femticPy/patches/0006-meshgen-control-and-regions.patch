@@ -1,0 +1,92 @@
+femticPy patch 0006-meshgen-control-and-regions
+
+Rationale: MeshGen hard-coded NUM_THREADS 1, no ITER_MAX, a mandatory SEA_DEPTH, the ALTITUDE file name and the earth region line (ndiv 9); expose them as attributes whose defaults reproduce upstream output.
+
+--- a/src/femticPy.py
++++ b/src/femticPy.py
+@@ -675,9 +675,16 @@
+         self.altitude_min = 0.0
+         self.altitude_max = 1e20
+         # sea_depth parameters:
+-        self.sea_depth_file = 'bathymetry.dat'
++        self.sea_depth_file = 'bathymetry.dat'   # [patch 0006] None: no SEA_DEPTH block (land-only model)
+         self.sea_depth_min = 0.01
+         self.sea_depth_max = 1e20     
++        # [patch 0006] makeTetraMesh control.dat options (the defaults reproduce the upstream file)
++        self.num_threads = 1
++        self.surf_mesh = True
++        self.iter_max = None      # e.g. [60, 0] writes an ITER_MAX block
++        # [patch 0006] resistivity_attr.dat region lines: None keeps the upstream lines, otherwise a list of
++        # [attribute, resistivity_ohmm, ndiv, ifix]; the first one must be the air (ndiv < 0)
++        self.regions = None
+         
+         self.ellipsoids_mtr = [10,
+                             [40.0,    1.0,  0.0,  0.7,  0.9],
+@@ -741,27 +748,33 @@
+         file.write('%.10g %.10g %.10g\n'%(self.center[0],self.center[1],self.center[2]))
+         file.write('ROTATION\n')
+         file.write('%.10g\n'%(self.rotation))
+-        file.write('NUM_THREADS\n1\nSURF_MESH\nELLIPSOIDS\n')
++        file.write('NUM_THREADS\n%d\n'%(self.num_threads))
++        if self.surf_mesh:
++            file.write('SURF_MESH\n')
++        file.write('ELLIPSOIDS\n')
+         file.write('%d'%(self.ellipsoids_control[0]))
+         for tt in self.ellipsoids_control[1:]:
+             file.write('\n')
+             for ttt in tt:
+                 file.write('%.10g '%(ttt))
+         file.write('\n')
++        if self.iter_max is not None:
++            file.write('ITER_MAX\n%d %d\n'%(self.iter_max[0], self.iter_max[1]))
+         file.write('INTERPOLATE\n')
+         file.write('%.10g\n'%self.interpolate_sr)
+         file.write('%d\n'%self.interpolate_npts)
+         file.write('%.10g\n'%self.interpolate_minval)
+ 
+         file.write('ALTITUDE\n')
+-        file.write('topography.dat\n')
++        file.write('%s\n'%self.altitude_file)
+         file.write('%.10g\n'%self.altitude_min)
+         file.write('%.10g\n'%self.altitude_max)          
+ 
+-        file.write('SEA_DEPTH\n')
+-        file.write('bathymetry.dat\n')
+-        file.write('%.10g\n'%self.sea_depth_min)
+-        file.write('%.10g\n'%self.sea_depth_max) 
++        if self.sea_depth_file is not None:
++            file.write('SEA_DEPTH\n')
++            file.write('%s\n'%self.sea_depth_file)
++            file.write('%.10g\n'%self.sea_depth_min)
++            file.write('%.10g\n'%self.sea_depth_max) 
+         file.write('END')
+         file.close() 
+ 
+@@ -859,14 +872,20 @@
+     def write_resistivity_attr(self):
+         file_loc = os.path.join(self.outdir, 'resistivity_attr.dat') 
+         file = open(file_loc,'w', newline='\n') 
+-        self.region_attributes = np.sum([self.land, self.sea]) + 1
+-        file.write('%d\n'%self.region_attributes)
+-        file.write('10 1.0e+9 -1 1\n')
+-        if self.sea:
+-            file.write('20 %.3f  -1 1\n'%self.resistivity_sea)
+-            file.write('30 %.1f   9 0\n'%self.resistivity_starting_model)
++        if self.regions is not None:
++            self.region_attributes = len(self.regions)
++            file.write('%d\n'%self.region_attributes)
++            for reg in self.regions:
++                file.write('%d %.10g %d %d\n'%(reg[0], reg[1], reg[2], reg[3]))
+         else:
+-            file.write('20 %.1f   9 0\n'%self.resistivity_starting_model)
++            self.region_attributes = np.sum([self.land, self.sea]) + 1
++            file.write('%d\n'%self.region_attributes)
++            file.write('10 1.0e+9 -1 1\n')
++            if self.sea:
++                file.write('20 %.3f  -1 1\n'%self.resistivity_sea)
++                file.write('30 %.1f   9 0\n'%self.resistivity_starting_model)
++            else:
++                file.write('20 %.1f   9 0\n'%self.resistivity_starting_model)
+             
+         file.write('%.10g %.10g %.10g\n'%(self.center[0],self.center[1],self.center[2]))
+         file.write('%.10g\n'%(self.rotation))

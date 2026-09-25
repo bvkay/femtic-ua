@@ -1,0 +1,122 @@
+Opening output.1.node.
+Opening output.1.ele.
+Opening output.1.face.
+Opening output.1.edge.
+Opening output.1.mtr.
+  Cannot access file output.1.b.node.
+  Initializing memorypools.
+  tetrahedron per block: 8188.
+  Size of a point: 152 bytes.
+  Size of a tetrahedron: 112 (112) bytes.
+  Size of a shellface: 200 (200) bytes.
+  Initializing robust predicates.
+  sizeof(double) =  8
+  machine epsilon =   2.22045e-16 [IEEE 754 64-bit macheps]
+Reconstructing mesh ...
+Mesh reconstruction seconds:  0.413934
+Mesh coarsening ...
+  Removing 5331 points...
+Mesh coarsening seconds:  0.475532
+Recovering Delaunayness...
+Delaunay recovery seconds:  0.122723
+Refining mesh...
+  Min radius-edge ratio = 3.
+  Splitting bad quality tets.
+  Added 32530 (0,0,32530) Steiner points.
+  Added 1 (0,0,1) Steiner points.
+  Added 0 (0,0,0) Steiner points.
+Refinement seconds:  1.19689
+Smoothing vertices...
+  Smooth criterion   = 3
+  Smooth iterations  = 7
+  Smooth relax-alpha = 0.3
+Mesh smoothing seconds:  2.84583
+Improving mesh...
+  Target maximum aspect ratio = 1000.
+  Target maximum dihedral angle = 177.
+  Maximum flip level   = 3.
+  Number of iterations = 3.
+  Removed 48 edges/faces.
+Mesh improvement seconds:  0.045525
+Jettisoning redundant points.
+  0 duplicated vertices are removed.
+  5331 unused vertices are removed.
+
+Writing output.2.node.
+Writing output.2.ele.
+Writing output.2.face.
+Writing output.2.edge.
+Writing output.2.mtr.
+Writing output.2.p2t.
+Writing output.2.vtk.
+Writing output.2.neigh.
+
+Output seconds:  0.31702
+Total running seconds:  5.41899
+
+Statistics:
+
+  Input points: 30213
+  Input tetrahedra: 164329
+  Input triangles: 47678
+  Input edges: 71499
+
+  Mesh points: 57434
+  Mesh tetrahedra: 338204
+  Mesh faces: 677110
+  Mesh faces on exterior boundary: 1404
+  Mesh faces on input facets: 47678
+  Mesh edges on input segments: 71499
+  Steiner points inside domain: 32552
+
+Mesh quality statistics:
+
+  Smallest volume:       1.4406e-07   |  Largest volume:            34883
+  Shortest edge:           0.011523   |  Longest edge:             78.819
+  Smallest asp.ratio:        1.2503   |  Largest asp.ratio:        119.71
+  Smallest facangle:         7.2845   |  Largest facangle:       151.6113
+  Smallest dihedral:         1.1561   |  Largest dihedral:       176.9924
+
+  Aspect ratio histogram:
+         < 1.5       :      8464      |      6 - 10         :      7683
+     1.5 - 2         :    107190      |     10 - 15         :      1416
+       2 - 2.5       :     80531      |     15 - 25         :       626
+     2.5 - 3         :     44148      |     25 - 50         :       282
+       3 - 4         :     55084      |     50 - 100        :        48
+       4 - 6         :     32727      |    100 -            :         5
+  (A tetrahedron's aspect ratio is its longest edge length divided by its
+    smallest side height)
+
+  Face angle histogram:
+      0 -  10 degrees:        67      |     90 - 100 degrees:     71290
+     10 -  20 degrees:     13543      |    100 - 110 degrees:     37939
+     20 -  30 degrees:     72546      |    110 - 120 degrees:     21329
+     30 -  40 degrees:    183001      |    120 - 130 degrees:      9562
+     40 -  50 degrees:    381983      |    130 - 140 degrees:      2764
+     50 -  60 degrees:    441968      |    140 - 150 degrees:       393
+     60 -  70 degrees:    390174      |    150 - 160 degrees:         7
+     70 -  80 degrees:    259839      |    160 - 170 degrees:         0
+     80 -  90 degrees:    144925      |    170 - 180 degrees:         0
+
+  Dihedral angle histogram:
+       0 -  5 degrees:       852      |     80 - 110 degrees:    468566
+       5 - 10 degrees:      3052      |    110 - 120 degrees:     68013
+      10 - 20 degrees:     17117      |    120 - 130 degrees:     41261
+      20 - 30 degrees:     49425      |    130 - 140 degrees:     23281
+      30 - 40 degrees:    123739      |    140 - 150 degrees:     11424
+      40 - 50 degrees:    239124      |    150 - 160 degrees:      5639
+      50 - 60 degrees:    322417      |    160 - 170 degrees:      2745
+      60 - 70 degrees:    352299      |    170 - 175 degrees:       609
+      70 - 80 degrees:    299532      |    175 - 180 degrees:       129
+
+
+Memory usage statistics:
+
+  Maximum number of tetrahedra:  348495
+  Maximum number of tet blocks (blocksize = 8188):  43
+  Approximate memory for tetrahedral mesh (bytes):  72,407,272
+  Approximate memory for extra pointers (bytes):  10,052,032
+  Approximate memory for algorithms (bytes):  133,120
+  Approximate memory for working arrays (bytes):  16,256,000
+  Approximate total used memory (bytes):  98,848,424
+

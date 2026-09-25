@@ -1,0 +1,54 @@
+femticPy patch 0008-write_inversion_control-options
+
+Rationale: write_inversion_control rounded CONVERGE ('%.1f': 0.25 -> 0.2) and TRADE_OFF/ALPHA ('%.2f': 0.001 -> 0.00), fixed BOTTOM_RESISTIVITY at 100 and could not write OWNER_ELEMENT; add both, print %.10g.
+
+--- a/src/femticPy.py
++++ b/src/femticPy.py
+@@ -522,7 +522,9 @@
+                                 TRADE_OFF_PARAM = [3],
+                                 ITERATION = 10,
+                                 CONVERGE = 1.0,
+-                                ALPHA_WEIGHT = [1,1,1]
++                                ALPHA_WEIGHT = [1,1,1],
++                                BOTTOM_RESISTIVITY = 100.0,   # [patch 0008]
++                                OWNER_ELEMENT = None          # [patch 0008] None: keyword not written
+                                 ):
+         file_loc = os.path.join(self.outdir, 'control.dat') 
+         file = open(file_loc,'w', newline='\n')
+@@ -539,30 +541,32 @@
+         file.write('%d\n'%DISTORTION)
+         file.write('ALPHA_WEIGHT\n')
+         for i in range(len(ALPHA_WEIGHT)):
+-            file.write('%.2f '%ALPHA_WEIGHT[i]) 
++            file.write('%.10g '%ALPHA_WEIGHT[i]) 
+         file.write('\n')
+         file.write('INV_METHOD\n')
+         file.write('%d\n'%INV_METHOD)
+         file.write('BOTTOM_RESISTIVITY\n')
+-        file.write('100.0\n')
++        file.write('%.10g\n'%BOTTOM_RESISTIVITY)
+         file.write('BOTTOM_ROUGHNING_FACTOR\n')
+         file.write('1.0\n')
+         file.write('OUTPUT_OPTION\n')
+         file.write('0 0\n')
+         file.write('TRADE_OFF_PARAM\n')
+         for i in range(len(TRADE_OFF_PARAM)):
+-            file.write('%.2f '%TRADE_OFF_PARAM[i])      
++            file.write('%.10g '%TRADE_OFF_PARAM[i])      
+         file.write('\n')    
+         file.write('ITERATION\n')
+         file.write('0 %d\n'%ITERATION)        
+         file.write('RETRIAL\n')
+         file.write('2\n') 
+         file.write('CONVERGE\n')       
+-        file.write('%.1f\n'%CONVERGE)  
++        file.write('%.10g\n'%CONVERGE)  
+         file.write('STEP_LENGTH\n')
+         file.write('0.5 0.1 1.0\n')           
+         file.write('3\n')
+         file.write('0.5 1.25\n')           
++        if OWNER_ELEMENT is not None:   # [patch 0008] use -1 with write_observe(owner_element=-1)
++            file.write('OWNER_ELEMENT\n%d\n'%OWNER_ELEMENT)
+         file.write('END')
+         file.close()    
+                 

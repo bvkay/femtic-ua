@@ -1,0 +1,50 @@
+femticPy patch 0002-read_MTdata-snap-before-copy
+
+Rationale: read_MTdata snapped near-duplicate frequencies in edi_data after data_Z/data_VTF had been copied, so snapped values never reached data_Z and prep_data silently dropped those rows; snap first.
+
+--- a/src/femticPy.py
++++ b/src/femticPy.py
+@@ -137,6 +137,22 @@
+                     print ('    reading %s'%edi_file)
+                     #read edi file
+                     edi_data, site_id, coord = MTtools.read(edi_file_path)
++                    # data.append([site_id, edi_data])
++                    # site_ids.append(site_id)
++                    # coords.append(coord)
++                    # list all the existing frequencies in the dataset
++                    # [patch 0002] snap near-duplicate frequencies BEFORE data_Z / data_VTF are copied from
++                    # edi_data, so the snapped values reach the tables that prep_data filters on
++                    for freq in range(len(edi_data['FREQ'].values)):
++                        if not edi_data['FREQ'].values[freq] in freq_list:
++                            if freq == 0:
++                                freq_list.append(edi_data['FREQ'].values[freq])
++                            else:
++                                if min(np.abs(np.log10(freq_list) - np.log10(edi_data['FREQ'].values[freq]))) < 0.01:
++                                    idx = (np.abs(freq_list - edi_data['FREQ'].values[freq])).argmin()
++                                    edi_data.loc[freq, "FREQ"] = freq_list[idx]
++                                else:
++                                    freq_list.append(edi_data['FREQ'].values[freq])
+                     
+ 
+                     
+@@ -177,20 +193,6 @@
+                         self.ids_VTF.append(site_id)
+                     
+                     
+-                    # data.append([site_id, edi_data])
+-                    # site_ids.append(site_id)
+-                    # coords.append(coord)
+-                    # list all the existing frequencies in the dataset
+-                    for freq in range(len(edi_data['FREQ'].values)):
+-                        if not edi_data['FREQ'].values[freq] in freq_list:
+-                            if freq == 0:
+-                                freq_list.append(edi_data['FREQ'].values[freq])
+-                            else:
+-                                if min(np.abs(np.log10(freq_list) - np.log10(edi_data['FREQ'].values[freq]))) < 0.01:
+-                                    idx = (np.abs(freq_list - edi_data['FREQ'].values[freq])).argmin()
+-                                    edi_data.loc[freq, "FREQ"] = freq_list[idx]
+-                                else:
+-                                    freq_list.append(edi_data['FREQ'].values[freq])
+ 
+         freq_list=np.sort(freq_list)[::-1]
+ 

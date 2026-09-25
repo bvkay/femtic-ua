@@ -1,0 +1,66 @@
+Read parameters from makeMtr.param
+--- Spheres ---
+Center coorinate of the fine region [km] : (X,Y,Z) = : 0 0 0
+Rotation angle of horizontal ellipsoid [deg] : 0
+Total number of spheres : 4
+<Radius[km]> <Edge Length[km]> <OblatenessHorizontal> <OblatenessVerticalEarth> <OblatenessVerticalAir>
+   1.000000e+01   2.000000e+00   0.000000e+00   0.000000e+00   0.000000e+00
+   3.000000e+01   5.000000e+00   0.000000e+00   0.000000e+00   0.000000e+00
+   1.000000e+02   1.000000e+02   0.000000e+00   0.000000e+00   0.000000e+00
+   3.000000e+02   1.000000e+02   0.000000e+00   0.000000e+00   0.000000e+00
+Read data of observed sites from obs_site.dat
+Total number of observed site : 16
+Coordinate : -7.500000e+00 -7.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : -2.500000e+00 -7.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : 2.500000e+00 -7.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : 7.500000e+00 -7.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : -7.500000e+00 -2.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : -2.500000e+00 -2.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : 2.500000e+00 -2.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : 7.500000e+00 -2.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : -7.500000e+00 2.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : -2.500000e+00 2.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : 2.500000e+00 2.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : 7.500000e+00 2.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : -7.500000e+00 7.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : -2.500000e+00 7.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : 2.500000e+00 7.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Coordinate : 7.500000e+00 7.500000e+00 -0.000000e+00
+Number of spheres : 1
+ Radius[km] : 1.000000e+00, edge length[km] : 5.000000e-01, oblateness : 3.000000e-01
+Total number of lines : 0
+Read node data from output.1.node
+Total number of nodes : 1605
+Read element data from output.1.ele
+Total number of elements : 7879
+Write mesh size to output.1.mtr

@@ -1,0 +1,21 @@
+prep_vulcan: config /mnt/d/BEN/FEMTIC_2026/config/vulcan_mesh_v3.yml -> /mnt/d/BEN/FEMTIC_2026/mesh/vulcan_v3
+femticPy read 120 EDIs: 120 with Z, 0 with tipper; 65 distinct bands
+origin (bbox centre): E 697.38400 km, N 6697.44045 km
+frequencies: 53 candidates, 21 selected: 100, 62.896, 31.514, 19.985, 10.013, 6.2974, 3.1521, 1.9961, 1.001, 0.63033, 0.31537, 0.19951, 0.1001, 0.063033, 0.031537, 0.019951, 0.01001, 0.0063033, 0.0031521, 0.0019947, 0.0012553
+wrote control.dat, observe.dat, station_map.csv and analysis_domain.dat, bathymetry.dat, coast_line.dat, control.dat, makeMtr.param, obs_site.dat, observing_site.dat, region_seeds.dat, resistivity_attr.dat, topography.dat
+self-checks on /mnt/d/BEN/FEMTIC_2026/mesh/vulcan_v3.staging
+  [PASS] C01  LF line endings: no CR in any file
+  [PASS] C02  site ids: 120 table ids, 120 DATAIDs, 120 files; identical sets: True
+  [PASS] C03  origin: origin E 697.38400 N 6697.44045 km; bbox centre E 697.38400 N 6697.44045 km
+  [PASS] C04  stations: 120 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.67 m); 120 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+  [PASS] C05  frequency selection: 21 bands selected from 53 candidates; femticPy path chose the same list: True
+  [PASS] C06  frequencies: max relative difference 0.00e+00 over 2520 data lines
+  [PASS] C07  data line count: 2520 data lines = sum over 120 sites of selected bands present (2520)
+  [PASS] C08  impedance values: 20160 values, max relative difference 5.0e-05
+  [PASS] C09  error floors: 10080 SE pairs, max relative difference 4.9e-05; floor active in 100%/97%/96%/100% of Zxx/Zxy/Zyx/Zyy
+  [PASS] C10  time convention: median phase Zxy -37.2 deg, Zyx 142.3 deg
+  [PASS] C11  mesh-site coordinates: obs_site.dat 120 sites, max 0.67 m; observing_site.dat 120 sites, max 0.67 m; resistivity_attr.dat 120 sites, max 0.67 m
+  [PASS] C12  mesh tables: all tables equal the config
+  [PASS] C13  geometry: sites x -7.255..7.255, y -6.622..6.622 km inside the domain; coast, topography and seeds consistent
+  [PASS] C14  inversion control.dat: all keywords equal the config
+OK: 14 checks passed; wrote /mnt/d/BEN/FEMTIC_2026/mesh/vulcan_v3

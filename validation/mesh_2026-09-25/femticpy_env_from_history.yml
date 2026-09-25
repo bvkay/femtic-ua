@@ -1,0 +1,15 @@
+name: femticpy
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - numpy
+  - scipy
+  - pandas[version='>=1.5,<3']
+  - matplotlib
+  - pyproj
+  - shapely
+  - rdp
+  - tabulate
+  - pyyaml
+  - jupyterlab

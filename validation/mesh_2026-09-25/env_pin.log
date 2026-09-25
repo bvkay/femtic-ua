@@ -1,0 +1,51 @@
+CMD: mamba install -y -n femticpy -c conda-forge "pandas>=1.5,<3"
+conda-forge/linux-64                                        Using cache
+conda-forge/noarch                                          Using cache
+
+Pinned packages:
+
+  - python=3.12
+
+
+Transaction
+
+  Prefix: /home/tara/miniforge3/envs/femticpy
+
+  Updating specs:
+
+   - pandas[version=">=1.5,<3"]
+
+
+  Package   Version  Build               Channel           Size
+─────────────────────────────────────────────────────────────────
+  Install:
+─────────────────────────────────────────────────────────────────
+
+  + pytz     2026.4  pyh5ded981_0        conda-forge      202kB
+
+  Downgrade:
+─────────────────────────────────────────────────────────────────
+
+  - pandas    3.0.6  np2py312h91ec553_0  conda-forge     Cached
+  + pandas    2.3.3  py312hf79963d_1     conda-forge       15MB
+
+  Summary:
+
+  Install: 1 packages
+  Downgrade: 1 packages
+
+  Total download: 15MB
+
+─────────────────────────────────────────────────────────────────
+
+
+
+Transaction starting
+Unlinking pandas-3.0.6-np2py312h91ec553_0
+Linking pytz-2026.4-pyh5ded981_0
+Linking pandas-2.3.3-py312hf79963d_1
+
+Transaction finished
+
+EXIT=0
+ELAPSED=8

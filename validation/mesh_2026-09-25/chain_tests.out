@@ -1,0 +1,75 @@
+T0 usage: no arguments -> exit 2 and help text
+  PASS rc (got '2')
+  PASS help (got '1')
+T1 positive: raw CRLF upstream inputs + meshGen.sh synthetic seeds via script -> CHAIN OK, mesh.dat/resistivity_block identical to manual Run A
+  PASS rc (got '0')
+  PASS ok (got 'CHAIN OK')
+  PASS crlf_notes (got '9')
+  PASS md5 mesh.dat (got '8844b52f3efca52bbd363de70e4ec18b  -')
+  PASS md5 resistivity_block_iter0.dat (got '119bb35f11025ed3be5bc0c8180a22ba  -')
+     output.1: 263 elements touch the top plane (0 not air), 254 touch the bottom plane (0 air)
+     output.6: 296 elements touch the top plane (0 not air), 290 touch the bottom plane (0 air)
+T1b rerun in the same dir (stale products must be wiped first) -> CHAIN OK, identical again
+  PASS rc (got '0')
+  PASS md5 (got '8844b52f3efca52bbd363de70e4ec18b  -')
+T2 swapped seeds (air attr 10 seeded BELOW the surface, earth 20 ABOVE)
+   T2a bare tool chain -> every tool exits 0 (the tools cannot see the error)
+  PASS nonzero_tool_rcs (got '0')
+  PASS products (got '2')
+   T2b check_mesh.py on that product -> exit 1 (air cell below the surface)
+  PASS check_rc (got '1')
+     FAIL  flat surface: centroid above surface <=> air cell 0: 13477 above-surface elements not air, 14024 below-surface elements in air
+   T2c run_mesh_chain.sh -> CHAIN FAILED at the air-on-top check, no mesh.dat
+  PASS rc (got '1')
+  PASS msg (got '1')
+  PASS no_mesh (got '0')
+     output.1: 263 elements touch the top plane (263 not air), 254 touch the bottom plane (254 air)
+     CHAIN FAILED: air attribute 10 is not the region at the top of the domain (or is at the bottom): check the region seeds
+T3 both seeds in the air region -> earth unseeded -> tetgen gives it 21 -> CHAIN FAILED on attribute set
+  PASS rc (got '1')
+  PASS attrs (got '10 21')
+  PASS tetgen_subdomains (got '1')
+     region seeds (x y z attr maxvol):
+       attr 10 : 3919 elements
+       attr 21 : 3960 elements
+     CHAIN FAILED: tetgen region attributes {10 21} != seeded {10 20}: an unseeded closed region got max+1.. (add a seed for it)
+T4 earth seed missing, bare tool chain incl. fix_output1 (the 31/32 fix) -> attrs {10 11}; fix_output1 leaves 11 (<=30);
+   TetGen2Femtic exits 1 'Region attribute 11 cannot be found' but mesh.dat is already written
+  PASS attrs_after_fix (got '10 11')
+  PASS fix_rc (got 'rc fix_output1=0')
+  PASS t2f_rc (got 'rc TetGen2Femtic=1')
+  PASS t2f_msg (got '1')
+  PASS mesh_dat_exists (got '1')
+  PASS block_exists (got '0')
+     Error : Region attiribute << 11 of element 0 cannot be found !!
+   T4b same via script -> refused in preflight (seeded {10} != resistivity_attr {10 20})
+  PASS rc (got '1')
+     CHAIN FAILED: need at least 2 region seeds (air + earth), got 1
+T5 raw CRLF inputs through the bare tools (no conversion) -> same mesh.dat as LF run?
+  PASS crlf_files (got '9')
+  PASS nonzero_tool_rcs (got '0')
+  PASS md5_mesh (got '8844b52f3efca52bbd363de70e4ec18b  -')
+  PASS md5_block (got '119bb35f11025ed3be5bc0c8180a22ba  -')
+T5b meshGen.sh itself is CRLF: its first lines (cd into the project) fail under bash
+     x.sh: line 2: $'\r': command not found
+     x.sh: line 4: cd: $'sub\r': No such file or directory
+     rc=1
+  PASS crlf_script_breaks (got '1')
+T6 missing input -> preflight refuses and names the file
+  PASS rc (got '1')
+  PASS msg (got '1')
+T7 seed outside the analysis domain -> refused
+  PASS rc (got '1')
+  PASS msg (got '1')
+T8 FIX_OUTPUT1=1 path (pandas 2.3.3) -> CHAIN OK and identical mesh (fix is a no-op for 10/20)
+  PASS rc (got '0')
+  PASS fix_ran (got '1')
+  PASS md5 (got '8844b52f3efca52bbd363de70e4ec18b  -')
+T9 N_ROUNDS=0 with default land-only seeds -> TetGen2Femtic on output.1, CHAIN OK
+  PASS rc (got '0')
+  PASS vtk (got '1')
+     region seeds       : 0 0 -150 10 1e9;0 0 150 20 1e9;
+     nodes / elements   : 1605 / 7879
+     parameter cells    : 1467 (cell 0 = air)
+
+OVERALL: PASS

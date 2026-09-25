@@ -1,0 +1,1 @@
+np=4 omp=4 host=Tara start=2026-09-25T15:14:26+08:00

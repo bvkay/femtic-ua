@@ -1,0 +1,118 @@
+femticPy patch 0005-meshgen-number-format
+
+Rationale: MeshGen wrote table values with '%4.1f'/'%4.3f': oblateness 0.952 became 1.0 (a zero-thickness ellipsoid), 0.35 became 0.3, and INTERPOLATE's point count '3.0' shifted epsilon to 0; use %.10g/%d.
+
+--- a/src/femticPy.py
++++ b/src/femticPy.py
+@@ -730,7 +730,7 @@
+         file_loc = os.path.join(self.outdir, 'analysis_domain.dat') 
+         file = open(file_loc,'w', newline='\n') 
+         for i in range(3):
+-            file.write(' %4.1f %4.1f\n'%(self.analysis_domain[i][0], self.analysis_domain[i][1]))
++            file.write(' %.10g %.10g\n'%(self.analysis_domain[i][0], self.analysis_domain[i][1]))
+         file.close() 
+         
+     
+@@ -738,30 +738,30 @@
+         file_loc = os.path.join(self.outdir, 'control.dat') 
+         file = open(file_loc,'w', newline='\n')      
+         file.write('CENTER\n')
+-        file.write('%4.1f %4.1f %4.1f\n'%(self.center[0],self.center[1],self.center[2]))
++        file.write('%.10g %.10g %.10g\n'%(self.center[0],self.center[1],self.center[2]))
+         file.write('ROTATION\n')
+-        file.write('%4.1f\n'%(self.rotation))
++        file.write('%.10g\n'%(self.rotation))
+         file.write('NUM_THREADS\n1\nSURF_MESH\nELLIPSOIDS\n')
+         file.write('%d'%(self.ellipsoids_control[0]))
+         for tt in self.ellipsoids_control[1:]:
+             file.write('\n')
+             for ttt in tt:
+-                file.write('%4.1f '%(ttt))
++                file.write('%.10g '%(ttt))
+         file.write('\n')
+         file.write('INTERPOLATE\n')
+-        file.write('%4.1f\n'%self.interpolate_sr)
+-        file.write('%4.1f\n'%self.interpolate_npts)
+-        file.write('%4.7f\n'%self.interpolate_minval)
++        file.write('%.10g\n'%self.interpolate_sr)
++        file.write('%d\n'%self.interpolate_npts)
++        file.write('%.10g\n'%self.interpolate_minval)
+ 
+         file.write('ALTITUDE\n')
+         file.write('topography.dat\n')
+-        file.write('%4.1f\n'%self.altitude_min)
+-        file.write('%4.1f\n'%self.altitude_max)          
++        file.write('%.10g\n'%self.altitude_min)
++        file.write('%.10g\n'%self.altitude_max)          
+ 
+         file.write('SEA_DEPTH\n')
+         file.write('bathymetry.dat\n')
+-        file.write('%4.1f\n'%self.sea_depth_min)
+-        file.write('%4.1f\n'%self.sea_depth_max) 
++        file.write('%.10g\n'%self.sea_depth_min)
++        file.write('%.10g\n'%self.sea_depth_max) 
+         file.write('END')
+         file.close() 
+ 
+@@ -769,13 +769,13 @@
+     def write_makeMtr(self):
+         file_loc = os.path.join(self.outdir, 'makeMtr.param') 
+         file = open(file_loc,'w', newline='\n')      
+-        file.write('%4.1f %4.1f %4.1f\n'%(self.center[0],self.center[1],self.center[2]))
+-        file.write('%4.1f\n'%(self.rotation))
++        file.write('%.10g %.10g %.10g\n'%(self.center[0],self.center[1],self.center[2]))
++        file.write('%.10g\n'%(self.rotation))
+         file.write('%d'%(self.ellipsoids_mtr[0]))
+         for tt in self.ellipsoids_mtr[1:]:
+             file.write('\n')
+             for ttt in tt:
+-                file.write('%4.1f '%(ttt))
++                file.write('%.10g '%(ttt))
+         file.close() 
+         
+ 
+@@ -791,7 +791,7 @@
+             for tt in self.ellipsoids_obs_sites[1:]:
+                 file.write('\n')
+                 for ttt in tt:
+-                    file.write('%4.3f '%(ttt))
++                    file.write('%.10g '%(ttt))
+             file.write('\n')
+         file.close() 
+ 
+@@ -806,7 +806,7 @@
+                                          self.mt_coords['east'][rx]))
+             file.write('%d  '%(self.ellipsoids_observing_sites[0]))
+             for tt in self.ellipsoids_observing_sites[1:]:
+-                file.write('%4.3f '%(tt))
++                file.write('%.10g '%(tt))
+             file.write('\n')
+         file.close() 
+         
+@@ -868,14 +868,14 @@
+         else:
+             file.write('20 %.1f   9 0\n'%self.resistivity_starting_model)
+             
+-        file.write('%4.1f %4.1f %4.1f\n'%(self.center[0],self.center[1],self.center[2]))
+-        file.write('%4.1f\n'%(self.rotation))
++        file.write('%.10g %.10g %.10g\n'%(self.center[0],self.center[1],self.center[2]))
++        file.write('%.10g\n'%(self.rotation))
+         
+         file.write('%d'%(self.ellipsoids_resistivity_attr[0]))
+         for tt in self.ellipsoids_resistivity_attr[1:]:
+             file.write('\n')
+             for ttt in tt:
+-                file.write('%4.1f '%(ttt))
++                file.write('%.10g '%(ttt))
+         file.write('\n')
+         file.write('%d\n'%self.nRx)
+         for rx in range(self.nRx):
+@@ -886,7 +886,7 @@
+             for tt in self.ellipsoids_resistivity_attr_sites[1:]:
+                 file.write('\n')
+                 for ttt in tt:
+-                    file.write('%4.3f '%(ttt))
++                    file.write('%.10g '%(ttt))
+             file.write('\n')
+         file.close() 
+         

@@ -1,0 +1,7 @@
+rho 3 ohm-m, columns Cal, 1 run dir(s), 240 site-frequency rows, complete True
+convention from Cal: median arg Zxy -44.95 deg -> exp(-i omega t); Re Zxy>0 1.000, Im Zxy<0 1.000, Re Zyx<0 1.000, Im Zyx>0 1.000
+      f Hz delta km max|rho|%  mean%  std% max|ph|   mean   std  diag% fail r/p/d  fwd s np x nt PARDISO MB  source
+       100    0.087      3.07  +1.15  0.81    0.96  -0.08  0.21   1.54      0/0/0    203     1x8      22903  bs_highf  PASS
+    31.514    0.155      2.68  +1.26  0.50    0.52  -0.05  0.13   0.92      0/0/0    245     1x8      22903  bs_highf  PASS
+run /home/tara/femtic_wsl/mesh_runs/acc_v2_3/bs_highf: rc 0 watchdog no; np 1 x nt 8 (NUM_THREADS 8); wall 463.46 s, user 3417.24 s, CPU 757%; max single RSS 28219240 kB; peak summed RSS 28231204.0 kB (5 s sampler (femtic+prterun+mpirun)), min MemAvailable 93929416.0 kB, swap 0.0 kB, NI ['10']; misfit csv 3.871003e+04 cnv 38710.03 rel 2.3899198594871624e-08; neq [2848706, 2844872]
+RESULT: PASS

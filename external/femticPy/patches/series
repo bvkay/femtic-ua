@@ -1,0 +1,11 @@
+# femticPy patch series, applied in this order with 'patch -p1' from external/femticPy
+# to the LF-normalised upstream files (see ../UPSTREAM.txt). One line per patch: file  # rationale
+0001-write_observe-frequency-precision.patch  # write_observe printed frequencies with '%.5f', rounding the Vulcan long-period bands by up to 3 % (1.26263e-4 -> 0.00013; 1.2553e-3 -> 0.00126); '%.6e' keeps 7 significant digits.
+0002-read_MTdata-snap-before-copy.patch  # read_MTdata snapped near-duplicate frequencies in edi_data after data_Z/data_VTF had been copied, so snapped values never reached data_Z and prep_data silently dropped those rows; snap first.
+0003-read_MTdata-snap-first-row.patch  # the 'freq == 0' guard appended the first frequency of EVERY file without the tolerance test, so a slightly different first band became a new band; the guard is meant for the empty list.
+0004-writers-lf-newlines.patch  # open(...,'w') writes CRLF under Windows Python; FEMTIC's C++ readers tolerate it but shell/sed steps of the mesh chain do not, so every writer now forces '\n'.
+0005-meshgen-number-format.patch  # MeshGen wrote table values with '%4.1f'/'%4.3f': oblateness 0.952 became 1.0 (a zero-thickness ellipsoid), 0.35 became 0.3, and INTERPOLATE's point count '3.0' shifted epsilon to 0; use %.10g/%d.
+0006-meshgen-control-and-regions.patch  # MeshGen hard-coded NUM_THREADS 1, no ITER_MAX, a mandatory SEA_DEPTH, the ALTITUDE file name and the earth region line (ndiv 9); expose them as attributes whose defaults reproduce upstream output.
+0007-write_observe-owner-element.patch  # add owner_element=-1: MT stations take H from a dummy VTF station (0 frequencies, upward owner element) at the same place, FEMTIC manual 'How to improve response functions at high frequencies'.
+0008-write_inversion_control-options.patch  # write_inversion_control rounded CONVERGE ('%.1f': 0.25 -> 0.2) and TRADE_OFF/ALPHA ('%.2f': 0.001 -> 0.00), fixed BOTTOM_RESISTIVITY at 100 and could not write OWNER_ELEMENT; add both, print %.10g.
+0009-read_MTdata-no-intra-site-merge.patch  # after 0002 a snapped value reaches data_Z, so snapping onto a band the SAME EDI already holds made two rows with one frequency (Vulcan D5, E3, F2 hold both 1.26263e-4 and 1.25e-4 Hz); never merge within an EDI.

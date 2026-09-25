@@ -1,0 +1,23 @@
+mesh.dat: 401334 nodes, 2446095 elements, boundary faces per plane [412, 412, 412, 412, 454, 454], earth-surface faces 218292
+PASS  node ids contiguous: ids 0..N-1
+PASS  element ids contiguous: ids 0..N-1
+PASS  node extents == analysis_domain box: min [-500. -500. -500.] km, max [500. 500. 500.] km
+PASS  no degenerate elements: min |vol| = 2.852e-01 m^3
+PASS  consistent orientation: 2446095 positive, 0 negative
+PASS  sum of element volumes == box volume: 1.000000000e+18 vs 1.000000000e+18 m^3 (rel err 0.0e+00)
+PASS  neighbour relation symmetric: 0 one-way links
+PASS  #faces with no neighbour == #faces on the 6 outer planes: 2556 vs 2556
+PASS  earth-surface faces tile the horizontal domain: projected area 1.000000000e+12 vs 1.000000000e+12 m^2
+resistivity_block_iter0.dat: 2446095 elements, 65342 parameter cells (cell 0 = air)
+PASS  element count agrees mesh.dat vs resistivity_block: 2446095 vs 2446095
+PASS  cell indices in range: 0..65341
+PASS  every parameter cell owns >= 1 element: 0 empty cells
+PASS  cell 0 is air: rho and fixed flag: rho 1e+09, fixed 1
+PASS  earth cells free (fixed flag 0): 0 fixed earth cells
+      earth cell starting resistivities: [20.0]
+      air volume 5.000000e+08 km^3, earth volume 5.000000e+08 km^3
+PASS  flat surface: centroid above surface <=> air cell 0: 0 above-surface elements not air, 0 below-surface elements in air
+PASS  flat surface: earth-surface faces lie on z = surface: max |z - z0| = 0.00e+00 m
+PASS  flat surface: air / earth volumes match the box split: air 5.000000000e+17/5.000000000e+17, earth 5.000000000e+17/5.000000000e+17
+
+17/17 checks passed

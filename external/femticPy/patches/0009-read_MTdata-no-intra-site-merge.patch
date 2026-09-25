@@ -1,0 +1,19 @@
+femticPy patch 0009-read_MTdata-no-intra-site-merge
+
+Rationale: after 0002 a snapped value reaches data_Z, so snapping onto a band the SAME EDI already holds made two rows with one frequency (Vulcan D5, E3, F2 hold both 1.26263e-4 and 1.25e-4 Hz); never merge within an EDI.
+
+--- a/src/femticPy.py
++++ b/src/femticPy.py
+@@ -148,8 +148,10 @@
+                             if len(freq_list) == 0:   # [patch 0003] was 'freq == 0'
+                                 freq_list.append(edi_data['FREQ'].values[freq])
+                             else:
+-                                if min(np.abs(np.log10(freq_list) - np.log10(edi_data['FREQ'].values[freq]))) < 0.01:
+-                                    idx = (np.abs(freq_list - edi_data['FREQ'].values[freq])).argmin()
++                                idx = (np.abs(freq_list - edi_data['FREQ'].values[freq])).argmin()
++                                # [patch 0009] only snap onto a band this EDI does not already hold
++                                if (min(np.abs(np.log10(freq_list) - np.log10(edi_data['FREQ'].values[freq]))) < 0.01
++                                        and not freq_list[idx] in edi_data['FREQ'].values):
+                                     edi_data.loc[freq, "FREQ"] = freq_list[idx]
+                                 else:
+                                     freq_list.append(edi_data['FREQ'].values[freq])

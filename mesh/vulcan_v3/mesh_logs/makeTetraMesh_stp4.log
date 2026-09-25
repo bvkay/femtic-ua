@@ -1,0 +1,218 @@
+# makeTetraMesh v1.3.2
+# Read parameters
+# Read data of ellipsoids used for specifing maximum edge length.
+# Center coordinte [km] : 0 0 0
+# Rotation angle [deg] : 0
+# Total number of ellipsoids : 9
+<Radius[km]> <Edge Length[km]> <OblatenessHorizontal> <OblatenessVerticalEarth> <OblatenessVerticalAir>
+   1.050000e+01   2.000000e-01   0.000000e+00   9.520000e-01   9.900000e-01
+   1.150000e+01   3.500000e-01   0.000000e+00   8.700000e-01   9.650000e-01
+   1.300000e+01   6.000000e-01   0.000000e+00   7.300000e-01   9.200000e-01
+   1.700000e+01   1.200000e+00   0.000000e+00   5.300000e-01   8.200000e-01
+   2.500000e+01   3.000000e+00   0.000000e+00   2.800000e-01   6.000000e-01
+   5.000000e+01   8.000000e+00   0.000000e+00   1.000000e-01   4.000000e-01
+   1.200000e+02   2.000000e+01   0.000000e+00   0.000000e+00   2.500000e-01
+   3.000000e+02   5.000000e+01   0.000000e+00   0.000000e+00   0.000000e+00
+   8.000000e+02   1.000000e+02   0.000000e+00   0.000000e+00   0.000000e+00
+# Threshold ratio of edge length of boundary curves : 3.000000e+00
+# Maximum iteration number of the coast line smoothing : 0
+# Threshold angle of the coast line smoothing : 1.000000e+01
+# Threshold distance of the coast line smoothing : 3.000000e+00
+# Maximum edge length at outer-most edges : 1.000000e+02
+# Factor of the size of the super triangle : 1.000000e+00
+# Parameter alpha : 1.500000e+00
+# Parameter beta : 2.000000e-01
+# Threshold angle for refinement [deg] : 1.500000e+02
+# Maximum iteration number for refining triangles having long edges : 60
+# Maximum iteration number for refining triangles having large angle : 0
+# Maximum iteration number of laplacian method : 5
+# Maximum number of points used for interpolating altitudes : 3
+# Distance used to avoid too small denominator in inverse distance weighting [km] : 1.000000e-06
+# Factor of inverse distance weighting : 1.000000e+00
+# Maximum distance  for interpolating [km] : 1.000000e+02
+# File name of altitude of the earth : topography.dat
+# Minimum value of altitude of land [km] : 0.000000e+00
+# Maximum value of altitude of land [km] : 1.000000e+10
+# Surface meshes are made on all boundary faces.
+# Total number of threads : 8
+# *** Start Step 4
+# *** Make PLCs with surface meshes of the eatrh
+# Read nodes
+# Read node list of mesh from node_mesh.stp3
+# Read triangles
+# Relate nodes to triangles
+# Read boundary curve list from boundary_curves.stp3
+# Read containment relationship of boundary curves from boundary_curves_relation.stp3
+# Read node list of 2D mesh from node_bound_curve.stp3
+# Read data of analysis domain from input file.
+# Minimum value of X coordinate [km] : -5.000000e+02
+# Maximum value of X coordinate [km] : 5.000000e+02
+# Minimum value of Y coordinate [km] : -5.000000e+02
+# Maximum value of Y coordinate [km] : 5.000000e+02
+# Minimum value of Z coordinate [km] : -5.000000e+02
+# Maximum value of Z coordinate [km] : 5.000000e+02
+# Make PLCs
+# Make rough triangles from the node of boundaries
+# Insert nodes of the outer boundary 0
+# Assign domain type to triangles
+# Refine triangle having long edges
+# Iteration :          1, Number of nodes to be inserted :         34
+# Iteration :          2, Number of nodes to be inserted :         62
+# Iteration :          3, Number of nodes to be inserted :         60
+# Iteration :          4, Number of nodes to be inserted :         52
+# Iteration :          5, Number of nodes to be inserted :          0
+# Refine triangle with large angle
+# Finish refinement
+# Perform laplacian method
+# Iteration :          1
+# Iteration :          2
+# Iteration :          3
+# Iteration :          4
+# Iteration :          5
+# Make rough triangles from the node of boundaries
+# Insert nodes of the outer boundary 0
+# Assign domain type to triangles
+# Refine triangle having long edges
+# Iteration :          1, Number of nodes to be inserted :         34
+# Iteration :          2, Number of nodes to be inserted :         62
+# Iteration :          3, Number of nodes to be inserted :         60
+# Iteration :          4, Number of nodes to be inserted :         52
+# Iteration :          5, Number of nodes to be inserted :          0
+# Refine triangle with large angle
+# Finish refinement
+# Perform laplacian method
+# Iteration :          1
+# Iteration :          2
+# Iteration :          3
+# Iteration :          4
+# Iteration :          5
+# Make rough triangles from the node of boundaries
+# Insert nodes of the outer boundary 0
+# Assign domain type to triangles
+# Refine triangle having long edges
+# Iteration :          1, Number of nodes to be inserted :         28
+# Iteration :          2, Number of nodes to be inserted :         54
+# Iteration :          3, Number of nodes to be inserted :          6
+# Iteration :          4, Number of nodes to be inserted :          0
+# Refine triangle with large angle
+# Finish refinement
+# Perform laplacian method
+# Iteration :          1
+# Iteration :          2
+# Iteration :          3
+# Iteration :          4
+# Iteration :          5
+# Make rough triangles from the node of boundaries
+# Insert nodes of the outer boundary 0
+# Assign domain type to triangles
+# Refine triangle having long edges
+# Iteration :          1, Number of nodes to be inserted :         28
+# Iteration :          2, Number of nodes to be inserted :         54
+# Iteration :          3, Number of nodes to be inserted :          6
+# Iteration :          4, Number of nodes to be inserted :          0
+# Refine triangle with large angle
+# Finish refinement
+# Perform laplacian method
+# Iteration :          1
+# Iteration :          2
+# Iteration :          3
+# Iteration :          4
+# Iteration :          5
+# Make rough triangles from the node of boundaries
+# Insert nodes of the outer boundary 0
+# Assign domain type to triangles
+# Refine triangle having long edges
+# Iteration :          1, Number of nodes to be inserted :         28
+# Iteration :          2, Number of nodes to be inserted :         54
+# Iteration :          3, Number of nodes to be inserted :          6
+# Iteration :          4, Number of nodes to be inserted :          0
+# Refine triangle with large angle
+# Finish refinement
+# Perform laplacian method
+# Iteration :          1
+# Iteration :          2
+# Iteration :          3
+# Iteration :          4
+# Iteration :          5
+# Make rough triangles from the node of boundaries
+# Insert nodes of the outer boundary 0
+# Assign domain type to triangles
+# Refine triangle having long edges
+# Iteration :          1, Number of nodes to be inserted :         28
+# Iteration :          2, Number of nodes to be inserted :         54
+# Iteration :          3, Number of nodes to be inserted :          6
+# Iteration :          4, Number of nodes to be inserted :          0
+# Refine triangle with large angle
+# Finish refinement
+# Perform laplacian method
+# Iteration :          1
+# Iteration :          2
+# Iteration :          3
+# Iteration :          4
+# Iteration :          5
+# Make rough triangles from the node of boundaries
+# Insert nodes of the outer boundary 0
+# Assign domain type to triangles
+# Refine triangle having long edges
+# Iteration :          1, Number of nodes to be inserted :         28
+# Iteration :          2, Number of nodes to be inserted :         54
+# Iteration :          3, Number of nodes to be inserted :          6
+# Iteration :          4, Number of nodes to be inserted :          0
+# Refine triangle with large angle
+# Finish refinement
+# Perform laplacian method
+# Iteration :          1
+# Iteration :          2
+# Iteration :          3
+# Iteration :          4
+# Iteration :          5
+# Make rough triangles from the node of boundaries
+# Insert nodes of the outer boundary 0
+# Assign domain type to triangles
+# Refine triangle having long edges
+# Iteration :          1, Number of nodes to be inserted :         28
+# Iteration :          2, Number of nodes to be inserted :         54
+# Iteration :          3, Number of nodes to be inserted :          6
+# Iteration :          4, Number of nodes to be inserted :          0
+# Refine triangle with large angle
+# Finish refinement
+# Perform laplacian method
+# Iteration :          1
+# Iteration :          2
+# Iteration :          3
+# Iteration :          4
+# Iteration :          5
+# Make rough triangles from the node of boundaries
+# Insert nodes of the outer boundary 0
+# Assign domain type to triangles
+# Refine triangle having long edges
+# Iteration :          1, Number of nodes to be inserted :         28
+# Iteration :          2, Number of nodes to be inserted :         54
+# Iteration :          3, Number of nodes to be inserted :          6
+# Iteration :          4, Number of nodes to be inserted :          0
+# Refine triangle with large angle
+# Finish refinement
+# Perform laplacian method
+# Iteration :          1
+# Iteration :          2
+# Iteration :          3
+# Iteration :          4
+# Iteration :          5
+# Make rough triangles from the node of boundaries
+# Insert nodes of the outer boundary 0
+# Assign domain type to triangles
+# Refine triangle having long edges
+# Iteration :          1, Number of nodes to be inserted :         28
+# Iteration :          2, Number of nodes to be inserted :         54
+# Iteration :          3, Number of nodes to be inserted :          6
+# Iteration :          4, Number of nodes to be inserted :          0
+# Refine triangle with large angle
+# Finish refinement
+# Perform laplacian method
+# Iteration :          1
+# Iteration :          2
+# Iteration :          3
+# Iteration :          4
+# Iteration :          5
+# Write PLCs
+# Finished !!

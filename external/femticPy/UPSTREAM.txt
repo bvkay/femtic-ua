@@ -1,0 +1,79 @@
+femticPy, vendored for scripts/prep_vulcan.py
+=============================================
+
+upstream   : https://github.com/hseille/femticPy (CSIRO, Hoel Seille; MIT licence, see LICENSE)
+commit: 1b0fe316c01714d06a1c3be2bef5fa47daa67f0c
+commit date: 2025-09-16  "plot_induction_arrows and read_result_csv updated (merged issues #2 and #3)"
+vendored   : 2026-09-25
+
+Copied: src/ (femticPy.py, MTtools.py, __init__.py), scripts/ (create_mesh.sh, fix_output1.py, meshGen.sh,
+run_inversion.sh, run_inversion_synthetic.sh), LICENSE, README.md.
+Not copied: projects/ (example data), docs/, .git.
+
+Import normalisation: every upstream file is CRLF; each was converted to LF with  sed 's/\r$//'  and is
+otherwise byte-identical to the upstream commit. The CRLF shell scripts fail under bash ($'\r': command not
+found), and this repository stores text as LF (.gitattributes).
+
+Patches: patches/series lists them in order with a one-line rationale each. They apply with 'patch -p1' from
+this directory to the LF-normalised upstream files; only src/femticPy.py is patched. The working copy here
+IS the patched result; the .patch files are the record. Every patched line carries a '[patch 000N]' comment
+where the change is not self-evident.
+
+  0001 write_observe frequency format %.5f -> %.6e
+  0002 read_MTdata: snap near-duplicate frequencies before data_Z/data_VTF are copied
+  0003 read_MTdata: snapping guard 'freq == 0' -> 'len(freq_list) == 0'
+  0004 all writers: open(..., newline='\n')
+  0005 MeshGen: %.10g / %d instead of %4.1f / %4.3f for table values
+  0006 MeshGen: NUM_THREADS, SURF_MESH, ITER_MAX, ALTITUDE file, optional SEA_DEPTH, region lines
+  0007 write_observe(owner_element=-1): dummy VTF H-stations (FEMTIC OWNER_ELEMENT -1)
+  0008 write_inversion_control: BOTTOM_RESISTIVITY, OWNER_ELEMENT, %.10g for CONVERGE/TRADE_OFF/ALPHA
+  0009 read_MTdata: never snap onto a band the same EDI already holds (needed once 0002 propagates snaps)
+
+0006-0008 keep upstream behaviour at their defaults; 0001-0005 and 0009 change output formats or fix bugs.
+Verified on 2026-09-25: applying the series to the LF-normalised upstream reproduces src/femticPy.py byte
+for byte (cmp), and the unpatched files equal upstream with CR removed.
+
+To reproduce:
+  git clone https://github.com/hseille/femticPy.git fp && git -C fp checkout 1b0fe316c01714d06a1c3be2bef5fa47daa67f0c
+  mkdir -p base/src base/scripts
+  for f in src/femticPy.py src/MTtools.py src/__init__.py scripts/create_mesh.sh scripts/fix_output1.py \
+           scripts/meshGen.sh scripts/run_inversion.sh scripts/run_inversion_synthetic.sh LICENSE README.md; do
+    sed 's/\r$//' fp/$f > base/$f; done
+  (cd base && for p in $(grep -v '^#' ../patches/series | awk '{print $1}'); do patch -p1 < ../patches/$p; done)
+  cmp base/src/femticPy.py src/femticPy.py
+
+sha256 (upstream CRLF file / LF-normalised = vendored unless patched)
+  src/femticPy.py   943290d298623639b80eeb0db268e1eaca3e118262cc7de6a55732b4d565c5a7 / eca2821ac3123ac10515b2f7bdafb2e89fb713d944fecd74724c9ce34e1bec3c
+                    patched (vendored): 1035aa1a80537ea848c55301666a64c202a37726b656206d0c318da9c120dbf6
+  src/MTtools.py    f1635b5d98d037a00d1ff9867a1b73d9e52458fb49c1871e246f267616725da2 / b87f529c97a9e6d2df2c828410bdb259fe3de853234636b98740794fa783d844
+  src/__init__.py   e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 (empty)
+  scripts/create_mesh.sh             67e38f61532984af56426b7dac92713597fc675247e9b6702e49422481cf9bde / d80689e00756e8fd7ccccb62aadaac9088a6aadfe1d0ba31fe24d9d51942a4fe
+  scripts/fix_output1.py             3a0c07bfeeee87408639c590b608325948388ff9ac304a9227923104fa4f51a8 / 7d0abea5b52b3700b314d1f37f2b37e450ef4a94e20cf95b88a170a94ad13355
+  scripts/meshGen.sh                 c5e77798311484308e1fefca8f757ca1e4bf74ddf0cc94fce7ecb75a2d07ce74 / 521687b031be3c00d80df85fb1623b1123be436dc2d67382f419438996b7d515
+  scripts/run_inversion.sh           989ef123c362b84c0f8ab118175630c8dc6585eb89b1221a6d25fbbfb5c4230c / bc03474a3f9568f0ce129a3e5e314361e8967b62f536f239a448e801477dd518
+  scripts/run_inversion_synthetic.sh 5e8461e7c79915ebdc41382934100b6cf2edaa5dc8dfb8529d82eb9a5d049e2c / 8c43299cfbcd1ada270d77a5053f569553dbce6143e29fd65193845d7c6fe5d2
+  LICENSE           7bef72b7fd978d58bce9149c744b8fa1bb883313d98f1ee7444fe06b80c9f9d0 / f039fe54e3aec8e5e54ce80595b5906f1c45d8bc52c19d87c1008fc0b9e9ead0
+  README.md         030796c231dcc44eb9c1bae76d7f8de5a11df192223b0f1dc167d5d23365eca5 / 0fc4223eacbc6d63ba37494973b692ca978f288c6e0e17273d2ab826baed7daf
+
+Tested (2026-09-25) on the Vulcan EDIs and a synthetic pair of EDIs (A1 and a copy with 200 -> 200.4 Hz
+and 100 -> 100.2 Hz):
+  upstream      : 200.4 Hz kept as a separate band (0003); the copy's 100 Hz row dropped by prep_data (0002);
+                  the 1.25e-4 Hz data of D5, E3 and F2 silently dropped (snapped in edi_data only).
+  0001-0008     : synthetic case fixed, but D5, E3 and F2 get two rows at 1.26263e-4 Hz (0009's reason).
+  0001-0009     : synthetic case fixed; 65 distinct bands, 1.26263e-4 Hz at 6 sites and 1.25e-4 Hz at 3,
+                  no repeated frequency at any site.
+None of this touches the default Vulcan selection (0.001-100 Hz), where every site holds identical values.
+
+Known upstream issues NOT patched (scripts/prep_vulcan.py works around them):
+  - MeshGen.__init__ sets the ellipsoid centre z to -median(z) with z already = -elevation, i.e. below
+    ground; prep_vulcan.py sets MeshGen.center explicitly.
+  - MeshGen writes the site z of mt_coords (femticPy: -elevation) into obs_site.dat and resistivity_attr.dat;
+    prep_vulcan.py passes the mesh-surface z (0 for a flat surface).
+  - DataGen.prep_data converts and floors data_Z in place, so a second write_observe call would convert
+    twice; prep_vulcan.py calls it once per process.
+  - write_observe's tipper masking test is a no-op (the conditions are always true and drop() is not
+    assigned); irrelevant here because no tipper is inverted.
+  - scripts/fix_output1.py and InvResults use pandas APIs removed in pandas 3 (delim_whitespace): use
+    1.5 <= pandas < 3.
+  - Invalid escape sequences ('\s', '\O', '\c') in regular strings raise SyntaxWarning on Python >= 3.12;
+    harmless (the strings still mean what was intended).

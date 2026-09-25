@@ -1,0 +1,9 @@
+6c5704f16840da501f68f4b6107612af  control.dat
+b65a8c437e81e77a072be25f7816668f  analysis_domain.dat
+c335e9e66e3185d629847ff0774aecd1  observing_site.dat
+0fd6c326a6f89d41f07e682d281954dc  coast_line.dat
+4449df3ae999eca25000b7dbd9809ad0  obs_site.dat
+60579a9523371ff8729261659a87178f  makeMtr.param
+76f73bdca82d3aafb48915cee803e498  resistivity_attr.dat
+b6864701872339c439a02b0c4a5fb534  topography.dat
+e4790534648aca6101a2af26a792a3b0  bathymetry.dat

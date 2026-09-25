@@ -1,0 +1,9 @@
+run_dir            : /home/tara/femtic_wsl/mesh_runs/vulcan_v3
+refinement rounds  : 5  (final mesh output.6)
+region seeds       : 0 0 -250 10 1000000000;0 0 250 20 1000000000;
+region attributes  : {10 20} in output.1.ele and output.6.ele (resistivity_attr.dat: {10 20}, air 10)
+nodes / elements   : 502982 / 3068130
+parameter cells    : 68655 (cell 0 = air)
+volume check       : sum |V| = 1.000000000e+09 km^3, box = 1.000000000e+09 km^3, rel err 9.77e-12
+total wall time    : 1022.2 s
+CHAIN OK

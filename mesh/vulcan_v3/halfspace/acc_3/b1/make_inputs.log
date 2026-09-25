@@ -1,0 +1,4 @@
+make_acc_inputs OK: /home/tara/femtic_wsl/mesh_runs/acc_v3_3/b1: rho 3 ohm-m on 68654 earth cells (68655 cells, 3068130 elements); 120 MT stations x 2 freqs; mesh.dat linked (502982 nodes)
+  batch 1; NUM_THREADS 8
+  requested 200 Hz -> band 200 Hz
+  requested 60 Hz -> band 62.896 Hz

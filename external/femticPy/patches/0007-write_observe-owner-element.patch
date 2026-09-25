@@ -1,0 +1,49 @@
+femticPy patch 0007-write_observe-owner-element
+
+Rationale: add owner_element=-1: MT stations take H from a dummy VTF station (0 frequencies, upward owner element) at the same place, FEMTIC manual 'How to improve response functions at high frequencies'.
+
+--- a/src/femticPy.py
++++ b/src/femticPy.py
+@@ -359,7 +359,16 @@
+ 
+         
+     
+-    def write_observe(self, write = True, freq_bandwidth = None, subsampling = 1, plot=True):
++    def write_observe(self, write = True, freq_bandwidth = None, subsampling = 1, plot=True, owner_element=None):
++        # [patch 0007] owner_element=None: upstream layout (FEMTIC OWNER_ELEMENT 0 or 1).
++        # owner_element=-1 (FEMTIC OWNER_ELEMENT -1): MT station i is written 'i  1000+i  0  x  y' (E from the
++        # element below the surface) and a dummy VTF station 1000+i with 0 frequencies and owner type 1
++        # (H from the element above the surface) is added at the same place (FEMTIC manual,
++        # 'How to improve response functions at high frequencies').
++        if owner_element not in (None, -1):
++            raise ValueError('owner_element must be None or -1')
++        if owner_element == -1 and self.invert_VTF:
++            raise NotImplementedError('owner_element=-1 is implemented for impedance-only data')
+         
+         self.prep_data(freq_bandwidth = freq_bandwidth, subsampling = subsampling)
+         if plot: self.plot_inversion_periods()
+@@ -377,7 +386,7 @@
+                 
+                 data = self.data_Z[rx]
+                 
+-                file.write('%d  %d  %2.3f  %2.3f  \n'%(rx+1, rx+1, 
++                file.write(('%d  %d  0  %2.3f  %2.3f  \n' if owner_element == -1 else '%d  %d  %2.3f  %2.3f  \n')%(rx+1, rx+1001 if owner_element == -1 else rx+1, 
+                                                      self.mt_coords['north'][ind],
+                                                      self.mt_coords['east'][ind]))                
+                 nFreq = len(data)
+@@ -432,6 +441,15 @@
+                
+         
+         
++        if owner_element == -1 and self.invert_Z:
++            # [patch 0007] dummy H stations: same place as MT station rx+1, no data
++            file.write('VTF    %d\n'%(self.nRx_Z))
++            for rx in range(self.nRx_Z):
++                ind = np.where(self.ids_Z[rx] == self.mt_coords['id'].values)[0][0]
++                file.write('%d  %d  1  %2.3f  %2.3f  \n'%(rx+1001, rx+1001,
++                                                     self.mt_coords['north'][ind],
++                                                     self.mt_coords['east'][ind]))
++                file.write('0\n')
+         file.write('END')
+         file.close()
+         

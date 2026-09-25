@@ -1,0 +1,9 @@
+run_dir            : /home/tara/femtic_wsl/mesh_runs/chain_proof_meshgen
+refinement rounds  : 5  (final mesh output.6)
+region seeds       : 0 0 -100 10 1e9;0 0 100 20 1e9;
+region attributes  : {10 20} in output.1.ele and output.6.ele (resistivity_attr.dat: {10 20}, air 10)
+nodes / elements   : 70324 / 418186
+parameter cells    : 3931 (cell 0 = air)
+volume check       : sum |V| = 6.400000000e+07 km^3, box = 6.400000000e+07 km^3, rel err 1.16e-16
+total wall time    : 51.1 s
+CHAIN OK

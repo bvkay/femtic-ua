@@ -1,0 +1,155 @@
+# makeTetraMesh v1.3.2
+# Read parameters
+# Read data of ellipsoids used for specifing maximum edge length.
+# Center coordinte [km] : 0 0 -0
+# Rotation angle [deg] : 0
+# Total number of ellipsoids : 6
+<Radius[km]> <Edge Length[km]> <OblatenessHorizontal> <OblatenessVerticalEarth> <OblatenessVerticalAir>
+   2.000000e+01   1.000000e+00   0.000000e+00   5.000000e-01   7.000000e-01
+   3.000000e+01   5.000000e+00   0.000000e+00   3.000000e-01   5.000000e-01
+   5.000000e+01   1.000000e+01   0.000000e+00   1.000000e-01   3.000000e-01
+   1.000000e+02   2.000000e+01   0.000000e+00   0.000000e+00   0.000000e+00
+   1.500000e+02   3.000000e+01   0.000000e+00   0.000000e+00   0.000000e+00
+   2.500000e+02   5.000000e+01   0.000000e+00   0.000000e+00   0.000000e+00
+# Threshold ratio of edge length of boundary curves : 3.000000e+00
+# Maximum iteration number of the coast line smoothing : 0
+# Threshold angle of the coast line smoothing : 1.000000e+01
+# Threshold distance of the coast line smoothing : 3.000000e+00
+# Maximum edge length at outer-most edges : 5.000000e+01
+# Factor of the size of the super triangle : 1.000000e+00
+# Parameter alpha : 1.500000e+00
+# Parameter beta : 2.000000e-01
+# Threshold angle for refinement [deg] : 1.500000e+02
+# Maximum iteration number for refining triangles having long edges : 30
+# Maximum iteration number for refining triangles having large angle : 0
+# Maximum iteration number of laplacian method : 5
+# Maximum number of points used for interpolating altitudes : 3
+# Distance used to avoid too small denominator in inverse distance weighting [km] : 0.000000e+00
+# Factor of inverse distance weighting : 1.000000e+00
+# Maximum distance  for interpolating [km] : 1.000000e+02
+# File name of altitude of the earth : topography.dat
+# Minimum value of altitude of land [km] : 0.000000e+00
+# Maximum value of altitude of land [km] : 1.000000e+20
+# File name of depth of the sea : bathymetry.dat
+# Minimum value of depth of the sea [km] : 0.000000e+00
+# Maximum value of depth of the sea [km] : 1.000000e+20
+# Surface meshes are made on all boundary faces.
+# Total number of threads : 1
+# *** Start Step 1
+# *** Calculate boudary curve of the earth surface
+# Read parameters
+# Read data of ellipsoids used for specifing maximum edge length.
+# Center coordinte [km] : 0.000000e+00 0.000000e+00 -0.000000e+00
+# Rotation angle [deg] : 0.000000e+00
+# Total number of ellipsoids : 6
+<Radius[km]> <Edge Length[km]> <OblatenessHorizontal> <OblatenessVerticalEarth> <OblatenessVerticalAir>
+   2.000000e+01   1.000000e+00   0.000000e+00   5.000000e-01   7.000000e-01
+   3.000000e+01   5.000000e+00   0.000000e+00   3.000000e-01   5.000000e-01
+   5.000000e+01   1.000000e+01   0.000000e+00   1.000000e-01   3.000000e-01
+   1.000000e+02   2.000000e+01   0.000000e+00   0.000000e+00   0.000000e+00
+   1.500000e+02   3.000000e+01   0.000000e+00   0.000000e+00   0.000000e+00
+   2.500000e+02   5.000000e+01   0.000000e+00   0.000000e+00   0.000000e+00
+# Threshold ratio of edge length of boundary curves : 3.000000e+00
+# Maximum iteration number of the coast line smoothing : 0
+# Threshold angle of the coast line smoothing : 1.000000e+01
+# Threshold distance of the coast line smoothing : 3.000000e+00
+# Maximum edge length at outer-most edges : 5.000000e+01
+# Factor of the size of the super triangle : 1.000000e+00
+# Parameter alpha : 1.500000e+00
+# Parameter beta : 2.000000e-01
+# Threshold angle for refinement [deg] : 1.500000e+02
+# Maximum iteration number for refining triangles having long edges : 30
+# Maximum iteration number for refining triangles having large angle : 0
+# Maximum iteration number of laplacian method : 5
+# Maximum number of points used for interpolating altitudes : 3
+# Distance used to avoid too small denominator in inverse distance weighting [km] : 0.000000e+00
+# Factor of inverse distance weighting : 1.000000e+00
+# Maximum distance  for interpolating [km] : 1.000000e+02
+# File name of altitude of the earth : topography.dat
+# Minimum value of altitude of land [km] : 0.000000e+00
+# Maximum value of altitude of land [km] : 1.000000e+20
+# File name of depth of the sea : bathymetry.dat
+# Minimum value of depth of the sea [km] : 0.000000e+00
+# Maximum value of depth of the sea [km] : 1.000000e+20
+# Surface meshes are made on all boundary faces.
+# Total number of threads : 1
+# Read data of analysis domain from input file.
+# Minimum value of X coordinate [km] : -2.000000e+02
+# Maximum value of X coordinate [km] : 2.000000e+02
+# Minimum value of Y coordinate [km] : -2.000000e+02
+# Maximum value of Y coordinate [km] : 2.000000e+02
+# Minimum value of Z coordinate [km] : -2.000000e+02
+# Maximum value of Z coordinate [km] : 2.000000e+02
+# Read data of observing site list from input file.
+# Coordinate : -5.000000e+00 -5.000000e+00
+# Number of circles : 5
+# Radius[km] : 1.000000e-01, edge length[km] : 2.000000e-02
+# Radius[km] : 3.000000e-01, edge length[km] : 5.000000e-02
+# Radius[km] : 1.000000e+00, edge length[km] : 1.000000e-01
+# Radius[km] : 3.000000e+00, edge length[km] : 3.000000e-01
+# Radius[km] : 5.000000e+00, edge length[km] : 5.000000e-01
+# Coordinate : -5.000000e+00 0.000000e+00
+# Number of circles : 5
+# Radius[km] : 1.000000e-01, edge length[km] : 2.000000e-02
+# Radius[km] : 3.000000e-01, edge length[km] : 5.000000e-02
+# Radius[km] : 1.000000e+00, edge length[km] : 1.000000e-01
+# Radius[km] : 3.000000e+00, edge length[km] : 3.000000e-01
+# Radius[km] : 5.000000e+00, edge length[km] : 5.000000e-01
+# Coordinate : -5.000000e+00 5.000000e+00
+# Number of circles : 5
+# Radius[km] : 1.000000e-01, edge length[km] : 2.000000e-02
+# Radius[km] : 3.000000e-01, edge length[km] : 5.000000e-02
+# Radius[km] : 1.000000e+00, edge length[km] : 1.000000e-01
+# Radius[km] : 3.000000e+00, edge length[km] : 3.000000e-01
+# Radius[km] : 5.000000e+00, edge length[km] : 5.000000e-01
+# Coordinate : 0.000000e+00 -5.000000e+00
+# Number of circles : 5
+# Radius[km] : 1.000000e-01, edge length[km] : 2.000000e-02
+# Radius[km] : 3.000000e-01, edge length[km] : 5.000000e-02
+# Radius[km] : 1.000000e+00, edge length[km] : 1.000000e-01
+# Radius[km] : 3.000000e+00, edge length[km] : 3.000000e-01
+# Radius[km] : 5.000000e+00, edge length[km] : 5.000000e-01
+# Coordinate : 0.000000e+00 0.000000e+00
+# Number of circles : 5
+# Radius[km] : 1.000000e-01, edge length[km] : 2.000000e-02
+# Radius[km] : 3.000000e-01, edge length[km] : 5.000000e-02
+# Radius[km] : 1.000000e+00, edge length[km] : 1.000000e-01
+# Radius[km] : 3.000000e+00, edge length[km] : 3.000000e-01
+# Radius[km] : 5.000000e+00, edge length[km] : 5.000000e-01
+# Coordinate : 0.000000e+00 5.000000e+00
+# Number of circles : 5
+# Radius[km] : 1.000000e-01, edge length[km] : 2.000000e-02
+# Radius[km] : 3.000000e-01, edge length[km] : 5.000000e-02
+# Radius[km] : 1.000000e+00, edge length[km] : 1.000000e-01
+# Radius[km] : 3.000000e+00, edge length[km] : 3.000000e-01
+# Radius[km] : 5.000000e+00, edge length[km] : 5.000000e-01
+# Coordinate : 5.000000e+00 -5.000000e+00
+# Number of circles : 5
+# Radius[km] : 1.000000e-01, edge length[km] : 2.000000e-02
+# Radius[km] : 3.000000e-01, edge length[km] : 5.000000e-02
+# Radius[km] : 1.000000e+00, edge length[km] : 1.000000e-01
+# Radius[km] : 3.000000e+00, edge length[km] : 3.000000e-01
+# Radius[km] : 5.000000e+00, edge length[km] : 5.000000e-01
+# Coordinate : 5.000000e+00 0.000000e+00
+# Number of circles : 5
+# Radius[km] : 1.000000e-01, edge length[km] : 2.000000e-02
+# Radius[km] : 3.000000e-01, edge length[km] : 5.000000e-02
+# Radius[km] : 1.000000e+00, edge length[km] : 1.000000e-01
+# Radius[km] : 3.000000e+00, edge length[km] : 3.000000e-01
+# Radius[km] : 5.000000e+00, edge length[km] : 5.000000e-01
+# Coordinate : 5.000000e+00 5.000000e+00
+# Number of circles : 5
+# Radius[km] : 1.000000e-01, edge length[km] : 2.000000e-02
+# Radius[km] : 3.000000e-01, edge length[km] : 5.000000e-02
+# Radius[km] : 1.000000e+00, edge length[km] : 1.000000e-01
+# Radius[km] : 3.000000e+00, edge length[km] : 3.000000e-01
+# Radius[km] : 5.000000e+00, edge length[km] : 5.000000e-01
+# Read data of coast lines from input file.
+# Total number of coast line data : 1
+# Roughen coast lines
+# Roughen coast line
+# Coast line smoothing 
+# Make boundary curves
+# Relate inner boundaries to outer boundaries
+# Make all node fixed
+# Finished !!

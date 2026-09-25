@@ -1,0 +1,24 @@
+femticPy patch 0001-write_observe-frequency-precision
+
+Rationale: write_observe printed frequencies with '%.5f', rounding the Vulcan long-period bands by up to 3 % (1.26263e-4 -> 0.00013; 1.2553e-3 -> 0.00126); '%.6e' keeps 7 significant digits.
+
+--- a/src/femticPy.py
++++ b/src/femticPy.py
+@@ -382,7 +382,7 @@
+                 file.write('%d\n'%nFreq)
+                 
+                 for freq in range(nFreq):
+-                    file.write('%.5f %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e \n'%(
++                    file.write('%.6e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e \n'%(
+                                data['FREQ'][freq],
+                                data['ZXXR'][freq],data['ZXXI'][freq],data['ZXYR'][freq],data['ZXYI'][freq],
+                                data['ZYXR'][freq],data['ZYXI'][freq],data['ZYYR'][freq],data['ZYYI'][freq],
+@@ -422,7 +422,7 @@
+                 file.write('%d\n'%nFreq)
+                 
+                 for freq in range(nFreq):
+-                    file.write('%.5f %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e \n'%(
++                    file.write('%.6e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e \n'%(
+                                data_tz['FREQ'][freq],
+                                data_tz['TXR.EXP'][freq],data_tz['TXI.EXP'][freq],data_tz['TYR.EXP'][freq],data_tz['TYI.EXP'][freq],
+                                data_tz['TXVAR.EXP'][freq]**0.5,data_tz['TXVAR.EXP'][freq]**0.5,
