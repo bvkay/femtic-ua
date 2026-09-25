@@ -1,5 +1,4 @@
-# --- decision pending: raw survey EDIs stay out until Ben confirms they may live in the repo ---
-Vulcan/Processed_Data/
+# raw survey EDIs are committed on purpose (public on AusMT; students need them)
 
 # generated mesh and inversion products (large, reproducible from inputs)
 mesh/**/output.*
