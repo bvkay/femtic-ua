@@ -1,0 +1,33 @@
+Phoenix link-correctness review (adversarial, 2026-09-25)
+=========================================================
+EXERCISED (WSL2, conda-forge; see SUMMARY.md, s6_foss2023a.log, foss2023a/):
+  - femtic/Makefile.gcc_openmpi_mkl, byte-identical, with GCC 12.3.0 + OpenMPI 4.1.5 +
+    MKL 2023.1.0 (same versions as foss/2023a + imkl/2023.1.0): compiles, links, NEEDED =
+    mkl_intel_ilp64 + mkl_gnu_thread + mkl_core + libgomp + libmpi; 3-iteration inversion runs.
+    Also re-checked here: every femtic TU in OBJS passes g++ -std=gnu++17 -fsyntax-only
+    (icpx's default dialect) with -Wvla clean; only the unlisted dead file
+    InversionGaussNewtonDataSpace.cpp fails, and it is not in OBJS in any Makefile.
+  - makeTetraMesh/Makefile.gcc_mkl (WITH_MKL=0) with GCC 12.3: builds; sources contain no
+    MKL call (only omp.h / omp_set_num_threads), so no MKL is linked.
+NOT EXERCISED:
+  - EasyBuild layout itself: MKLROOT=<imkl>/mkl/2023.1.0, libs in lib/intel64 (per the
+    easybuild-easyblocks imkl.py easyblock). The Makefile passes -L$(MKLROOT)/lib/intel64,
+    so it should resolve, but only conda's flat lib/ was tested.
+  - Real GNU libgomp from EasyBuild GCCcore at link time (conda's libgomp.so.1 is an LLVM
+    libomp symlink; GNU libgomp was only LD_PRELOADed at run time).
+  - --no-as-needed interaction with EasyBuild binutils 2.40 (EasyBuild GCC does not default
+    to --as-needed, so the flag is expected to be a no-op there).
+  - femtic/Makefile.intel_oneapi and makeTetraMesh/Makefile.intel_oneapi: ENTIRELY UNTESTED.
+    No icpx / clang / mpiicpx / Intel MPI on this machine. mpiicpx is present in impi
+    2021.9 (introduced in that release). icpx front-end strictness (clang-based) is only
+    proxied by GCC -Wall -Wextra -Wpedantic: no clang-default-error categories seen
+    (no narrowing, VLA, literal-suffix, register, dynamic exception specs).
+  - Runtime on Phoenix: no rpath is embedded; job scripts must load the same modules
+    (foss/2023a imkl/2023.1.0, or intel/2023a) so LD_LIBRARY_PATH finds MKL/libgomp/libiomp5.
+FIRST COMMANDS TO RUN ON PHOENIX (each fails loudly if the assumption is wrong):
+  module load foss/2023a imkl/2023.1.0; echo $MKLROOT; ls $MKLROOT/lib/intel64/libmkl_gnu_thread.so
+  make -f Makefile.gcc_openmpi_mkl -j8 && ldd femtic | grep -E 'mkl|gomp|iomp|mpi'
+    -> fails if libiomp5 or mkl_intel_thread appears, or any "not found".
+  module purge; module load intel/2023a; which mpiicpx icpx
+  make -f Makefile.intel_oneapi -j8 && ldd femtic | grep -E 'mkl|gomp|iomp|mpi'
+    -> fails if libgomp or mkl_gnu_thread appears.

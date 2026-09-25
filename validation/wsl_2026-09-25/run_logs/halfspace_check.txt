@@ -1,0 +1,13 @@
+ freq_Hz comp rho_a min rho_a max phase min phase max
+   1e-03   xy    101.57    103.09     45.25     45.64
+   1e-03   yx    101.35    102.46     45.26     45.55
+   1e-02   xy    103.58    108.41     45.55     46.66
+   1e-02   yx    103.49    106.90     45.61     46.51
+   1e-01   xy    108.13    123.37     46.66     49.65
+   1e-01   yx    108.67    120.34     46.83     49.72
+   1e+00   xy    122.43    175.19     50.35     56.88
+   1e+00   yx    125.52    173.72     50.66     59.00
+station-freq-components checked: 288; outside tolerance (rho +-10%, phase +-3 deg): 134
+max |Zdiag|/|Zoffdiag| = 1.414e-01
+HALFSPACE CHECK: FAIL
+per-frequency failures (rho +-10%, phase +-3 deg): {'0.001 Hz': '0/72', '0.01 Hz': '0/72', '0.1 Hz': '62/72', '1 Hz': '72/72'}

@@ -1,0 +1,94 @@
+### full ldd femtic (env not activated)
+	linux-vdso.so.1 (0x00007ffeb98a0000)
+	libmkl_intel_ilp64.so.3 => /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3 (0x00007710c6c00000)
+	libmkl_gnu_thread.so.3 => /home/tara/miniforge3/envs/femtic-build/lib/libmkl_gnu_thread.so.3 (0x00007710c5000000)
+	libmkl_core.so.3 => /home/tara/miniforge3/envs/femtic-build/lib/libmkl_core.so.3 (0x00007710c0800000)
+	libgomp.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/libgomp.so.1 (0x00007710c06f0000)
+	libmpi.so.40 => /home/tara/miniforge3/envs/femtic-build/lib/libmpi.so.40 (0x00007710c0200000)
+	libstdc++.so.6 => /home/tara/miniforge3/envs/femtic-build/lib/libstdc++.so.6 (0x00007710bfe00000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007710c0607000)
+	libgcc_s.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/libgcc_s.so.1 (0x00007710c6bc6000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007710bfa00000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007710c7b49000)
+	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007710c6bc1000)
+	librt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x00007710c6bbc000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007710c7ca9000)
+	libucc.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/libucc.so.1 (0x00007710c6b6f000)
+	libopen-pal.so.80 => /home/tara/miniforge3/envs/femtic-build/lib/libopen-pal.so.80 (0x00007710c00ca000)
+	libfabric.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/libfabric.so.1 (0x00007710bfc42000)
+	libucp.so.0 => /home/tara/miniforge3/envs/femtic-build/lib/libucp.so.0 (0x00007710bf8fd000)
+	libucs.so.0 => /home/tara/miniforge3/envs/femtic-build/lib/libucs.so.0 (0x00007710c4f90000)
+	libucm.so.0 => /home/tara/miniforge3/envs/femtic-build/lib/libucm.so.0 (0x00007710c6b54000)
+	libuct.so.0 => /home/tara/miniforge3/envs/femtic-build/lib/libuct.so.0 (0x00007710c4f50000)
+	libnl-route-3.so.200 => /home/tara/miniforge3/envs/femtic-build/lib/libnl-route-3.so.200 (0x00007710bf865000)
+	libnl-3.so.200 => /home/tara/miniforge3/envs/femtic-build/lib/libnl-3.so.200 (0x00007710c4f2b000)
+	libutil.so.1 => /lib/x86_64-linux-gnu/libutil.so.1 (0x00007710c6b4d000)
+	libevent_core-2.1.so.7 => /home/tara/miniforge3/envs/femtic-build/lib/libevent_core-2.1.so.7 (0x00007710c05ce000)
+	libevent_pthreads-2.1.so.7 => /home/tara/miniforge3/envs/femtic-build/lib/libevent_pthreads-2.1.so.7 (0x00007710c6b48000)
+	libhwloc.so.15 => /home/tara/miniforge3/envs/femtic-build/lib/libhwloc.so.15 (0x00007710bf805000)
+	libpmix.so.2 => /home/tara/miniforge3/envs/femtic-build/lib/libpmix.so.2 (0x00007710bf400000)
+	librdmacm.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/./librdmacm.so.1 (0x00007710c05ac000)
+	libefa.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/./libefa.so.1 (0x00007710c6b34000)
+	libibverbs.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/./libibverbs.so.1 (0x00007710bfc1d000)
+	libatomic.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/./libatomic.so.1 (0x00007710c05a0000)
+	libxml2.so.16 => /home/tara/miniforge3/envs/femtic-build/lib/./libxml2.so.16 (0x00007710bf6bf000)
+	libz.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/././libz.so.1 (0x00007710bf6a4000)
+	libiconv.so.2 => /home/tara/miniforge3/envs/femtic-build/lib/././libiconv.so.2 (0x00007710bf2ed000)
+	libicuuc.so.78 => /home/tara/miniforge3/envs/femtic-build/lib/././libicuuc.so.78 (0x00007710bf000000)
+	libicudata.so.78 => /home/tara/miniforge3/envs/femtic-build/lib/././libicudata.so.78 (0x00007710bd000000)
+### RUNPATH
+ 0x0000000000000001 (NEEDED)             Shared library: [libmkl_intel_ilp64.so.3]
+ 0x0000000000000001 (NEEDED)             Shared library: [libmkl_gnu_thread.so.3]
+ 0x0000000000000001 (NEEDED)             Shared library: [libmkl_core.so.3]
+ 0x0000000000000001 (NEEDED)             Shared library: [libgomp.so.1]
+ 0x0000000000000001 (NEEDED)             Shared library: [libmpi.so.40]
+ 0x0000000000000001 (NEEDED)             Shared library: [libstdc++.so.6]
+ 0x0000000000000001 (NEEDED)             Shared library: [libm.so.6]
+ 0x0000000000000001 (NEEDED)             Shared library: [libgcc_s.so.1]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+ 0x000000000000000f (RPATH)              Library rpath: [/home/tara/miniforge3/envs/femtic-build/lib]
+### libgomp.so.1 resolves to:
+/home/tara/miniforge3/envs/femtic-build/lib/libomp.so
+### undefined MKL/LAPACK/BLAS/OMP symbols referenced by femtic
+GOMP_barrier@GOMP_1.0 GOMP_critical_name_end@GOMP_1.0 GOMP_critical_name_start@GOMP_1.0 GOMP_parallel@GOMP_4.0 GOMP_single_start@GOMP_1.0 LAPACKE_dbdsdc LAPACKE_dgebrd LAPACKE_dpptrf LAPACKE_dpptrs LAPACKE_dsptrd LAPACKE_dsptrf LAPACKE_dsptrs LAPACKE_dsterf MKL_Set_Num_Threads omp_get_num_threads@OMP_1.0 omp_get_thread_num@OMP_1.0 omp_set_num_threads@OMP_1.0 pardiso_64 pardisoinit 
+### forbidden libs (must be empty): iomp5 / mkl_intel_thread / mkl_intel_lp64 / not found
+(none)
+### ldd makeTetraMesh
+	libstdc++.so.6 => /home/tara/miniforge3/envs/femtic-build/lib/libstdc++.so.6 (0x0000746643600000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x0000746643517000)
+	libgomp.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/libgomp.so.1 (0x0000746643407000)
+	libgcc_s.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/libgcc_s.so.1 (0x000074664396a000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x0000746643000000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x0000746643963000)
+	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x000074664395e000)
+	librt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x0000746643959000)
+### ldd makeMtr
+	libstdc++.so.6 => /home/tara/miniforge3/envs/femtic-build/lib/libstdc++.so.6 (0x00007ca302e00000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007ca303163000)
+	libgcc_s.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/libgcc_s.so.1 (0x00007ca303135000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007ca302a00000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007ca303130000)
+### ldd TetGen2Femtic
+	libstdc++.so.6 => /home/tara/miniforge3/envs/femtic-build/lib/libstdc++.so.6 (0x000079582fa00000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x000079582fdb3000)
+	libgcc_s.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/libgcc_s.so.1 (0x000079582fd85000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x000079582f600000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x000079582fd80000)
+### ldd makeDHexaMesh
+	libstdc++.so.6 => /home/tara/miniforge3/envs/femtic-build/lib/libstdc++.so.6 (0x0000737802200000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x0000737802117000)
+	libgcc_s.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/libgcc_s.so.1 (0x00007378020e9000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x0000737801e00000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007378024cd000)
+### ldd mergeResultOfFEMTIC
+	libstdc++.so.6 => /home/tara/miniforge3/envs/femtic-build/lib/libstdc++.so.6 (0x000070b109a00000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x000070b109d2d000)
+	libgcc_s.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/libgcc_s.so.1 (0x000070b109cff000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x000070b109600000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x000070b109cfa000)
+### ldd tetgen
+	libstdc++.so.6 => /home/tara/miniforge3/envs/femtic-build/lib/libstdc++.so.6 (0x000075b517800000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x000075b517b39000)
+	libgcc_s.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/libgcc_s.so.1 (0x000075b517b0b000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x000075b517400000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x000075b517b06000)

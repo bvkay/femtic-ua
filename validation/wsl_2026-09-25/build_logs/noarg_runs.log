@@ -1,0 +1,89 @@
+=== installed
+total 3476
+drwxr-xr-x  2 tara tara    4096 Sep 25 11:57 .
+drwxr-xr-x 11 tara tara    4096 Sep 25 11:53 ..
+-rwxr-xr-x  1 tara tara  113528 Sep 25 11:57 TetGen2Femtic
+-rwxr-xr-x  1 tara tara 1569888 Sep 25 11:57 femtic
+-rwxr-xr-x  1 tara tara  243024 Sep 25 11:57 makeDHexaMesh
+-rwxr-xr-x  1 tara tara   63624 Sep 25 11:57 makeMtr
+-rwxr-xr-x  1 tara tara  472216 Sep 25 11:57 makeTetraMesh
+-rwxr-xr-x  1 tara tara  175872 Sep 25 11:57 mergeResultOfFEMTIC
+-rwxr-xr-x  1 tara tara  898976 Sep 25 11:57 tetgen
+/home/tara/femtic_wsl/bin/TetGen2Femtic:       ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, not stripped
+/home/tara/femtic_wsl/bin/femtic:              ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, not stripped
+/home/tara/femtic_wsl/bin/makeDHexaMesh:       ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, not stripped
+/home/tara/femtic_wsl/bin/makeMtr:             ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, not stripped
+/home/tara/femtic_wsl/bin/makeTetraMesh:       ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, not stripped
+/home/tara/femtic_wsl/bin/mergeResultOfFEMTIC: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, not stripped
+/home/tara/femtic_wsl/bin/tetgen:              ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, not stripped
+=== femtic_ldd.txt
+	libmkl_intel_ilp64.so.3 => /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3 (0x000073d5ec000000)
+	libmkl_gnu_thread.so.3 => /home/tara/miniforge3/envs/femtic-build/lib/libmkl_gnu_thread.so.3 (0x000073d5ea400000)
+	libmkl_core.so.3 => /home/tara/miniforge3/envs/femtic-build/lib/libmkl_core.so.3 (0x000073d5e5c00000)
+	libgomp.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/libgomp.so.1 (0x000073d5ecfe9000)
+	libmpi.so.40 => /home/tara/miniforge3/envs/femtic-build/lib/libmpi.so.40 (0x000073d5e5800000)
+=== femtic (no args, clean env, cwd=/tmp/tmp.0XJ3qgiY0M)
+[exit=1]
+=== makeTetraMesh (no args, clean env, cwd=/tmp/tmp.0XJ3qgiY0M)
+You must specify  arguments as below
+ makeTetraMesh -stp [Step ID]
+ <Step>
+  1 : Calculate boudary curve of the earth surface
+  2 : Calculate surface mesh of the earth
+  3 : Calculate surface mesh with topography
+  4 : Make PLCs with surface meshes of the eatrh
+[exit=1]
+=== makeMtr (no args, clean env, cwd=/tmp/tmp.0XJ3qgiY0M)
+You must specify node file name !!
+[exit=1]
+=== TetGen2Femtic (no args, clean env, cwd=/tmp/tmp.0XJ3qgiY0M)
+You must specify root name of tetgen file
+[exit=1]
+=== makeDHexaMesh (no args, clean env, cwd=/tmp/tmp.0XJ3qgiY0M)
+Start Mesh Generation. Version v2.0.0
+Read Input file.
+File open error : meshgen.inp !!
+[exit=1]
+=== mergeResultOfFEMTIC (no args, clean env, cwd=/tmp/tmp.0XJ3qgiY0M)
+You must specify iteration number and process number !!
+[exit=1]
+=== tetgen (no args, clean env, cwd=/tmp/tmp.0XJ3qgiY0M)
+  tetgen [-pYrq_Aa_miO_S_T_XMwcdzfenvgkJBNEFICQVh] input_file
+    -p  Tetrahedralizes a piecewise linear complex (PLC).
+    -Y  Preserves the input surface mesh (does not modify it).
+    -r  Reconstructs a previously generated mesh.
+    -q  Refines mesh (to improve mesh quality).
+    -R  Mesh coarsening (to reduce the mesh elements).
+    -A  Assigns attributes to tetrahedra in different regions.
+    -a  Applies a maximum tetrahedron volume constraint.
+    -m  Applies a mesh sizing function.
+    -i  Inserts a list of additional points.
+    -O  Specifies the level of mesh optimization.
+    -S  Specifies maximum number of added points.
+    -T  Sets a tolerance for coplanar test (default 1e-8).
+    -X  Suppresses use of exact arithmetic.
+    -M  No merge of coplanar facets or very close vertices.
+[exit=0]
+=== femtic under mpirun -np 2 (env activated)
+--------------------------------------------------------------------------
+prterun detected that one or more processes exited with non-zero status,
+thus causing the job to be terminated. The first process to do so was:
+
+   Process name: [prterun-Tara-1718@1,0]
+   Exit code:    1
+--------------------------------------------------------------------------
+[exit=1]
+=== files left in temp dir
+total 104
+drwx------  2 tara tara  4096 Sep 25 11:57 .
+drwxrwxrwt 10 root root 61440 Sep 25 11:57 ..
+-rw-r--r--  1 tara tara   132 Sep 25 11:57 femtic_0.log
+-rw-r--r--  1 tara tara   132 Sep 25 11:57 femtic_1.log
+-rw-r--r--  1 tara tara    42 Sep 25 11:57 out_TetGen2Femtic.txt
+-rw-r--r--  1 tara tara     0 Sep 25 11:57 out_femtic.txt
+-rw-r--r--  1 tara tara    88 Sep 25 11:57 out_makeDHexaMesh.txt
+-rw-r--r--  1 tara tara    35 Sep 25 11:57 out_makeMtr.txt
+-rw-r--r--  1 tara tara   262 Sep 25 11:57 out_makeTetraMesh.txt
+-rw-r--r--  1 tara tara    56 Sep 25 11:57 out_mergeResultOfFEMTIC.txt
+-rw-r--r--  1 tara tara   355 Sep 25 11:57 out_mpirun.txt
+-rw-r--r--  1 tara tara  1774 Sep 25 11:57 out_tetgen.txt

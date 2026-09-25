@@ -1,0 +1,22 @@
+exit=0
+     Iter#  Retrial#          Alpha           Damp      Roughness         Misfit            RMS        ObjFunc
+         0         0   1.000000e+00   5.000000e-01   0.000000e+00   5.752642e+03   2.234639e+00   5.752642e+03
+         1         0   1.000000e+00   5.000000e-01   1.056015e+02   2.308638e+03   1.415636e+00   2.414240e+03
+         2         0   1.000000e+00   5.000000e-01   2.535414e+02   1.293302e+03   1.059555e+00   1.546843e+03
+--- MKL entry points bound at run time (rank 0), symbol -> library:
+LAPACKE_d_nancheck -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+LAPACKE_dge_nancheck -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+LAPACKE_dsp_nancheck -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+LAPACKE_dsptrf -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+LAPACKE_dsptrf_work -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+LAPACKE_dsptrs -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+LAPACKE_dsptrs_work -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+LAPACKE_get_nancheck -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+MKL_Detect_Cpu_Global_Lock -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_core.so.3
+MKL_PROGRESS -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+MKL_PROGRESS_ -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+MKL_Set_Num_Threads -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+pardiso_64 -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+pardisoinit -> /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+--- any mkl_intel_thread / iomp5 / libomp loaded? (must be none)
+(none)

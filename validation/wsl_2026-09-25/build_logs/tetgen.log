@@ -1,0 +1,6 @@
+g++ -O0 -c predicates.cxx
+g++ -O3 -Wl,-rpath,/home/tara/miniforge3/envs/femtic-build/lib -o tetgen tetgen.cxx predicates.o -lm
+
+real	0m10.573s
+user	0m10.878s
+sys	0m0.213s

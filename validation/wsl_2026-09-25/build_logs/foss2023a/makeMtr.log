@@ -1,0 +1,4 @@
+g++ -O2 -DNDEBUG -c ObservationPoint.cpp -o ObservationPoint.o
+g++ -O2 -DNDEBUG -c ObservationLine.cpp -o ObservationLine.o
+g++ -O2 -DNDEBUG -c main.cpp -o main.o
+g++ -O2 -DNDEBUG ObservationPoint.o ObservationLine.o main.o -Wl,-rpath,/home/tara/miniforge3/envs/femtic-foss2023a/lib  -o makeMtr

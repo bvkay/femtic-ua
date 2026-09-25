@@ -1,0 +1,251 @@
+copied femtic: 607 files
+copied makeTetraMesh: 55 files
+copied makeMtr: 9 files
+copied TetGen2Femtic: 8 files
+copied makeDHexaMesh: 27 files
+copied mergeResultOfFEMTIC: 4 files
+copied tetgen: 8 files
+copied ported: 10 files
+RUNNING: mamba create -y -n femtic-build -c conda-forge compilers openmpi mkl-devel mkl-include make cmake
+
+
+Transaction
+
+  Prefix: /home/tara/miniforge3/envs/femtic-build
+
+  Updating specs:
+
+   - compilers
+   - openmpi
+   - mkl-devel
+   - mkl-include
+   - make
+   - cmake
+
+
+  Package                          Version  Build                  Channel           Size
+───────────────────────────────────────────────────────────────────────────────────────────
+  Install:
+───────────────────────────────────────────────────────────────────────────────────────────
+
+  + _openmp_mutex                      4.5  8_kmp_llvm             conda-forge        8kB
+  + binutils_impl_linux-64          2.46.1  default_hfdba357_102   conda-forge        4MB
+  + bzip2                            1.0.8  hda65f42_10            conda-forge      258kB
+  + c-ares                          1.34.8  hebe6cf0_2             conda-forge      229kB
+  + c-compiler                       2.0.0  ha29393d_0             conda-forge        7kB
+  + ca-certificates              2026.7.22  hbd8a1cb_0             conda-forge      132kB
+  + cmake                            4.4.3  hff7ac6b_0             conda-forge       26MB
+  + compilers                        2.0.0  ha770c72_0             conda-forge        7kB
+  + conda-gcc-specs                 15.3.0  h8846f6e_7             conda-forge       33kB
+  + cxx-compiler                     2.0.0  hdab9b82_0             conda-forge        7kB
+  + fortran-compiler                 2.0.0  h0f4f740_0             conda-forge        7kB
+  + gcc                             15.3.0  hc6a0c74_7             conda-forge       30kB
+  + gcc_impl_linux-64               15.3.0  h6ad849d_7             conda-forge       84MB
+  + gfortran                        15.3.0  hc6a0c74_7             conda-forge       29kB
+  + gfortran_impl_linux-64          15.3.0  h27ced10_7             conda-forge       21MB
+  + gxx                             15.3.0  hc6a0c74_7             conda-forge       29kB
+  + gxx_impl_linux-64               15.3.0  h90d9265_7             conda-forge       17MB
+  + icu                               78.3  py310h44b86e0_2        conda-forge       14MB
+  + kernel-headers_linux-64         6.12.0  he073ed8_6             conda-forge     Cached
+  + keyutils                         1.6.3  h7cc23a3_1             conda-forge      135kB
+  + krb5                            1.22.2  hbc21106_2             conda-forge        1MB
+  + ld_impl_linux-64                2.46.1  default_hbd61a6d_102   conda-forge      745kB
+  + libcap                            2.78  h084b8d7_1             conda-forge      124kB
+  + libcurl                         8.22.0  ha042cf0_0             conda-forge      500kB
+  + libedit                   3.1.20250104  pl5321h373387f_1       conda-forge      135kB
+  + libev                             4.33  h280c20c_3             conda-forge       43kB
+  + libevent                        2.1.12  h5348a74_2             conda-forge      431kB
+  + libexpat                         2.8.4  hd2095e1_0             conda-forge       78kB
+  + libfabric                        2.6.0  ha770c72_0             conda-forge       14kB
+  + libfabric1                       2.6.0  h6b3ec72_0             conda-forge      735kB
+  + libgcc                          16.2.0  ha9f2e26_7             conda-forge        1MB
+  + libgcc-devel_linux-64           15.3.0  h2b852eb_107           conda-forge        3MB
+  + libgfortran                     16.2.0  h69a702a_7             conda-forge       29kB
+  + libgfortran5                    16.2.0  h6b99dfc_7             conda-forge        3MB
+  + libgomp                         16.2.0  he0feb66_7             conda-forge      641kB
+  + libhwloc                        2.13.0  default_he001693_1000  conda-forge     Cached
+  + libiconv                          1.18  h0cb94f2_3             conda-forge      789kB
+  + liblzma                          5.8.3  hb03c661_1             conda-forge      113kB
+  + libnghttp2                      1.68.1  h74cf4be_1             conda-forge      650kB
+  + libnl                           3.11.0  hb03c661_1             conda-forge      735kB
+  + libpmix                          5.0.8  h31fc519_4             conda-forge      731kB
+  + libpsl                          0.23.1  hd9e3e90_1             conda-forge       73kB
+  + libsanitizer                    15.3.0  h54950a5_7             conda-forge        8MB
+  + libssh2                         1.11.1  h6154650_1             conda-forge      306kB
+  + libstdcxx                       16.2.0  h934c35e_7             conda-forge        7MB
+  + libstdcxx-devel_linux-64        15.3.0  hb2c5482_107           conda-forge       21MB
+  + libsystemd0                        262  h26e0ef7_0             conda-forge      573kB
+  + libudev1                           262  h26e0ef7_0             conda-forge      185kB
+  + libuv                           1.52.1  h280c20c_1             conda-forge      420kB
+  + libxml2                         2.15.4  h7df9aa5_0             conda-forge       47kB
+  + libxml2-16                      2.15.4  hf3af7cc_0             conda-forge      569kB
+  + libzlib                          1.3.2  h25fd6f3_3             conda-forge       64kB
+  + llvm-openmp                     23.1.2  h7148c6a_0             conda-forge        6MB
+  + make                             4.4.1  hb03c661_3             conda-forge      511kB
+  + mkl                           2026.1.0  hd2095e1_245           conda-forge      142MB
+  + mkl-devel                     2026.1.0  ha770c72_245           conda-forge       40kB
+  + mkl-include                   2026.1.0  ha770c72_245           conda-forge      789kB
+  + mpi                              1.0.1  openmpi                conda-forge        7kB
+  + ncurses                            6.6  hdb14827_1             conda-forge      911kB
+  + openmpi                         5.0.10  hee33aa4_2             conda-forge        4MB
+  + openssl                          3.6.4  h781a0a9_0             conda-forge        3MB
+  + rdma-core                         65.0  h7b4f2e6_0             conda-forge        1MB
+  + rhash                            1.4.6  hb03c661_2             conda-forge      195kB
+  + sysroot_linux-64                  2.39  hc4b9eeb_6             conda-forge     Cached
+  + tbb                           2023.1.0  hfd44327_0             conda-forge      187kB
+  + tzdata                           2026c  h151e31d_0             conda-forge      119kB
+  + ucc                              1.8.0  h539fd1b_2             conda-forge       13MB
+  + ucx                             1.22.0  h6cc3e34_1             conda-forge        9MB
+  + zstd                             1.5.7  hb78ec9c_7             conda-forge      601kB
+
+  Summary:
+
+  Install: 69 packages
+
+  Total download: 401MB
+
+───────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+Transaction starting
+Linking mkl-include-2026.1.0-ha770c72_245
+Linking libzlib-1.3.2-h25fd6f3_3
+Linking llvm-openmp-23.1.2-h7148c6a_0
+Linking libgomp-16.2.0-he0feb66_7
+Linking zstd-1.5.7-hb78ec9c_7
+Linking _openmp_mutex-4.5-8_kmp_llvm
+Linking ld_impl_linux-64-2.46.1-default_hbd61a6d_102
+Linking libgcc-16.2.0-ha9f2e26_7
+Linking libiconv-1.18-h0cb94f2_3
+Linking libev-4.33-h280c20c_3
+Linking c-ares-1.34.8-hebe6cf0_2
+Linking keyutils-1.6.3-h7cc23a3_1
+Linking libcap-2.78-h084b8d7_1
+Linking rhash-1.4.6-hb03c661_2
+Linking ncurses-6.6-hdb14827_1
+Linking libuv-1.52.1-h280c20c_1
+Linking liblzma-5.8.3-hb03c661_1
+Linking libexpat-2.8.4-hd2095e1_0
+Linking bzip2-1.0.8-hda65f42_10
+Linking libnl-3.11.0-hb03c661_1
+Linking libgfortran5-16.2.0-h6b99dfc_7
+Linking libstdcxx-16.2.0-h934c35e_7
+Linking make-4.4.1-hb03c661_3
+Linking libudev1-262-h26e0ef7_0
+Linking libsystemd0-262-h26e0ef7_0
+Linking libedit-3.1.20250104-pl5321h373387f_1
+Linking libgfortran-16.2.0-h69a702a_7
+Linking icu-78.3-py310h44b86e0_2
+Linking libsanitizer-15.3.0-h54950a5_7
+Linking rdma-core-65.0-h7b4f2e6_0
+Linking libxml2-16-2.15.4-hf3af7cc_0
+Linking libpsl-0.23.1-hd9e3e90_1
+Linking ucx-1.22.0-h6cc3e34_1
+
+To enable CUDA support, UCX requires the CUDA Runtime library (libcudart).
+The library can be installed with the appropriate command below:
+
+* For CUDA 12, run:    conda install cuda-cudart cuda-version=12
+* For CUDA 13, run:    conda install cuda-cudart cuda-version=13
+
+If any of the packages you requested use CUDA then CUDA should already
+have been installed for you.
+
+
+Linking libfabric1-2.6.0-h6b3ec72_0
+Linking libxml2-2.15.4-h7df9aa5_0
+Linking ucc-1.8.0-h539fd1b_2
+setting libfabric environment variables for conda-build
+FI_PROVIDER=tcp
+
+To enable CUDA support, UCX requires the CUDA Runtime library (libcudart).
+The library can be installed with the appropriate command below:
+
+* For CUDA 12, run:    conda install cuda-cudart cuda-version=12
+* For CUDA 13, run:    conda install cuda-cudart cuda-version=13
+
+If any of the packages you requested use CUDA then CUDA should already
+have been installed for you.
+
+
+To enable CUDA support, please follow UCX's instruction above.
+
+To additionally enable NCCL support, run:    conda install nccl
+
+
+Linking libfabric-2.6.0-ha770c72_0
+Linking libhwloc-2.13.0-default_he001693_1000
+Linking tbb-2023.1.0-hfd44327_0
+Linking mkl-2026.1.0-hd2095e1_245
+Linking mkl-devel-2026.1.0-ha770c72_245
+Linking mpi-1.0.1-openmpi
+Linking libgcc-devel_linux-64-15.3.0-h2b852eb_107
+Linking libstdcxx-devel_linux-64-15.3.0-hb2c5482_107
+Linking ca-certificates-2026.7.22-hbd8a1cb_0
+Linking kernel-headers_linux-64-6.12.0-he073ed8_6
+Linking tzdata-2026c-h151e31d_0
+Linking sysroot_linux-64-2.39-hc4b9eeb_6
+Linking openssl-3.6.4-h781a0a9_0
+Linking binutils_impl_linux-64-2.46.1-default_hfdba357_102
+Linking libssh2-1.11.1-h6154650_1
+Linking libnghttp2-1.68.1-h74cf4be_1
+Linking krb5-1.22.2-hbc21106_2
+Linking libevent-2.1.12-h5348a74_2
+Linking gcc_impl_linux-64-15.3.0-h6ad849d_7
+Linking libcurl-8.22.0-ha042cf0_0
+Linking libpmix-5.0.8-h31fc519_4
+Linking conda-gcc-specs-15.3.0-h8846f6e_7
+Linking gxx_impl_linux-64-15.3.0-h90d9265_7
+Linking gfortran_impl_linux-64-15.3.0-h27ced10_7
+Linking cmake-4.4.3-hff7ac6b_0
+Linking openmpi-5.0.10-hee33aa4_2
+setting libfabric environment variables for conda-build
+FI_PROVIDER=tcp
+setting openmpi environment variables for conda-build
+
+To enable CUDA support, UCX requires the CUDA Runtime library (libcudart).
+The library can be installed with the appropriate command below:
+
+* For CUDA 12, run:    conda install cuda-cudart cuda-version=12
+* For CUDA 13, run:    conda install cuda-cudart cuda-version=13
+
+If any of the packages you requested use CUDA then CUDA should already
+have been installed for you.
+
+
+To enable CUDA support, please follow UCX's instruction above.
+
+To additionally enable NCCL support, run:    conda install nccl
+
+
+On Linux, Open MPI is built with CUDA awareness but it is disabled by default.
+To enable it, please set the environment variable
+OMPI_MCA_opal_cuda_support=true
+before launching your MPI processes.
+Equivalently, you can set the MCA parameter in the command line:
+mpiexec --mca opal_cuda_support 1 ...
+Note that you might also need to set UCX_MEMTYPE_CACHE=n for CUDA awareness via
+UCX. Please consult UCX documentation for further details.
+
+
+Linking gcc-15.3.0-hc6a0c74_7
+Linking gxx-15.3.0-hc6a0c74_7
+Linking gfortran-15.3.0-hc6a0c74_7
+Linking c-compiler-2.0.0-ha29393d_0
+Linking cxx-compiler-2.0.0-hdab9b82_0
+Linking fortran-compiler-2.0.0-h0f4f740_0
+Linking compilers-2.0.0-ha770c72_0
+
+Transaction finished
+
+
+To activate this environment, use:
+
+    mamba activate femtic-build
+
+Or to execute a single command in this environment, use:
+
+    mamba run -n femtic-build mycommand
+
+EXIT=0

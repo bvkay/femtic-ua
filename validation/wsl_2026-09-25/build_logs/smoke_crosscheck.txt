@@ -1,0 +1,17 @@
+# femtic INV_MT_01/Tetra, ITERATION 0 3, 2 MPI ranks x 4 threads. Compares three runs:
+#  inv3_llvmomp  = main build (gcc15.3/ompi5.0.10/mkl2026.1), default conda runtime (libgomp.so.1 -> LLVM libomp)
+#  inv3_gnugomp  = main build, LD_PRELOAD genuine GNU libgomp.so.1.0.0 (foss-faithful runtime)
+#  inv3_foss2023a= matched build (gcc12.3/ompi4.1.5/mkl2023.1), genuine GNU libgomp
+# Fails if: any run exits non-zero, RMS does not decrease, or numeric outputs differ by more than print rounding.
+resistivity_block_iter3.dat  llvmomp-vs-gnugomp:same  main(gcc15/mkl2026)-vs-foss2023a(gcc12/mkl2023):same
+result_0_iter3.csv  llvmomp-vs-gnugomp:same  main(gcc15/mkl2026)-vs-foss2023a(gcc12/mkl2023):DIFF
+result_1_iter3.csv  llvmomp-vs-gnugomp:same  main(gcc15/mkl2026)-vs-foss2023a(gcc12/mkl2023):same
+Sensitivity.iter2  llvmomp-vs-gnugomp:DIFF  main(gcc15/mkl2026)-vs-foss2023a(gcc12/mkl2023):DIFF
+femtic.cnv  llvmomp-vs-gnugomp:same  main(gcc15/mkl2026)-vs-foss2023a(gcc12/mkl2023):same
+result_0_iter3.csv [inv3_gnugomp vs inv3_foss2023a]: 2376 values, 1 differ, max rel diff 8.16e-07
+[inv3_llvmomp vs inv3_gnugomp] header bytes 0-243: False
+   body: 34559 float32 values, 0 differ, max rel diff 0.00e+00
+[inv3_gnugomp vs inv3_foss2023a] header bytes 0-243: False
+   body: 34559 float32 values, 0 differ, max rel diff 0.00e+00
+# NOTE: Sensitivity.iter2 bytes 0-243 (the 80-char EnSight header records) differ between every pair of runs because upstream writes
+# an uninitialised char[80] buffer after the 'Sensitivity' string - garbage padding, not data. The 34559 float32 data values are identical.

@@ -1,0 +1,8 @@
+g++ -O2 -DNDEBUG -c TopographicData.cpp -o TopographicData.o
+g++ -O2 -DNDEBUG -c MeshData.cpp -o MeshData.o
+g++ -O2 -DNDEBUG -c main.cpp -o main.o
+g++ -O2 -DNDEBUG TopographicData.o MeshData.o main.o -Wl,-rpath,/home/tara/miniforge3/envs/femtic-build/lib  -o TetGen2Femtic
+
+real	0m2.673s
+user	0m2.181s
+sys	0m0.152s

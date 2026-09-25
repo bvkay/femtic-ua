@@ -1,0 +1,6 @@
+g++ -O2 -DNDEBUG -c mergeResult.cpp -o mergeResult.o
+g++ -O2 -DNDEBUG mergeResult.o -Wl,-rpath,/home/tara/miniforge3/envs/femtic-build/lib  -o mergeResultOfFEMTIC
+
+real	0m2.700s
+user	0m2.476s
+sys	0m0.149s

@@ -1,0 +1,75 @@
+control.dat:
+NUM_THREADS
+4
+MESH_TYPE
+1
+OUTPUT_PARAM_VTK
+3
+0 4 5
+DISTORTION
+0
+OUTPUT_OPTION
+0 0
+TRADE_OFF_PARAM
+1.0
+ITERATION
+0 0
+RETRIAL
+2
+CONVERGE
+1.0
+STEP_LENGTH
+0.5 0.1 1.0
+3
+0.5 1.25
+END
+cmd: mpirun -np 2 --bind-to none  /home/tara/femtic_wsl/bin/femtic
+exit=0
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:04.55
+	Maximum resident set size (kbytes): 332856
+--- femtic.cnv
+     Iter#  Retrial#          Alpha           Damp      Roughness         Misfit            RMS        ObjFunc
+         0         0   1.000000e+00   5.000000e-01   0.000000e+00   5.752642e+03   2.234639e+00   5.752642e+03
+--- femtic_0.log tail
+# Start 3D forward calculation with 0th order 3D edge-based element.( 2 sec )
+# Number of equation = 40919, Number of equation after degeneration = 39254
+# Calculating EM field of the boundary planes with 2D forward analysis.        
+#-----------------------------[ Boundary Plane 0 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 274, Number of equation after degeneration = 242
+# Set values of matrix and right hand side vector. ( 2 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 1 Plane : 0. ( 2 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 1 Plane : 0. ( 2 sec )
+#-----------------------------[ Boundary Plane 1 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 267, Number of equation after degeneration = 234
+# Set values of matrix and right hand side vector. ( 2 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 1 Plane : 1. ( 2 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 1 Plane : 1. ( 2 sec )
+#------------------------------------------------------------------------------
+# Set values of matrix and right hand side vector. ( 2 sec )
+# Numerical factorization phase of matrix solver for 3D forward calculation. Polarization : 1.( 2 sec )
+# Solve phase of matrix solver for 3D forward calculation. Polarization : 1.( 2 sec )
+#==============================================================================
+# Calculate response functions. ( 3 sec )
+#==============================================================================
+# Release memory of coefficient matrix and sparse solver. ( 3 sec )
+# Reach maximum iteration number.
+# End femtic ( 3 sec )
+--- files
+BlockIDs
+Mesh.geo
+Resistivity.iter0
+control.dat
+femtic.cnv
+femtic_0.log
+femtic_1.log
+mesh.dat
+obs_loc.vtk
+observe.dat
+resistivity_block_iter0.dat
+result.case
+result_0_iter0.csv
+result_1_iter0.csv
+stdout.txt
+time.txt

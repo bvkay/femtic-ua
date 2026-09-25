@@ -1,0 +1,14 @@
+=== femtic 11:55:25
+femtic rc=0
+=== makeTetraMesh 11:55:30
+makeTetraMesh rc=0
+=== makeMtr 11:55:35
+makeMtr rc=0
+=== TetGen2Femtic 11:55:36
+TetGen2Femtic rc=0
+=== makeDHexaMesh 11:55:39
+makeDHexaMesh rc=0
+=== mergeResultOfFEMTIC 11:55:42
+mergeResultOfFEMTIC rc=0
+=== tetgen 11:55:45
+tetgen rc=0

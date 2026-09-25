@@ -1,0 +1,7 @@
+You must specify  arguments as below
+ makeTetraMesh -stp [Step ID]
+ <Step>
+  1 : Calculate boudary curve of the earth surface
+  2 : Calculate surface mesh of the earth
+  3 : Calculate surface mesh with topography
+  4 : Make PLCs with surface meshes of the eatrh

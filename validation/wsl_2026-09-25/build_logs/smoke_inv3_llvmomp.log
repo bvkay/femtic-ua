@@ -1,0 +1,109 @@
+control.dat:
+NUM_THREADS
+4
+MESH_TYPE
+1
+OUTPUT_PARAM_VTK
+3
+0 4 5
+DISTORTION
+0
+OUTPUT_OPTION
+0 0
+TRADE_OFF_PARAM
+1.0
+ITERATION
+0 3
+RETRIAL
+2
+CONVERGE
+1.0
+STEP_LENGTH
+0.5 0.1 1.0
+3
+0.5 1.25
+END
+cmd: mpirun -np 2 --bind-to none  /home/tara/femtic_wsl/bin/femtic
+OpenMP/MKL libs mapped in pid 1978:
+/home/tara/miniforge3/envs/femtic-build/lib/libmkl_avx2.so.3
+/home/tara/miniforge3/envs/femtic-build/lib/libmkl_core.so.3
+/home/tara/miniforge3/envs/femtic-build/lib/libmkl_gnu_thread.so.3
+/home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+/home/tara/miniforge3/envs/femtic-build/lib/libmkl_vml_avx2.so.3
+/home/tara/miniforge3/envs/femtic-build/lib/libomp.so
+exit=0
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:15.93
+	Maximum resident set size (kbytes): 565480
+--- femtic.cnv
+     Iter#  Retrial#          Alpha           Damp      Roughness         Misfit            RMS        ObjFunc
+         0         0   1.000000e+00   5.000000e-01   0.000000e+00   5.752642e+03   2.234639e+00   5.752642e+03
+         1         0   1.000000e+00   5.000000e-01   9.935719e+01   2.331502e+03   1.422629e+00   2.430859e+03
+         2         0   1.000000e+00   5.000000e-01   2.410951e+02   1.309987e+03   1.066369e+00   1.551083e+03
+         3         0   1.000000e+00   5.000000e-01   3.404758e+02   9.912418e+02   9.276060e-01   1.331718e+03
+--- femtic_0.log tail
+# Number of equation = 40919, Number of equation after degeneration = 39254
+# Calculating EM field of the boundary planes with 2D forward analysis.        
+#-----------------------------[ Boundary Plane 0 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 274, Number of equation after degeneration = 242
+# Set values of matrix and right hand side vector. ( 14 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 1 Plane : 0. ( 14 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 1 Plane : 0. ( 14 sec )
+#-----------------------------[ Boundary Plane 1 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 267, Number of equation after degeneration = 234
+# Set values of matrix and right hand side vector. ( 14 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 1 Plane : 1. ( 14 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 1 Plane : 1. ( 14 sec )
+#------------------------------------------------------------------------------
+# Set values of matrix and right hand side vector. ( 14 sec )
+# Numerical factorization phase of matrix solver for 3D forward calculation. Polarization : 1.( 14 sec )
+# Solve phase of matrix solver for 3D forward calculation. Polarization : 1.( 15 sec )
+#==============================================================================
+# Calculate response functions. ( 15 sec )
+#==============================================================================
+# Release memory of coefficient matrix and sparse solver. ( 15 sec )
+# Factor of step length damping change from 0.5 to 0.625.
+# Reach maximum iteration number.
+# End femtic ( 15 sec )
+--- files
+BlockIDs
+Mesh.geo
+NormalizedSensitivity.iter0
+NormalizedSensitivity.iter1
+NormalizedSensitivity.iter2
+NormalizedSensitivityDensity.iter0
+NormalizedSensitivityDensity.iter1
+NormalizedSensitivityDensity.iter2
+Resistivity.iter0
+Resistivity.iter1
+Resistivity.iter2
+Resistivity.iter3
+Sensitivity.iter0
+Sensitivity.iter1
+Sensitivity.iter2
+SensitivityDensity.iter0
+SensitivityDensity.iter1
+SensitivityDensity.iter2
+control.dat
+femtic.cnv
+femtic_0.log
+femtic_1.log
+mesh.dat
+obs_loc.vtk
+observe.dat
+resistivity_block_iter0.dat
+resistivity_block_iter1.dat
+resistivity_block_iter2.dat
+resistivity_block_iter3.dat
+result.case
+result_0_iter0.csv
+result_0_iter1.csv
+result_0_iter2.csv
+result_0_iter3.csv
+result_1_iter0.csv
+result_1_iter1.csv
+result_1_iter2.csv
+result_1_iter3.csv
+stdout.txt
+time.txt

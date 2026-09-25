@@ -1,0 +1,5 @@
+	libmkl_intel_ilp64.so.3 => /home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3 (0x000073d5ec000000)
+	libmkl_gnu_thread.so.3 => /home/tara/miniforge3/envs/femtic-build/lib/libmkl_gnu_thread.so.3 (0x000073d5ea400000)
+	libmkl_core.so.3 => /home/tara/miniforge3/envs/femtic-build/lib/libmkl_core.so.3 (0x000073d5e5c00000)
+	libgomp.so.1 => /home/tara/miniforge3/envs/femtic-build/lib/libgomp.so.1 (0x000073d5ecfe9000)
+	libmpi.so.40 => /home/tara/miniforge3/envs/femtic-build/lib/libmpi.so.40 (0x000073d5e5800000)

@@ -1,0 +1,31 @@
+# --- decision pending: raw survey EDIs stay out until Ben confirms they may live in the repo ---
+Vulcan/Processed_Data/
+
+# generated mesh and inversion products (large, reproducible from inputs)
+mesh/**/output.*
+mesh/**/*.node
+mesh/**/*.ele
+mesh/**/*.face
+mesh/**/*.edge
+mesh/**/*.poly
+mesh/**/*.mtr
+mesh/**/*.vtk
+mesh/**/mesh.dat
+**/resistivity_block_iter[1-9]*.dat
+**/sensMat*
+**/ooc_temp*
+**/result_*_iter*.csv
+**/*.geo
+**/Resistivity.iter*
+**/Sensitivity*.iter*
+**/femtic_[0-9]*.log
+
+# python / jupyter / editors
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+*.egg-info/
+.vscode/
+.idea/
+Thumbs.db

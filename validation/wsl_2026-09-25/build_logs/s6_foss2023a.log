@@ -1,0 +1,38 @@
+RUNNING: mamba create -y -n femtic-foss2023a -c conda-forge gcc=12.3 gxx=12.3 openmpi=4.1.5 mkl-devel=2023.1 mkl-include=2023.1 make
+env rc=0
+g++: g++ (conda-forge gcc 12.3.0-13) 12.3.0
+mpicxx: x86_64-conda-linux-gnu-c++ (conda-forge gcc 12.3.0-13) 12.3.0
+ompi:                 Open MPI: 4.1.5
+_openmp_mutex               4.5              8_kmp_llvm             conda-forge
+gxx                         12.3.0           h915e2ae_13            conda-forge
+llvm-openmp                 23.1.2           h7148c6a_0             conda-forge
+mkl                         2023.1.0         h84fe81f_48680         conda-forge
+mkl-devel                   2023.1.0         ha770c72_48681         conda-forge
+openmpi                     4.1.5            h414af15_101           conda-forge
+femtic rc=0 warnings=25 errors=0
+makeTetraMesh rc=0 warnings=0 errors=0
+makeMtr rc=0 warnings=0 errors=0
+TetGen2Femtic rc=0 warnings=0 errors=0
+makeDHexaMesh rc=0 warnings=0 errors=0
+mergeResultOfFEMTIC rc=0 warnings=0 errors=0
+tetgen rc=0
+installed 7 binaries
+	libmkl_intel_ilp64.so.2 => /home/tara/miniforge3/envs/femtic-foss2023a/lib/libmkl_intel_ilp64.so.2 (0x0000797947a00000)
+	libmkl_gnu_thread.so.2 => /home/tara/miniforge3/envs/femtic-foss2023a/lib/libmkl_gnu_thread.so.2 (0x0000797945e00000)
+	libmkl_core.so.2 => /home/tara/miniforge3/envs/femtic-foss2023a/lib/libmkl_core.so.2 (0x0000797941a00000)
+	libgomp.so.1 => /home/tara/miniforge3/envs/femtic-foss2023a/lib/libgomp.so.1 (0x0000797948986000)
+	libmpi.so.40 => /home/tara/miniforge3/envs/femtic-foss2023a/lib/libmpi.so.40 (0x00007979418de000)
+libs mapped in pid 3174:
+/home/tara/miniforge3/envs/femtic-foss2023a/lib/libgomp.so.1.0.0
+/home/tara/miniforge3/envs/femtic-foss2023a/lib/libmkl_avx2.so.2
+/home/tara/miniforge3/envs/femtic-foss2023a/lib/libmkl_core.so.2
+/home/tara/miniforge3/envs/femtic-foss2023a/lib/libmkl_gnu_thread.so.2
+/home/tara/miniforge3/envs/femtic-foss2023a/lib/libmkl_intel_ilp64.so.2
+/home/tara/miniforge3/envs/femtic-foss2023a/lib/libmkl_vml_avx2.so.2
+smoke exit=0
+     Iter#  Retrial#          Alpha           Damp      Roughness         Misfit            RMS        ObjFunc
+         0         0   1.000000e+00   5.000000e-01   0.000000e+00   5.752642e+03   2.234639e+00   5.752642e+03
+         1         0   1.000000e+00   5.000000e-01   9.935719e+01   2.331502e+03   1.422629e+00   2.430859e+03
+         2         0   1.000000e+00   5.000000e-01   2.410951e+02   1.309987e+03   1.066369e+00   1.551083e+03
+         3         0   1.000000e+00   5.000000e-01   3.404758e+02   9.912418e+02   9.276060e-01   1.331718e+03
+iter3 model: bit-identical to main build

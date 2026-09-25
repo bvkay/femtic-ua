@@ -1,0 +1,2 @@
+NUM_THREADS=2 ITERATION=0 5
+exit=0 wall=37s

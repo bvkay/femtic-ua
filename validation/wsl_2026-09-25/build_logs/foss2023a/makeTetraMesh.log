@@ -1,0 +1,24 @@
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c AnalysisDomain.cpp -o AnalysisDomain.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c BoundaryCurve.cpp -o BoundaryCurve.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c BoundaryCurveInner.cpp -o BoundaryCurveInner.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c BoundaryCurveList.cpp -o BoundaryCurveList.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c BoundaryCurveOuter.cpp -o BoundaryCurveOuter.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c BoundaryCurveSubInner.cpp -o BoundaryCurveSubInner.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c CoastLine.cpp -o CoastLine.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c CoastLineList.cpp -o CoastLineList.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c Control.cpp -o Control.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c Ellipsoids.cpp -o Ellipsoids.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c main.cpp -o main.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c LakeList.cpp -o LakeList.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c Node.cpp -o Node.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c NodeList.cpp -o NodeList.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c ObservationLine.cpp -o ObservationLine.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c ObservationPoint.cpp -o ObservationPoint.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c ObservingSiteList.cpp -o ObservingSiteList.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c OutputFiles.cpp -o OutputFiles.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c TopographyData.cpp -o TopographyData.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c TopographyDataList.cpp -o TopographyDataList.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c Triangle.cpp -o Triangle.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c TriangleList.cpp -o TriangleList.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG -c Util.cpp -o Util.o
+g++ -O3 -fopenmp -D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG AnalysisDomain.o BoundaryCurve.o BoundaryCurveInner.o BoundaryCurveList.o BoundaryCurveOuter.o BoundaryCurveSubInner.o CoastLine.o CoastLineList.o Control.o Ellipsoids.o main.o LakeList.o Node.o NodeList.o ObservationLine.o ObservationPoint.o ObservingSiteList.o OutputFiles.o TopographyData.o TopographyDataList.o Triangle.o TriangleList.o Util.o -Wl,-rpath,/home/tara/miniforge3/envs/femtic-foss2023a/lib  -o makeTetraMesh

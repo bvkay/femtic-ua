@@ -1,0 +1,49 @@
+CONDA_PREFIX=/home/tara/miniforge3/envs/femtic-build
+-rw-rw-r-- 2 tara tara 1902 Jun 18 12:35 /home/tara/miniforge3/envs/femtic-build/include/mkl.h
+/home/tara/miniforge3/envs/femtic-build/lib/libmkl_core.so
+/home/tara/miniforge3/envs/femtic-build/lib/libmkl_core.so.3
+/home/tara/miniforge3/envs/femtic-build/lib/libmkl_gnu_thread.so
+/home/tara/miniforge3/envs/femtic-build/lib/libmkl_gnu_thread.so.3
+/home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so
+/home/tara/miniforge3/envs/femtic-build/lib/libmkl_intel_ilp64.so.3
+ls: cannot access '/home/tara/miniforge3/envs/femtic-build/lib/intel64': No such file or directory
+--- which
+/home/tara/miniforge3/envs/femtic-build/bin/mpicxx
+/home/tara/miniforge3/envs/femtic-build/bin/mpicc
+/home/tara/miniforge3/envs/femtic-build/bin/mpirun
+/home/tara/miniforge3/envs/femtic-build/bin/g++
+/home/tara/miniforge3/envs/femtic-build/bin/gcc
+/home/tara/miniforge3/envs/femtic-build/bin/make
+/home/tara/miniforge3/envs/femtic-build/bin/cmake
+CXX= CC=
+--- mpicxx --version
+x86_64-conda-linux-gnu-c++ (conda-forge gcc 15.3.0-7) 15.3.0
+Copyright (C) 2025 Free Software Foundation, Inc.
+--- mpicxx --showme
+x86_64-conda-linux-gnu-c++ -I/home/tara/miniforge3/envs/femtic-build/include -pthread -L/home/tara/miniforge3/envs/femtic-build/lib -Wl,--allow-shlib-undefined -Wl,-rpath -Wl,/home/tara/miniforge3/envs/femtic-build/lib -lmpi
+--- $CXX --version
+/tmp/s2.sh: line 12: --version: command not found
+--- g++ --version
+g++ (conda-forge gcc 15.3.0-7) 15.3.0
+--- mpirun --version
+mpirun (Open MPI) 5.0.10
+--- ompi_info
+                Open MPI: 5.0.10
+            C++ compiler: x86_64-conda-linux-gnu-c++
+--- make
+GNU Make 4.4.1
+--- conda list
+c-compiler                  2.0.0            ha29393d_0             conda-forge
+cmake                       4.4.3            hff7ac6b_0             conda-forge
+compilers                   2.0.0            ha770c72_0             conda-forge
+cxx-compiler                2.0.0            hdab9b82_0             conda-forge
+gcc                         15.3.0           hc6a0c74_7             conda-forge
+gxx                         15.3.0           hc6a0c74_7             conda-forge
+libgomp                     16.2.0           he0feb66_7             conda-forge
+libstdcxx                   16.2.0           h934c35e_7             conda-forge
+llvm-openmp                 23.1.2           h7148c6a_0             conda-forge
+make                        4.4.1            hb03c661_3             conda-forge
+mkl                         2026.1.0         hd2095e1_245           conda-forge
+openmpi                     5.0.10           hee33aa4_2             conda-forge
+--- env CXXFLAGS=
+--- env LDFLAGS=

@@ -1,0 +1,136 @@
+conda-forge/linux-64                                        Using cache
+conda-forge/noarch                                          Using cache
+
+
+Transaction
+
+  Prefix: /home/tara/miniforge3/envs/femtic-foss2023a
+
+  Updating specs:
+
+   - gcc=12.3
+   - gxx=12.3
+   - openmpi=4.1.5
+   - mkl-devel=2023.1
+   - mkl-include=2023.1
+   - make
+
+
+  Package                       Version  Build                  Channel           Size
+────────────────────────────────────────────────────────────────────────────────────────
+  Install:
+────────────────────────────────────────────────────────────────────────────────────────
+
+  + _openmp_mutex                   4.5  8_kmp_llvm             conda-forge     Cached
+  + binutils_impl_linux-64       2.46.1  default_hfdba357_102   conda-forge     Cached
+  + gcc                          12.3.0  h915e2ae_13            conda-forge       50kB
+  + gcc_impl_linux-64            12.3.0  h58ffeeb_13            conda-forge       60MB
+  + gxx                          12.3.0  h915e2ae_13            conda-forge       50kB
+  + gxx_impl_linux-64            12.3.0  h2a574ab_13            conda-forge       13MB
+  + kernel-headers_linux-64      6.12.0  he073ed8_6             conda-forge     Cached
+  + ld_impl_linux-64             2.46.1  default_hbd61a6d_102   conda-forge     Cached
+  + libgcc                       16.2.0  ha9f2e26_7             conda-forge     Cached
+  + libgcc-devel_linux-64        12.3.0  h6b66f73_113           conda-forge        3MB
+  + libgcc-ng                    16.2.0  h69a702a_7             conda-forge       29kB
+  + libgfortran                  16.2.0  h69a702a_7             conda-forge     Cached
+  + libgfortran-ng               16.2.0  h69a702a_7             conda-forge       29kB
+  + libgfortran5                 16.2.0  h6b99dfc_7             conda-forge     Cached
+  + libgomp                      16.2.0  he0feb66_7             conda-forge     Cached
+  + libhwloc                     2.13.0  default_he001693_1000  conda-forge     Cached
+  + libiconv                       1.18  h0cb94f2_3             conda-forge     Cached
+  + liblzma                       5.8.3  hb03c661_1             conda-forge     Cached
+  + libsanitizer                 12.3.0  hb8811af_13            conda-forge        4MB
+  + libstdcxx                    16.2.0  h934c35e_7             conda-forge     Cached
+  + libstdcxx-devel_linux-64     12.3.0  h6b66f73_113           conda-forge       12MB
+  + libstdcxx-ng                 16.2.0  hdf11a46_7             conda-forge       29kB
+  + libxml2                      2.15.4  ha7a5771_0             conda-forge       47kB
+  + libxml2-16                   2.15.4  hbdfff7e_0             conda-forge      566kB
+  + libzlib                       1.3.2  h25fd6f3_3             conda-forge     Cached
+  + llvm-openmp                  23.1.2  h7148c6a_0             conda-forge     Cached
+  + make                          4.4.1  hb03c661_3             conda-forge     Cached
+  + mkl                        2023.1.0  h84fe81f_48680         conda-forge      162MB
+  + mkl-devel                  2023.1.0  ha770c72_48681         conda-forge       35kB
+  + mkl-include                2023.1.0  h84fe81f_48680         conda-forge      671kB
+  + mpi                             1.0  openmpi                conda-forge        4kB
+  + openmpi                       4.1.5  h414af15_101           conda-forge        4MB
+  + sysroot_linux-64               2.39  hc4b9eeb_6             conda-forge     Cached
+  + tbb                       2021.13.0  h7148c6a_7             conda-forge      171kB
+  + tzdata                        2026c  h151e31d_0             conda-forge     Cached
+  + zlib                          1.3.2  h25fd6f3_3             conda-forge       96kB
+  + zstd                          1.5.7  hb78ec9c_7             conda-forge     Cached
+
+  Summary:
+
+  Install: 37 packages
+
+  Total download: 259MB
+
+────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+Transaction starting
+Linking mkl-include-2023.1.0-h84fe81f_48680
+Linking mpi-1.0-openmpi
+Linking libzlib-1.3.2-h25fd6f3_3
+Linking llvm-openmp-23.1.2-h7148c6a_0
+Linking libgomp-16.2.0-he0feb66_7
+Linking zstd-1.5.7-hb78ec9c_7
+Linking zlib-1.3.2-h25fd6f3_3
+Linking _openmp_mutex-4.5-8_kmp_llvm
+Linking ld_impl_linux-64-2.46.1-default_hbd61a6d_102
+Linking libgcc-16.2.0-ha9f2e26_7
+Linking liblzma-5.8.3-hb03c661_1
+Linking libiconv-1.18-h0cb94f2_3
+Linking libstdcxx-16.2.0-h934c35e_7
+Linking libgfortran5-16.2.0-h6b99dfc_7
+Linking libgcc-ng-16.2.0-h69a702a_7
+Linking make-4.4.1-hb03c661_3
+Linking libxml2-16-2.15.4-hbdfff7e_0
+Linking libstdcxx-ng-16.2.0-hdf11a46_7
+Linking libgfortran-16.2.0-h69a702a_7
+Linking libxml2-2.15.4-ha7a5771_0
+Linking libsanitizer-12.3.0-hb8811af_13
+Linking libgfortran-ng-16.2.0-h69a702a_7
+Linking libhwloc-2.13.0-default_he001693_1000
+Linking openmpi-4.1.5-h414af15_101
+ 
+For Linux 64, Open MPI is built with CUDA awareness but this support is disabled by default.
+To enable it, please set the environment variable OMPI_MCA_opal_cuda_support=true before
+launching your MPI processes. Equivalently, you can set the MCA parameter in the command line:
+mpiexec --mca opal_cuda_support 1 ...
+ 
+In addition, the UCX support is also built but disabled by default.
+To enable it, first install UCX (conda install -c conda-forge ucx). Then, set the environment
+variables OMPI_MCA_pml="ucx" OMPI_MCA_osc="ucx" before launching your MPI processes.
+Equivalently, you can set the MCA parameters in the command line:
+mpiexec --mca pml ucx --mca osc ucx ...
+Note that you might also need to set UCX_MEMTYPE_CACHE=n for CUDA awareness via UCX.
+Please consult UCX's documentation for detail.
+ 
+
+Linking tbb-2021.13.0-h7148c6a_7
+Linking mkl-2023.1.0-h84fe81f_48680
+Linking mkl-devel-2023.1.0-ha770c72_48681
+Linking libstdcxx-devel_linux-64-12.3.0-h6b66f73_113
+Linking libgcc-devel_linux-64-12.3.0-h6b66f73_113
+Linking kernel-headers_linux-64-6.12.0-he073ed8_6
+Linking tzdata-2026c-h151e31d_0
+Linking sysroot_linux-64-2.39-hc4b9eeb_6
+Linking binutils_impl_linux-64-2.46.1-default_hfdba357_102
+Linking gcc_impl_linux-64-12.3.0-h58ffeeb_13
+Linking gxx_impl_linux-64-12.3.0-h2a574ab_13
+Linking gcc-12.3.0-h915e2ae_13
+Linking gxx-12.3.0-h915e2ae_13
+
+Transaction finished
+
+
+To activate this environment, use:
+
+    mamba activate femtic-foss2023a
+
+Or to execute a single command in this environment, use:
+
+    mamba run -n femtic-foss2023a mycommand
+

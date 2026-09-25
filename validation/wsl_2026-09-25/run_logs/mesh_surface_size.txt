@@ -1,0 +1,8 @@
+nodes 5806, elements 34559; z range -328050..528000 m (z positive down? check sign)
+surface nodes (|z|<1 m) within +-15 km: 325
+elements touching surface within +-15 km: 3352
+edge length m: min 500  p10 1482  median 2367  p90 3276  max 5361
+f=0.001 Hz skin depth (100 ohm-m) = 159157 m ; median surface edge / skin depth = 0.01
+f=0.01 Hz skin depth (100 ohm-m) = 50330 m ; median surface edge / skin depth = 0.05
+f=0.1 Hz skin depth (100 ohm-m) = 15916 m ; median surface edge / skin depth = 0.15
+f=1 Hz skin depth (100 ohm-m) = 5033 m ; median surface edge / skin depth = 0.47
