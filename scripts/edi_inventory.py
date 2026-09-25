@@ -110,7 +110,9 @@ def main():
     np.fill_diagonal(d, np.inf)
     nn = d.min(1)
     mism = int((np.abs(df['head_lat_standard'] - df['info_lat']) > 0.001).sum())
-    naive_ok = int((np.abs(df['head_lat_naive'] - df['info_lat']) < 0.001).sum())
+    # HEAD (floor reading) agrees with INFO only when BOTH latitude and longitude agree
+    naive_ok = int(((np.abs(df['head_lat_naive'] - df['info_lat']) < 0.001) &
+                    (np.abs(df['lon'] - df['info_lon']) < 0.001)).sum())
     # sites whose INFO block disagrees with the HEAD block by more than ~100 m
     dlat = np.abs(df['info_lat'] - df['lat']) * 111000.0
     dlon = np.abs(df['info_lon'] - df['lon']) * 111000.0 * np.cos(np.deg2rad(df['lat']))
@@ -134,7 +136,8 @@ def main():
               f"N-S {(df['north_m'].max()-df['north_m'].min())/1000:.1f} km. Median NN spacing {np.median(nn):.0f} m.\n")
     md.append(f"Coordinates come from the HEAD block using the Geotools floor reading (D + M/60 + S/3600). "
               f"Under the standard DMS reading {mism} of {len(df)} headers would disagree with INFO; "
-              f"under the floor reading {naive_ok} agree.\n")
+              f"under the floor reading {naive_ok} agree in both latitude and longitude "
+              f"and {len(df) - naive_ok} do not (listed below).\n")
     if len(suspect):
         md.append(f"INFO block disagrees with HEAD by more than 100 m in {len(suspect)} file(s) "
                   "(INFO judged wrong; HEAD used):\n")

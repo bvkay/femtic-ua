@@ -1,0 +1,4 @@
+cd tetgen && sed -i 's/\r$//' makefile && make tetgen CXX=g++ CXXFLAGS=-O3 PREDCXXFLAGS=-O0
+# These are the upstream makefile defaults.  PREDCXXFLAGS=-O0 MUST stay: predicates.cxx is Shewchuk's exact-arithmetic code and breaks under optimisation or fast-math.  Never add -ffast-math/-Ofast (icpx: add -fp-model=precise to both flag sets).
+# The sed strips the CRLF that a Windows clone (core.autocrlf=true) adds; harmless on an LF file.  GNU make 4.3 was observed to drop the CR itself, older make versions pass "-lm<CR>" to the linker; the sed is cheap insurance.
+# CMake alternative (cmake -S . -B build -DBUILD_EXECUTABLE=ON -DBUILD_LIBRARY=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build build) compiles predicates.cxx with the same -O flags as tetgen.cxx, so prefer make.

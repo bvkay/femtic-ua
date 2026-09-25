@@ -1,0 +1,10 @@
+No C++ source patches were needed for the GCC + OpenMPI + MKL build (WSL build stage, 2026-09-25).
+
+All 216 .cpp/.h/.cxx files compiled from the upstream clones byte-for-byte unchanged
+(verified with cmp against the scratchpad clones after the build) with:
+  - conda-forge gcc/g++ 15.3.0, OpenMPI 5.0.10, MKL 2026.1.0   (env femtic-build)
+  - conda-forge gcc/g++ 12.3.0, OpenMPI 4.1.5,  MKL 2023.1.0   (env femtic-foss2023a, matches foss/2023a + imkl/2023.1.0)
+
+The only diagnostics are warnings (femtic: -Wconversion-null at PARDISOSolver.cpp:50,69,97 and
+AnalysisControl.cpp:65,1567; "unknown escape sequence '\/'" in Inversion*.cpp string literals).
+None affects correctness. See build_logs/SUMMARY.md.

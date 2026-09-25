@@ -1,0 +1,39 @@
+# ---------------------------------------------------------------------------
+# mergeResultOfFEMTIC -- Makefile for GCC (any EasyBuild GCC/GCCcore/foss toolchain)
+#
+#   module load GCC/12.3.0        (or foss/2023a)
+#   cd mergeResultOfFEMTIC/src
+#   make -f Makefile.gcc -j 4
+#
+# Upstream ships no makefile for this tool (single translation unit); flags follow the sibling tools (icpc -O2 -DNDEBUG).
+# Plain single-threaded C++98-compatible code: no MKL, no OpenMP, no MPI,
+# no Intel-only flags or headers (grep-verified).  Only the compiler name
+# changed; the optimisation level and -DNDEBUG are the upstream ones.
+# ---------------------------------------------------------------------------
+
+CXX           = g++
+CC            = gcc
+CXXFLAGS      = -O2 -DNDEBUG
+DEST          = ./
+LDFLAGS       =
+LIBS          =
+OBJS          = mergeResult.o
+PROGRAM       = mergeResultOfFEMTIC
+
+.PHONY: all clean
+
+all:            $(PROGRAM)
+
+$(PROGRAM):     $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(LIBS) -o $(PROGRAM)
+
+# The upstream makefiles track no header dependencies; rebuild every object
+# when any header changes (cheap for projects of this size, and always correct).
+$(OBJS): $(wildcard *.h)
+
+# Pattern rule so that "make -j N" compiles translation units in parallel.
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+clean:
+	rm -f *.o *~ $(PROGRAM)

@@ -1,0 +1,70 @@
+# ---------------------------------------------------------------------------
+# makeTetraMesh -- Makefile for Intel oneAPI (icpx)
+#
+#   module load intel/2023a       (or: source /opt/intel/oneapi/setvars.sh)
+#   cd makeTetraMesh/src
+#   make -f Makefile.intel_oneapi -j 8
+#
+# Ported from the upstream Makefile (icpc, LIBS = -mkl=parallel).  icpx spells
+# the MKL flag -qmkl=parallel; the classic -mkl=... form is icpc-only and is
+# gone in oneAPI 2024.  It selects the LP64 interface with the Intel OpenMP
+# threading layer (mkl_intel_lp64 + mkl_intel_thread + mkl_core + iomp5),
+# consistent with -qopenmp.
+#
+# NOTE: the sources make no MKL call (see Makefile.gcc_mkl), so -qmkl=parallel
+# is kept only for parity with upstream and can be removed without effect.
+# For classic icpc on oneAPI <= 2023:  make CXX=icpc LIBS=-qmkl=parallel
+# ---------------------------------------------------------------------------
+
+CXX           = icpx
+CC            = icx
+CXXFLAGS      = -O3 \
+                -qopenmp \
+                -D_USE_OMP \
+                -D_THICKNESS_FUNC \
+                -DNDEBUG
+DEST          = ./
+LDFLAGS       =
+LIBS          = -qmkl=parallel
+OBJS          = AnalysisDomain.o \
+                BoundaryCurve.o \
+                BoundaryCurveInner.o \
+                BoundaryCurveList.o \
+                BoundaryCurveOuter.o \
+                BoundaryCurveSubInner.o \
+                CoastLine.o \
+                CoastLineList.o \
+                Control.o \
+                Ellipsoids.o \
+                main.o \
+                LakeList.o \
+                Node.o \
+                NodeList.o \
+                ObservationLine.o \
+                ObservationPoint.o \
+                ObservingSiteList.o \
+                OutputFiles.o \
+                TopographyData.o \
+                TopographyDataList.o \
+                Triangle.o \
+                TriangleList.o \
+                Util.o
+PROGRAM       = makeTetraMesh
+
+.PHONY: all clean
+
+all:            $(PROGRAM)
+
+$(PROGRAM):     $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(LIBS) -o $(PROGRAM)
+
+# The upstream makefiles track no header dependencies; rebuild every object
+# when any header changes (cheap for projects of this size, and always correct).
+$(OBJS): $(wildcard *.h)
+
+# Pattern rule so that "make -j N" compiles translation units in parallel.
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+clean:
+	rm -f *.o *~ $(PROGRAM)

@@ -16,7 +16,7 @@ Files: 120   UTM zone 53S (WGS84)
 
 Extent E-W 13.2 km, N-S 14.5 km. Median NN spacing 980 m.
 
-Coordinates come from the HEAD block using the Geotools floor reading (D + M/60 + S/3600). Under the standard DMS reading 120 of 120 headers would disagree with INFO; under the floor reading 119 agree.
+Coordinates come from the HEAD block using the Geotools floor reading (D + M/60 + S/3600). Under the standard DMS reading 120 of 120 headers would disagree with INFO; under the floor reading 117 agree in both latitude and longitude and 3 do not (listed below).
 
 INFO block disagrees with HEAD by more than 100 m in 3 file(s) (INFO judged wrong; HEAD used):
 

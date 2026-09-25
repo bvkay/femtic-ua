@@ -1,0 +1,88 @@
+# ---------------------------------------------------------------------------
+# makeTetraMesh -- Makefile for GCC (EasyBuild GCC/GCCcore or foss toolchain)
+#
+#   module load foss/2023a              # imkl only needed with WITH_MKL=1
+#   cd makeTetraMesh/src
+#   make -f Makefile.gcc_mkl -j 8
+#
+# Ported from the upstream Makefile (icpc -O3 -qopenmp -D_USE_OMP
+# -D_THICKNESS_FUNC -DNDEBUG, LIBS = -mkl=parallel).
+#
+# MKL interface decision.  The upstream makefile links "-mkl=parallel", but
+# the sources make NO MKL call at all: there is no mkl*.h include, no
+# cblas_*/LAPACKE_*/pardiso* symbol, no MKL_INT, and -DMKL_ILP64 is not
+# defined (grep-verified).  The only external runtime the code touches is
+# OpenMP (omp_set_num_threads and one "omp parallel for" in TriangleList.cpp).
+# "-mkl=parallel" was therefore a no-op, and linking MKL here would only add
+# a run-time dependency on three MKL shared objects the binary never calls.
+# MKL is NOT linked by default.
+#
+# If MKL is ever wanted (e.g. a future version adds a LAPACK call), the code's
+# integer type is plain 'int' everywhere, which is the 32-bit LP64 interface:
+# libmkl_intel_lp64 (NOT ilp64 -- that is what FEMTIC itself needs because it
+# uses long long / MKL_INT).  "make WITH_MKL=1" enables the matching
+# GNU-threaded LP64 link line; MKLROOT must then be set (imkl module does it).
+# ---------------------------------------------------------------------------
+
+CXX           = g++
+CC            = gcc
+CXXFLAGS      = -O3 \
+                -fopenmp \
+                -D_USE_OMP \
+                -D_THICKNESS_FUNC \
+                -DNDEBUG
+DEST          = ./
+LDFLAGS       =
+LIBS          =
+
+WITH_MKL     ?= 0
+ifeq ($(WITH_MKL),1)
+ifeq ($(strip $(MKLROOT)),)
+$(error WITH_MKL=1 but MKLROOT is not set. Load the imkl module or pass MKLROOT=/path/to/mkl)
+endif
+CXXFLAGS     += -I$(MKLROOT)/include
+LIBS          = -L$(MKLROOT)/lib/intel64 -L$(MKLROOT)/lib -Wl,--no-as-needed \
+                -lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl
+endif
+OBJS          = AnalysisDomain.o \
+                BoundaryCurve.o \
+                BoundaryCurveInner.o \
+                BoundaryCurveList.o \
+                BoundaryCurveOuter.o \
+                BoundaryCurveSubInner.o \
+                CoastLine.o \
+                CoastLineList.o \
+                Control.o \
+                Ellipsoids.o \
+                main.o \
+                LakeList.o \
+                Node.o \
+                NodeList.o \
+                ObservationLine.o \
+                ObservationPoint.o \
+                ObservingSiteList.o \
+                OutputFiles.o \
+                TopographyData.o \
+                TopographyDataList.o \
+                Triangle.o \
+                TriangleList.o \
+                Util.o
+PROGRAM       = makeTetraMesh
+
+.PHONY: all clean
+
+all:            $(PROGRAM)
+
+$(PROGRAM):     $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(LIBS) -o $(PROGRAM)
+
+# The upstream makefiles track no header dependencies; rebuild every object
+# when any header changes (cheap for projects of this size, and always correct).
+$(OBJS): $(wildcard *.h)
+
+# Pattern rule so that "make -j N" compiles translation units in parallel.
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+clean:
+	rm -f *.o *~ $(PROGRAM)
