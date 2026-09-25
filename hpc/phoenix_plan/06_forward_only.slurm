@@ -28,7 +28,11 @@
 # resistivity_block_iter0.dat (and distortion_iter0.dat when DISTORTION != 0):
 #     cd /hpcfs/users/$USER/vulcan_femtic/inversion/inv01 && sbatch /path/to/06_forward_only.slurm
 # Other layouts: the same options as 04, e.g. sbatch --ntasks-per-node=12 --cpus-per-task=6 06_forward_only.slurm
-# Cost at full walltime: 72 cpus x 2 h x 1.2 SU = 172.8 SU (charged on elapsed time if Phoenix bills that way).
+# The header request (icelake, 1 node, 8x9, --mem=254952M, 2 h) was accepted by sbatch --test-only on
+# 2026-09-25. Above ~255 GB per node the only route is highmem (sbatch -p highmem --mem=1900G ..., 2.5 SU/cpu-h);
+# a100cpu gives a job at most 36 cpus and 257,472 MiB, so it has no advantage (04's header has the details).
+# Cost at full walltime: 72 cpus x 2 h x 1.2 SU = 172.8 SU (billing is CPU-only, TRESBillingWeights=CPU=1.20;
+# charged on elapsed time if Phoenix bills that way).
 #
 # TEST T6 (fails if): femtic exits non-zero; femtic_0.log lacks FEMTIC's end line; the number of
 # per-frequency times summed over all ranks' logs differs from F (every frequency solved exactly
@@ -49,8 +53,8 @@ FWD_SOLVER=${FWD_SOLVER:-}
 WALL_MARGIN_MIN=${WALL_MARGIN_MIN:-5}   # hard stop this many minutes before the limit (report still written)
 GUARD_MIN_S=${GUARD_MIN_S:-300}
 WATCH_S=${WATCH_S:-10}                  # RSS sampling interval (s)
-USE_SRUN=${USE_SRUN:-0}
-SRUN_MPI=${SRUN_MPI:-pmix}              # VERIFY with 'srun --mpi=list'
+USE_SRUN=${USE_SRUN:-0}                 # default mpirun (OpenMPI's ess slurm); 1 = srun
+SRUN_MPI=${SRUN_MPI:-pmi2}              # Phoenix 'srun --mpi=list': pmi2, none, cray_shasta (NO pmix)
 export USE_SRUN SRUN_MPI
 
 # shellcheck disable=SC1091

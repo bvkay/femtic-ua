@@ -8,16 +8,20 @@
 #   Slurm job on any partition other than 'interactive'; it stops and says so instead.
 # Step B, build + tests (interactive session: needed for the smoke test T2/T5; max 8 cpus per job):
 #     srun -p interactive -N 1 -n 8 --mem=16GB --time=04:00:00 --pty bash
-#     TOOLCHAIN=foss  bash -l 01_build_femtic.sh     # GCC 12.3 + OpenMPI 4.1.5 + Intel MKL 2023.1 (default)
-#     TOOLCHAIN=intel bash -l 01_build_femtic.sh     # intel-compilers 2023.1 + Intel MPI 2021.9 + MKL 2023.1
+#     TOOLCHAIN=foss  bash -l 01_build_femtic.sh     # GCC 12.3 + OpenMPI 4.1.5 + Intel MKL 2023.1 (default, primary)
+#     TOOLCHAIN=intel bash -l 01_build_femtic.sh     # intel-compilers 2023.1 + Intel MPI 2021.9 + MKL 2023.1 (untested fallback)
 #   Options (environment): SRC, BIN, PORTED, TARBALLS, JOBS=8, PIN=1, SMOKE=auto|1|0, FETCH_ONLY=0|1,
-#                          MODS="<module list>", INTEL_MPICXX=auto|mpiicpx|"mpiicpc -cxx=icpx"|mpiicpc
+#                          MODS="<module list>",
+#                          INTEL_MPICXX="mpiicpc -cxx=icpx" (default) | "mpiicpc -diag-disable=10441" (classic icpc)
 #
 # Before running:
-#   1. copy (WinSCP) the ported Makefiles to $SRC/ported/ (same tree:
-#      ported/femtic/Makefile.gcc_openmpi_mkl, ported/makeTetraMesh/Makefile.gcc_mkl, ...)
+#   1. the ported Makefiles must be in $PORTED (default $SRC/ported/; same tree:
+#      ported/femtic/Makefile.gcc_openmpi_mkl, ported/makeTetraMesh/Makefile.gcc_mkl, ...).
+#      Ben's WinSCP copy of the project puts them in /hpcfs/users/$USER/FEMTIC_2026/hpc/ported:
+#      pass PORTED=/hpcfs/users/$USER/FEMTIC_2026/hpc/ported, or copy that directory to $SRC/ported
 #   2. keep femtic_lib.sh next to this script (it is installed to $BIN)
-#   3. run 00_discover.sh and fix the module names below if they differ (all "VERIFY on Phoenix")
+#   3. the module names below were verified by 00_discover.sh on the login node p2-log-2 on
+#      2026-09-25 (phoenix_plan/discovery/phoenix_discovery_p2-log-2_2026-09-25.txt); no MODS needed
 #   4. if a shebang fails with "bad interpreter ^M", the file has CRLF endings: dos2unix *.sh *.slurm
 #
 # Sources: the tree does not need git. Per repo, the first of these that applies is used:
@@ -49,21 +53,30 @@
 #      7-significant-digit model file (%15e) the restart re-reads; a broken restart
 #      (wrong start model or iteration) changes the misfit by tens of percent.
 #
-# Toolchain facts (see README_phoenix.md):
-#   * intel/2023a = intel-compilers 2023.1.0 + impi 2021.9.0 + imkl 2023.1.0 (+ GCCcore 12.3.0)  (VERIFY on Phoenix)
-#     per the EasyBuild v4.9.4 easyconfigs; whether Phoenix has it is VERIFY on Phoenix.
-#   * intel-compilers 2023.1.0 still ships classic icpc (removed in oneAPI 2024.0).
-#   * mpiicpx may or may not exist in impi 2021.9; this script auto-detects it and falls back to
-#     "mpiicpc -cxx=icpx" (the same LLVM icpx through the classic wrapper). 00_discover.sh reports
-#     which wrappers exist. ported/femtic/Makefile.intel_oneapi says CXX = mpiicpx; the make call
-#     below always passes CXX=<detected wrapper>.
-#   * the EasyBuild imkl module sets MKLROOT (<prefix>/mkl/2023.1.0) and LD_LIBRARY_PATH.
+# Toolchain facts (load-tested by 00_discover.sh on p2-log-2, 2026-09-25; README_phoenix.md section 4):
+#   * foss/2023a + imkl/2023.1.0 load together: GCC 12.3.0, OpenMPI/4.1.5-GCC-12.3.0 (configured
+#     --with-slurm --with-pmi, PMIx 4.2.4, UCX 1.14.1), OpenBLAS 0.3.23, FlexiBLAS 3.3.1, FFTW 3.3.10,
+#     ScaLAPACK 2.2.0, imkl 2023.1.0 with MKLROOT=/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0
+#     (lib/ and lib/intel64/ both present; lib/intel64 has libmkl_gnu_thread.so and libmkl_intel_ilp64.so).
+#     mpicxx is the OpenMPI 4.1.5 wrapper around g++ 12.3.0. This is THE primary route.
+#   * intel/2023a loads: intel-compilers/2023.1.0 (classic icpc AND icpx), impi/2021.9.0-intel-compilers-2023.1.0,
+#     imkl/2023.1.0, imkl-FFTW, GCCcore 12.3.0. mpiicpc exists; mpiicpx and mpiicx do NOT
+#     ("mpiicpx  MISSING" in the discovery output). So the intel route uses "mpiicpc -cxx=icpx" (the
+#     LLVM icpx through the classic wrapper), passed to make as CXX=... because
+#     ported/femtic/Makefile.intel_oneapi says CXX = mpiicpx. Classic icpc is the alternative:
+#     INTEL_MPICXX="mpiicpc -diag-disable=10441" (silences the "remark #10441 ... deprecated" line).
+#     The intel route has never been compiled: it is the untested fallback.
+#   * the login node's system compiler is gcc 8.4.1 (RHEL 8.4): never build with it; step 2 refuses g++ < 9.
 # =============================================================================
 set -o pipefail            # no 'set -u/-e': Lmod/conda shell functions touch unset variables
 
 TOOLCHAIN="${TOOLCHAIN:-foss}"
 SRC="${SRC:-/hpcfs/users/$USER/femtic_src}"
 BIN="${BIN:-/hpcfs/users/$USER/femtic/bin}"
+# Ported Makefiles: prefer the kit's own sibling directory (hpc/ported in the repo, as copied to
+# /hpcfs), then fall back to $SRC/ported; PORTED=... on the command line overrides both.
+_KIT_PORTED="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/ported"
+if [ -z "${PORTED:-}" ] && [ -d "$_KIT_PORTED" ]; then PORTED="$_KIT_PORTED"; fi
 PORTED="${PORTED:-$SRC/ported}"
 TARBALLS="${TARBALLS:-$SRC/tarballs}"
 PLAN_DIR="${PLAN_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
@@ -71,7 +84,7 @@ JOBS="${JOBS:-8}"
 PIN="${PIN:-1}"
 SMOKE="${SMOKE:-auto}"
 FETCH_ONLY="${FETCH_ONLY:-0}"
-INTEL_MPICXX="${INTEL_MPICXX:-auto}"
+INTEL_MPICXX="${INTEL_MPICXX:-}"        # TOOLCHAIN=intel only; default "mpiicpc -cxx=icpx" (step 2)
 EB_MODULES="/hpcfs/users/$USER/easybuild/modules/all"     # EasyBuild fallback prefix (see bottom)
 
 mkdir -p "$SRC" "$BIN" || { echo "cannot create $SRC / $BIN"; exit 1; }
@@ -177,25 +190,23 @@ done
 if [ "$FETCH_ONLY" = 1 ]; then echo "== FETCH_ONLY: sources ready in $SRC; now build in an interactive job (step B)"; exit 0; fi
 
 # -----------------------------------------------------------------------------
-# 2. Modules (VERIFY on Phoenix -- confirm with phoenix_discovery_*.txt)
-#    Phoenix (Lmod, /gpfs/apps/icl/modules/all) uses full EasyBuild names with toolchain suffixes,
-#    e.g. CMake/3.26.3-GCCcore-12.3.0, and has the 2021b, 2023a and 2025a generations (census
-#    2026-09-25). Whether foss/2023a, imkl/2023.1.0 and intel/2023a exist was NOT in that census:  (VERIFY on Phoenix)
-#    00_discover.sh runs 'module avail foss imkl intel GCC OpenMPI impi' and 'module spider imkl'.
+# 2. Modules (verified: 00_discover.sh on p2-log-2, 2026-09-25, load tests A and B)
+#    Phoenix: Lmod 8.2.10, MODULEPATH includes /gpfs/apps/icl/modules/all (full EasyBuild names with
+#    toolchain suffixes). Generations present: 2021b, 2023a, 2025b (foss/2025b = GCC 14.3.0 +
+#    OpenMPI 5.0.8); only 2023a has both foss and intel, so the kit uses 2023a.
 # -----------------------------------------------------------------------------
 module purge >/dev/null 2>&1 || true
 [ -d "$EB_MODULES" ] && module use "$EB_MODULES"          # picks up EasyBuild-fallback modules if built
 case "$TOOLCHAIN" in
   foss)
-    # foss/2023a = GCC 12.3.0 + OpenMPI 4.1.5 + FlexiBLAS 3.3.1 + FFTW 3.3.10 + ScaLAPACK 2.2.0  (VERIFY on Phoenix)
-    # imkl/2023.1.0 = oneMKL 2023.1.0, SYSTEM toolchain                                        (VERIFY on Phoenix)
-    #   if only the gompi build exists: MODS="foss/2023a imkl/2023.1.0-gompi-2023a"            (VERIFY on Phoenix)
-    MODS="${MODS:-foss/2023a imkl/2023.1.0}"   # VERIFY on Phoenix
+    # foss/2023a = GCC 12.3.0 + OpenMPI 4.1.5 + FlexiBLAS 3.3.1 + FFTW 3.3.10 + ScaLAPACK 2.2.0
+    # imkl/2023.1.0 = oneMKL 2023.1.0 (SYSTEM toolchain; the only imkl 2023.1.0 module on Phoenix)
+    MODS="${MODS:-foss/2023a imkl/2023.1.0}"   # load-tested together on p2-log-2, 2026-09-25
     FEMTIC_MK=Makefile.gcc_openmpi_mkl;  FEMTIC_ARGS=()
     MTM_MK=Makefile.gcc_mkl;             MTM_ARGS=()      # makeTetraMesh makes no MKL call (ported/README.md)
     ;;
   intel)
-    # intel/2023a = intel-compilers/2023.1.0 + impi/2021.9.0 + imkl/2023.1.0                   (VERIFY on Phoenix)
+    # intel/2023a = intel-compilers/2023.1.0 + impi/2021.9.0 + imkl/2023.1.0 (load-tested 2026-09-25)
     MODS="${MODS:-intel/2023a}"
     FEMTIC_MK=Makefile.intel_oneapi
     MTM_MK=Makefile.intel_oneapi;        MTM_ARGS=()
@@ -209,14 +220,17 @@ echo "MKLROOT=${MKLROOT:-<unset>}"
 [ -n "${MKLROOT:-}" ] || die "MKLROOT is not set after 'module load $MODS' -- no MKL module loaded"
 [ -e "$MKLROOT/lib/intel64/libmkl_core.so" ] || [ -e "$MKLROOT/lib/libmkl_core.so" ] || die "no libmkl_core.so under MKLROOT=$MKLROOT"
 command -v g++ >/dev/null || die "g++ not on PATH (GCC/GCCcore module missing?)"
+# The RHEL 8.4 system compiler (gcc 8.4.1 on p2-log-2) must never build this: GCCcore 12.3.0 from the modules must win.
+[ "$(g++ -dumpversion 2>/dev/null | cut -d. -f1)" -ge 9 ] 2>/dev/null \
+  || die "g++ on PATH is $(command -v g++) $(g++ -dumpfullversion 2>/dev/null) (the system compiler?) -- 'module load $MODS' did not put GCC 12.3.0 first"
 
 if [ "$TOOLCHAIN" = intel ]; then
-  if [ "$INTEL_MPICXX" = auto ]; then
-    if command -v mpiicpx >/dev/null; then INTEL_MPICXX=mpiicpx; else INTEL_MPICXX="mpiicpc -cxx=icpx"; fi
-  fi
+  # Phoenix's intel/2023a (impi 2021.9.0) has mpiicpc but no mpiicpx / mpiicx (00_discover.sh, 2026-09-25),
+  # so icpx is driven through the classic wrapper. "mpiicpc -diag-disable=10441" = classic icpc instead
+  # (flags identical to upstream Makefile_IntelMPI; the option silences the deprecation remark).
+  INTEL_MPICXX="${INTEL_MPICXX:-mpiicpc -cxx=icpx}"
+  command -v "${INTEL_MPICXX%% *}" >/dev/null || die "${INTEL_MPICXX%% *} not on PATH after 'module load $MODS'"
   FEMTIC_ARGS=("CXX=$INTEL_MPICXX")
-  # INTEL_MPICXX=mpiicpc gives the classic icpc build (flags identical to upstream Makefile_IntelMPI);
-  # it prints "remark #10441 ... deprecated" -- harmless.
   echo "-- FEMTIC MPI C++ compiler: $INTEL_MPICXX  ->  $($INTEL_MPICXX -show 2>&1 | head -1)"
 else
   echo "-- FEMTIC MPI C++ compiler: mpicxx  ->  $(mpicxx -showme 2>&1 | head -1)"
@@ -265,7 +279,7 @@ install -m 644 "$PLAN_DIR/femtic_lib.sh" "$BIN/femtic_lib.sh"
   echo "# usage in job scripts (#!/bin/bash -l):   source $BIN/femtic_env.sh"
   echo "module purge >/dev/null 2>&1"
   echo "[ -d \"$EB_MODULES\" ] && module use \"$EB_MODULES\""
-  echo "module load $MODS || echo \"femtic_env.sh: module load $MODS FAILED\" >&2   # VERIFY on Phoenix"
+  echo "module load $MODS || echo \"femtic_env.sh: module load $MODS FAILED\" >&2"
   echo "export PATH=\"$BIN:\$PATH\""
   echo "export FEMTIC_TOOLCHAIN=$TOOLCHAIN FEMTIC_BIN=\"$BIN\""
   echo ". \"$BIN/femtic_lib.sh\""
@@ -372,41 +386,32 @@ echo "   next: 02_env_femticpy.sh, 03_mesh.slurm, then 06_forward_only.slurm (fi
 exit 0
 
 # =============================================================================
-# EasyBuild FALLBACK -- only if 00_discover.sh shows no usable central imkl / intel / foss module.
-# Easyconfig filenames verified in easybuilders/easybuild-easyconfigs at tag
-# easybuild-easyconfigs-v4.9.4 (the version Phoenix's EasyBuild/4.9.4 module ships):  (VERIFY on Phoenix)
-#   imkl-2023.1.0.eb                              (SYSTEM toolchain; binary installer, no compilation)
-#   imkl-2023.1.0-gompi-2023a.eb                  (same MKL, gompi-2023a toolchain)
-#   intel-compilers-2023.1.0.eb                   (deps: GCCcore-12.3.0, binutils-2.40)
-#   impi-2021.9.0-intel-compilers-2023.1.0.eb     (dep: UCX 1.14.1)
-#   intel-2023a.eb                                (= the four above + imkl-FFTW 2023.1.0)
-#   foss-2023a.eb                                 (GCC 12.3.0, OpenMPI 4.1.5, FlexiBLAS 3.3.1, FFTW 3.3.10, ScaLAPACK 2.2.0)
+# EasyBuild FALLBACK -- NOT NEEDED as of 2026-09-25: the central foss/2023a, imkl/2023.1.0 and
+# intel/2023a modules exist and load (00_discover.sh on p2-log-2). Kept only in case they are retired.
+# Phoenix has EasyBuild/4.5.5 ... 4.9.4, 5.0.0, 5.1.0, 5.3.0; 00_discover.sh loaded 5.3.0 (the newest),
+# whose robot path /apps/icl/software/EasyBuild/5.3.0/easybuild/easyconfigs contains imkl-2023.1.0.eb
+# (SYSTEM toolchain; binary installer, no compilation), intel-2023a.eb and
+# impi-2021.9.0-intel-compilers-2023.1.0.eb ('eb -S', 2026-09-25). EasyBuild 5.3.0 runs on the
+# system Python 3.6.8 with a deprecation warning, and its default installpath/buildpath/sourcepath are
+# under /home/$USER/.local/easybuild (10 GB cap), so EASYBUILD_PREFIX below is essential.
 #
-#   module load EasyBuild/4.9.4  (VERIFY on Phoenix)
+#   module load EasyBuild/5.3.0
 #   export EASYBUILD_PREFIX=/hpcfs/users/$USER/easybuild          # software/, modules/, sources/
 #   export MODULEPATH=$EASYBUILD_PREFIX/modules/all:$MODULEPATH
 #   mkdir -p $EASYBUILD_PREFIX
 #
-#   # (a) most likely case: foss/2023a exists centrally but no imkl -> MKL only (~2-3 GB download, no compile)  (VERIFY on Phoenix)
+#   # (a) MKL only (~2-3 GB download, no compile)
 #   eb imkl-2023.1.0.eb --robot -Dx                # dry run: shows what would be built
 #   eb imkl-2023.1.0.eb --robot                    # downloads l_onemkl_p_2023.1.0.46342_offline.sh from Intel
-#   module load foss/2023a imkl/2023.1.0           # VERIFY on Phoenix; then re-run:  TOOLCHAIN=foss bash -l 01_build_femtic.sh
+#   module load foss/2023a imkl/2023.1.0           # then re-run:  TOOLCHAIN=foss bash -l 01_build_femtic.sh
 #       # No internet on the build node? download the installer elsewhere and place it at
 #       #   $EASYBUILD_PREFIX/sources/i/imkl/l_onemkl_p_2023.1.0.46342_offline.sh
-#       # The module sets MKLROOT=<prefix>/software/imkl/2023.1.0/mkl/2023.1.0 plus LD_LIBRARY_PATH,  (VERIFY on Phoenix)
-#       # LIBRARY_PATH, CPATH, CMAKE_PREFIX_PATH, PKG_CONFIG_PATH (easyblock imkl.py, v4.9.4).
 #
 #   # (b) whole Intel toolchain (hours if GCCcore 12.3.0 must be compiled too)
 #   eb intel-2023a.eb --robot -Dx
 #   eb intel-2023a.eb --robot
 #
-#   # (c) whole foss toolchain (compiles GCC + OpenMPI from source: many hours; do it in an
-#   #     interactive session with EASYBUILD_BUILDPATH=$TMPDIR and --gres=tmpfs:50G)
-#   eb foss-2023a.eb --robot -Dx
-#   eb foss-2023a.eb --robot
-#
 #   This script and femtic_env.sh already 'module use' $EASYBUILD_PREFIX/modules/all when it exists,
-#   so batch jobs see the user-built modules without editing ~/.bashrc. Note the module NAME may carry
-#   a toolchain suffix depending on the module naming scheme EasyBuild/4.9.4 is configured with on  (VERIFY on Phoenix)
-#   Phoenix ('eb --show-config | grep module_naming'); pass MODS="..." accordingly.
+#   so batch jobs see the user-built modules without editing ~/.bashrc. Check the module name the
+#   build prints ('eb --show-config | grep module_naming') and pass MODS="..." if it differs.
 # =============================================================================

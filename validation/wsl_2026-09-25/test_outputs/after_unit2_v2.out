@@ -1,0 +1,22 @@
+  PASS extracted_lines (ok)
+T5a identical -> PASS
+  PASS T5a (PASS)
+T5b small rounding (2e-5 at iter 1, 5e-4 at iter 2) -> PASS
+  PASS T5b (PASS)
+T5c restart from the wrong model (misfit of iter 0 at iter 1) -> FAIL
+  PASS T5c (FAIL)
+T5d retrial in straight run at iter 2 -> INCONCLUSIVE (not PASS, not FAIL)
+  PASS T5d (INCONCLUSIVE)
+T5e missing restart row -> FAIL
+  PASS T5e (FAIL)
+03 region-attribute check (code copied from 03_mesh.slurm) against femticPy synthetic resistivity_attr.dat
+  PASS attrs (10 20 )
+  PASS default_regions_ok (yes)
+  PASS attr30_rejected (no)
+03 output.poly region-count replacement (meshGen.sh logic) on a poly ending '# Part 4' / '0'
+  PASS poly (# Part 4|2|1 0 0 -40 10 1e9|2 0 0 10 30 1e9|)
+03 FIX_ELE awk on a tetgen-style .ele
+  PASS fix_ele (10 30 30 )
+  PASS fix_ele_lines (4)
+
+OVERALL: PASS

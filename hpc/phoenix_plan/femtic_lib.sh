@@ -224,6 +224,9 @@ femtic_mem_limit_auto() {
 
 # femtic_launch_cmd NRANKS RANKS_PER_NODE THREADS EXE -> sets the array FEMTIC_LAUNCH (and the
 #   launcher's environment) for the toolchain in FEMTIC_TOOLCHAIN; USE_SRUN=1 uses srun.
+#   Phoenix (00_discover.sh, 2026-09-25): 'srun --mpi=list' gives pmi2, none, cray_shasta (no pmix) and
+#   MpiDefault=none, so srun needs --mpi=pmi2; OpenMPI 4.1.5 was built --with-pmi and has the s1/s2
+#   PMI components. mpirun (the default) uses OpenMPI's ess slurm component and needs none of this.
 # shellcheck disable=SC2034  # FEMTIC_LAUNCH is read by the caller
 femtic_launch_cmd() {
   local n=$1 rpn=$2 t=$3 exe=$4
@@ -231,7 +234,7 @@ femtic_launch_cmd() {
     # Slurm >= 22.05 no longer passes --cpus-per-task from sbatch to srun; SRUN_CPUS_PER_TASK does.
     export SRUN_CPUS_PER_TASK=$t
     [ "${FEMTIC_TOOLCHAIN:-foss}" = intel ] && export I_MPI_PMI_LIBRARY=${I_MPI_PMI_LIBRARY:-/usr/lib64/libpmi2.so}   # path VERIFY on Phoenix
-    FEMTIC_LAUNCH=(srun --mpi="${SRUN_MPI:-pmix}" --ntasks="$n" --ntasks-per-node="$rpn" --cpus-per-task="$t" --cpu-bind=cores "$exe")
+    FEMTIC_LAUNCH=(srun --mpi="${SRUN_MPI:-pmi2}" --ntasks="$n" --ntasks-per-node="$rpn" --cpus-per-task="$t" --cpu-bind=cores "$exe")
   elif [ "${FEMTIC_TOOLCHAIN:-foss}" = intel ]; then
     # Intel MPI: one pinning domain of OMP_NUM_THREADS cores per rank
     export I_MPI_PIN_DOMAIN=omp I_MPI_DEBUG=${I_MPI_DEBUG:-4}

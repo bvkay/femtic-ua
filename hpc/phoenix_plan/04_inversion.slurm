@@ -18,18 +18,25 @@
 #     cd /hpcfs/users/$USER/vulcan_femtic/inversion/inv01 && sbatch /path/to/04_inversion.slurm
 # or let 05_chain.sh submit K dependent copies (it sets AUTO_RESTART=1).
 #
-# ---- partition and memory: RAM is granted PER CPU (sinfo/sacctmgr, 2026-09-25) ----
-#   --mem is capped at cpus x (MiB per cpu of the partition), so memory is bought with cpus.
+# ---- partition and memory: RAM is granted PER CPU (scontrol show partition + sbatch --test-only,
+#      00_discover.sh on p2-log-2, 2026-09-25; phoenix_plan/discovery/) ----
+#   --mem is capped at cpus x MaxMemPerCPU of the partition, so memory is bought with cpus.
 #   The default is one whole icelake node:
-#     icelake   72 cpus x 3541 MiB = 254,952 MiB  -> --mem=254952M  (header)       1.2 SU/cpu-h
-#     a100cpu   72 cpus x 7152 MiB = 514,944 MiB  -> --mem=514944M                 1.2 SU/cpu-h (same price, 2x RAM)
-#     highmem   72 cpus, 1,990,000 MiB node       -> --mem=1900G (VERIFY the cap)  2.5 SU/cpu-h
-#   e.g.  sbatch -p a100cpu --mem=514944M 04_inversion.slurm
+#     icelake   72 cpus x  3541 MiB =   254,952 MiB -> --mem=254952M (header, accepted)  1.2 SU/cpu-h
+#     highmem   72 cpus x 27126 MiB = 1,953,072 MiB -> --mem=1900G   (accepted)          2.5 SU/cpu-h
+#   highmem is the ONLY route above ~255 GB per node (7 nodes; QoS highmem: at most 432 cpus = 6 nodes per job):
+#     e.g.  sbatch -p highmem --mem=1900G 04_inversion.slurm
+#   a100cpu is NOT a bigger-memory option: MaxCPUsPerNode=36 and MaxMemPerCPU=7152, so a job gets at
+#   most 36 cpus and 257,472 MiB per node there, at the same 1.2 SU/cpu-h. That is icelake's RAM with
+#   half the cores, so it has no advantage for FEMTIC (a 72-cpu a100cpu request was rejected: QOS policy).
 #   --mem=250G means 256,000 MiB (Slurm G = 1024 MiB), which is over 254,952 and is rejected on icelake.
-#   QoS normal / account physci set no MaxTRES limit, so whole-node requests are allowed; the 3-day
-#   walltime, not the SU budget, is the constraint.
-#   $TMPDIR (--gres=tmpfs:200G; icelake, a100cpu and highmem nodes offer tmpfs:2400G) holds the
-#   sensitivity files. VERIFY whether it is RAM-backed: the 'df -hT' line below prints its type.
+#   Limits: QoS normal / account physci set no MaxTRES; the icelake partition QoS allows 1200 cpus per
+#   user (16 whole nodes) and 7416 per job. 2 icelake nodes x 8x9 x --mem=254952M was accepted.
+#   The 3-day partition MaxTime, not the SU budget, is the constraint (README_phoenix.md section 1).
+#   Billing is CPU-only (TRESBillingWeights=CPU=1.20 on icelake, 2.5 on highmem): memory is not charged.
+#   $TMPDIR exists only with --gres=tmpfs:<N>G (header 200G; icelake, a100cpu and highmem nodes offer
+#   tmpfs:2400G, TmpDisk=0) and holds the sensitivity files. VERIFY whether it is RAM-backed: the
+#   'df -hT' line below prints its type (2,400 GB on a 255 GB node suggests it is disk-backed).
 #
 # ---- layout knobs (sbatch options or --export=ALL,KNOB=value,...) ----
 #   --ntasks-per-node  MPI ranks per node (header 8). FEMTIC gives each rank a contiguous block of
@@ -83,8 +90,8 @@ FWD_SOLVER=${FWD_SOLVER:-}              # empty = keep control.dat (FEMTIC defau
 WALL_MARGIN_MIN=${WALL_MARGIN_MIN:-20}  # hard stop this many minutes before the wall limit
 GUARD_MIN_S=${GUARD_MIN_S:-600}         # watcher deadline only if at least this many seconds of run time remain
 WATCH_S=${WATCH_S:-60}                  # watcher poll interval (s)
-USE_SRUN=${USE_SRUN:-0}                 # 1 = launch with srun instead of mpirun
-SRUN_MPI=${SRUN_MPI:-pmix}              # srun --mpi plugin (foss: pmix; intel: pmi2) -- VERIFY with 'srun --mpi=list'
+USE_SRUN=${USE_SRUN:-0}                 # 1 = launch with srun instead of mpirun (default mpirun: OpenMPI's ess slurm, nothing to set)
+SRUN_MPI=${SRUN_MPI:-pmi2}              # Phoenix 'srun --mpi=list': pmi2, none, cray_shasta (NO pmix); MpiDefault=none
 export USE_SRUN SRUN_MPI
 
 # shellcheck disable=SC1091
@@ -184,7 +191,7 @@ HOLD=0; femtic_ctl_has control.dat HOLD_FWD_MEM && HOLD=1
 if [ "$MEM_LIMIT_MB" = auto ] && [ -n "$NODE_MEM" ]; then
   MEM_LIMIT_MB=$(femtic_mem_limit_auto "$NODE_MEM" "$RPN" "$HOLD" "$RANK0_RESERVE_MB" "$NONPARDISO_MB")
   echo "MEM_LIMIT auto = (0.85 x $NODE_MEM MB - $([ "$HOLD" = 1 ] && echo "$RANK0_RESERVE_MB rank-0 reserve [HOLD_FWD_MEM]" || echo "0 [no HOLD_FWD_MEM: forward memory is freed before the rank-0 update]")) / $RPN ranks - $NONPARDISO_MB non-PARDISO = $MEM_LIMIT_MB MB per rank"
-  [ "$MEM_LIMIT_MB" -ge 1024 ] || { echo "ERROR: MEM_LIMIT auto = $MEM_LIMIT_MB MB per rank is below 1 GB -- fewer ranks per node, or -p a100cpu --mem=514944M"; exit 1; }
+  [ "$MEM_LIMIT_MB" -ge 1024 ] || { echo "ERROR: MEM_LIMIT auto = $MEM_LIMIT_MB MB per rank is below 1 GB -- fewer ranks per node, or -p highmem --mem=1900G"; exit 1; }
 fi
 if [ "$MEM_LIMIT_MB" != keep ] && [ "$MEM_LIMIT_MB" != auto ]; then
   femtic_ctl_set control.dat MEM_LIMIT "$MEM_LIMIT_MB" || exit 1   # MB per rank: MKL_PARDISO_OOC_MAX_CORE_SIZE (used by FWD_SOLVER 1/2 only)

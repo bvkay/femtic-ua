@@ -1,0 +1,23 @@
+F1 all 7 repos as GitHub tarballs, login node: expect exit 0, 7 trees unpacked, COMMIT_SHA.txt = pinned sha
+  PASS rc (0)
+  PASS trees (7)
+  PASS sha_femtic (26c8606ea61717a9386f93fff47203391836829c)
+  PASS pinned_msg (1)
+F2 rerun on the same tree: expect exit 0, no unpacking (idempotent)
+  PASS rc (0)
+  PASS no_unpack (0)
+F3 git-free tree without COMMIT_SHA.txt: expect exit 0 with a version-UNKNOWN warning naming the repo
+  PASS rc (0)
+  PASS unknown_warn (1)
+F4 COMMIT_SHA.txt differs from the pin, PIN=1: expect exit 1 (refused)
+  PASS rc (1)
+  PASS refuse_msg (1)
+F5 missing repo inside an icelake job, no tarball: expect exit 1 before any clone, with the login-node instruction
+  PASS rc (1)
+  PASS no_fetch_msg (1)
+  PASS nothing_cloned (0)
+F6 same, but the tarballs are present inside the icelake job: expect exit 0 (unpacking needs no internet)
+  PASS rc (0)
+
+CHECKS: 14 passed, 0 failed
+OVERALL: PASS

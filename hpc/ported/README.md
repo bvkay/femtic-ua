@@ -7,7 +7,7 @@ belongs to (e.g. `femtic/src/`) and run `make -f <name> -j N`.
 | Project | File | Toolchain | Compiler | Notes |
 |---|---|---|---|---|
 | femtic | `femtic/Makefile.gcc_openmpi_mkl` | foss/2023a + imkl/2023.1.0 | `mpicxx` | GNU OpenMP + `mkl_gnu_thread`, ILP64 |
-| femtic | `femtic/Makefile.intel_oneapi` | intel/2023a | `mpiicpx`, or `mpiicpc -cxx=icpx` (see note 8) | Intel OpenMP + `mkl_intel_thread`, ILP64 |
+| femtic | `femtic/Makefile.intel_oneapi` | intel/2023a | `mpiicpc -cxx=icpx` on Phoenix, where mpiicpx is absent (see note 8) | Intel OpenMP + `mkl_intel_thread`, ILP64 |
 | makeTetraMesh | `makeTetraMesh/Makefile.gcc_mkl` | GCC/foss | `g++` | OpenMP only; MKL off by default (`WITH_MKL=1` adds an LP64 link) |
 | makeTetraMesh | `makeTetraMesh/Makefile.intel_oneapi` | intel/2023a | `icpx` | `-qopenmp -qmkl=parallel` |
 | makeMtr | `makeMtr/Makefile.gcc` | GCC | `g++` | `-O2 -DNDEBUG` |
@@ -52,7 +52,7 @@ LIBS     = -L$(MKLROOT)/lib/intel64 -L$(MKLROOT)/lib -Wl,--no-as-needed \
 ### B. Intel oneAPI 2023 (`intel/2023a`)
 
 ```
-CXX      = mpiicpx     # if absent: "mpiicpc -cxx=icpx" (same icpx); "mpiicpc" = classic icpc (oneAPI <= 2023)
+CXX      = mpiicpx     # absent on Phoenix's intel/2023a: use "mpiicpc -cxx=icpx" (same icpx); "mpiicpc" = classic icpc (oneAPI <= 2023)
 CXXFLAGS = -O3 -qopenmp -D_LINUX -DMKL_ILP64 -D_USE_OMP -DNDEBUG -I$(MKLROOT)/include
 LIBS     = -L$(MKLROOT)/lib/intel64 -L$(MKLROOT)/lib \
            -lmkl_intel_ilp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl
@@ -169,10 +169,11 @@ not prove the sources compile (see risk 1).
    (`PARDISOSolver.cpp:50,69,97`) triggers `-Wconversion-null` on g++; `MKL_INT incx = 1.0`
    (`InversionGaussNewtonDataSpace.cpp`, 12 sites, file not built) is a silent
    double-to-integer conversion. Harmless.
-8. **`mpiicpx` availability.** mpiicpx may or may not exist in impi 2021.9 (the MPI of intel/2023a);
-   earlier write-ups disagreed and it is not verified. `phoenix_plan/01_build_femtic.sh` auto-detects it and
-   falls back to `mpiicpc -cxx=icpx` (the same icpx through the classic wrapper; `I_MPI_CXX=icpx mpiicpc`
-   is equivalent), passing the result as `make ... CXX=...`.
+8. **`mpiicpx` availability.** mpiicpx (and mpiicx) are absent on Phoenix's intel/2023a (impi 2021.9.0):
+   `phoenix_plan/00_discover.sh` on p2-log-2, 2026-09-25, found only `mpiicpc`. The wrapper to use there is
+   `mpiicpc -cxx=icpx` (the same icpx through the classic wrapper; `I_MPI_CXX=icpx mpiicpc` is equivalent).
+   `phoenix_plan/01_build_femtic.sh` passes it as `make ... CXX="mpiicpc -cxx=icpx"`, which overrides the
+   makefile's `CXX = mpiicpx`.
 9. **Thread counts at run time.** The control file drives `omp_set_num_threads` and
    `mkl_set_num_threads` (`AnalysisControl.cpp:1150-1152`), overriding `OMP_NUM_THREADS`
    from the scheduler. Not a build issue, but relevant when validating scaling.

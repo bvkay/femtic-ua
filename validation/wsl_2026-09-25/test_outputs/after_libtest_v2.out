@@ -1,0 +1,64 @@
+sed: sed (GNU sed) 4.9  bash: 5.2.21(1)-release  awk: GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0)
+lib: /mnt/d/BEN/FEMTIC_2026/hpc/phoenix_plan/femtic_lib.sh (FEMTIC_LIB_VERSION=2)
+PASS crlf_present (24)
+PASS get_existing (0 5)
+PASS set_existing (3 8)
+PASS linecount_unchanged (24)
+PASS set_threads (9)
+PASS insert_absent (/tmp/job123/sense)
+PASS end_still_last (END)
+PASS no_crlf_left (0)
+PASS reset_inserted (/tmp/job456/sense)
+PASS single_occurrence (1)
+PASS step_length_untouched (STEP_LENGTH|0.5 0.1 1.0|3|0.5 1.25|SENSE_MAT_DIRECTORY|/tmp/job456/sense|END|)
+PASS last_iter (12)
+PASS tl_days (259170)
+PASS tl_leading0 (29347)
+PASS block_stats (34559 289 289 288 1)
+PASS L16_has_absent (no)
+PASS L17_has_present (yes)
+PASS L18_has_after_END_ignored (no)
+PASS L19_ok_example (OK 34559 289)
+PASS L20_ok_vs_itself_as_ref (OK 34559 289)
+PASS L21_cut_in_blocks (BAD 140 block lines, header says 289)
+PASS L22_cut_in_elements (BAD 999 element lines, header says 34559)
+PASS L23_cut_midline (BAD block line 34849 has 3 field(s) (cut short?))
+PASS L24_header_vs_ref (BAD header 34559 290 differs from the reference 34559 289)
+PASS L25_nan_value (BAD block line 34849 field 2 "nan" is)
+PASS L25b_rc_nonzero (1)
+PASS L26_dist_ok (OK 2)
+PASS L27_dist_cut (BAD 1 station lines, header says 2)
+PASS L28_dist_gains_only (OK 2)
+PASS L29_dist_count_vs_ref (BAD station count 3 differs from the reference 2)
+PASS L30_pick_fallback (1)
+PASS L31_no_rename_without_q (0)
+PASS L32_rename_with_q (resistivity_block_iter0.dat resistivity_block_iter1.dat resistivity_block_iter2.dat.corrupt_77 )
+PASS L33_iter0_bad_fails (rc=1)
+PASS L33b_iter0_kept (resistivity_block_iter0.dat)
+PASS L34_double_bad_fails_no_rename (rc=1 0)
+PASS L35_dist_missing_falls_back (0)
+PASS L35b_dist_ignored_when_0 (1)
+PASS L36_memlimit_no_hold_ignores_reserve (16848)
+PASS L37_memlimit_hold_subtracts_reserve (10598)
+PASS L38_fwd_times_real_log (0.001 3|0.01 3|)
+PASS L39_launch_foss (mpirun -np 8 --map-by ppr:8:node:PE=9 --bind-to core --report-bindings /x/femtic)
+PASS L40_launch_intel (mpirun -np 16 -ppn 8 /x/femtic omp)
+PASS L41_launch_srun (srun --mpi=pmix --ntasks=8 --ntasks-per-node=8 --cpus-per-task=9 --cpu-bind=cores /x/femtic 9)
+PASS L42_rows (3 10 converged a b)
+PASS L43_control_plain_wait_interrupted (plain_rc=138 trapped)
+PASS L44_wait_pid_returns_child_rc (rc=7 trapped)
+libtest_v2.sh: line 105:  4504 Killed                  bash -c 'trap "" TERM; while :; do sleep 0.2; done'
+PASS L45_stop_kill_after_grace (137 unit_test)
+--- final control.dat (cat -A, first 6 + last 4 lines)
+NUM_THREADS$
+9$
+MESH_TYPE$
+1$
+OUTPUT_PARAM_VTK$
+3$
+0.5 1.25$
+SENSE_MAT_DIRECTORY$
+/tmp/job456/sense$
+END$
+CHECKS: 48 passed, 0 failed
+OVERALL: PASS

@@ -7,15 +7,18 @@
 #   make -f Makefile.intel_oneapi -j 8
 #
 # Compiler wrapper:
-#   mpiicpx           LLVM-based icpx. mpiicpx may or may not exist in impi 2021.9
-#                     (intel/2023a); phoenix_plan/01_build_femtic.sh auto-detects it
-#                     and falls back to "mpiicpc -cxx=icpx" via make CXX=...
+#   On Phoenix, mpiicpx (and mpiicx) do NOT exist in intel/2023a (impi 2021.9.0):
+#   00_discover.sh on p2-log-2, 2026-09-25, found mpiicpc only.  The wrapper to
+#   use there is "mpiicpc -cxx=icpx"; phoenix_plan/01_build_femtic.sh passes it
+#   as  make -f Makefile.intel_oneapi CXX="mpiicpc -cxx=icpx".  The CXX = mpiicpx
+#   default below is kept for oneAPI installs that ship mpiicpx.
+#   mpiicpc -cxx=icpx (or I_MPI_CXX=icpx mpiicpc) drives the LLVM-based icpx
+#                     through the classic wrapper.
 #   mpiicpc           classic icpc on oneAPI <= 2023.  The classic compilers
 #                     were removed in oneAPI 2024.  Use this with the upstream
 #                     Makefile_IntelMPI flags if bit-for-bit parity with the
-#                     original build matters.
-#   mpiicpc -cxx=icpx (or I_MPI_CXX=icpx mpiicpc) drives icpx through the
-#                     classic wrapper wherever mpiicpx is absent.
+#                     original build matters (add -diag-disable=10441 to
+#                     silence the deprecation remark).
 #
 # Changes vs. the upstream Makefile_IntelMPI:
 #   * The hard-coded INTEL_DIR (/opt/intel/composer_xe_2015...) is replaced

@@ -1,11 +1,12 @@
 #!/bin/bash -l
 # =============================================================================
-# 05_chain.sh -- submit K chained FEMTIC inversion jobs (each <= 3 days, the icelake/a100cpu/highmem limit)
+# 05_chain.sh -- submit K chained FEMTIC inversion jobs (each <= 3 days, the icelake/highmem MaxTime)
 #
 #   bash -l 05_chain.sh <inversion_dir> [K=3] [ITER_STEP=5] [ITER_MAX]
 #   e.g. bash -l 05_chain.sh /hpcfs/users/$USER/vulcan_femtic/inversion/inv01 3 8 30
 #   Options (environment): DEP_TYPE=afterok|afterany, JOB_SCRIPT=/path/04_inversion.slurm,
-#                          SBATCH_EXTRA="-p a100cpu --mem=514944M" (overrides the 04 header),
+#                          SBATCH_EXTRA="-p highmem --mem=1900G" (overrides the 04 header; highmem is
+#                          the only route above ~255 GB per node, 2.5 SU/cpu-h; a100cpu has no advantage),
 #                          SBATCH_EXPORT_EXTRA="RANKS=4,THREADS=18" (added to --export=ALL,...)
 #   Run on the login node, where sbatch is available. Nothing here needs internet or git.
 #

@@ -14,6 +14,15 @@
 #   * the env is created from environment_femticpy.yml, written next to this script if absent
 #     (edit it and delete the env, or run UPDATE=1, to change packages). conda-forge only.
 #   * idempotent: re-running skips what is installed and re-runs the self-test.
+#
+# State on Phoenix (00_discover.sh on p2-log-2, 2026-09-25): micromamba 2.9.0 is ALREADY at
+# /hpcfs/users/a1690074/micromamba/bin/micromamba with the envs base and gjoint; femticpy does not exist.
+# Code path on the first run there: step 2 finds $MM executable and skips the download (no curl);
+# step 3 parses 'micromamba env list' (first column; the same parse gave "not yet" in 00_discover.sh
+# against micromamba 2.9.0's table output), does not find femticpy and creates only that env from the
+# yml; base and gjoint are not touched. Re-runs take the "env femticpy exists -- skipping create" branch.
+# /hpcfs/users/a1690074 resolves to /scratchdata1/users/a1690074 (gpfs-2-1), so micromamba may print
+# /scratchdata1/... paths; the location check in step 3 compares resolved paths for that reason.
 # Deliberately no 'set -e' around the activation hooks (micromamba hooks + SIGPIPE abort under -e).
 #
 # In job scripts and interactive shells:
@@ -96,7 +105,7 @@ if [ "${PYVISTA:-0}" = 1 ]; then
 fi
 micromamba activate "$ENV_NAME" || { echo "activate $ENV_NAME failed"; exit 4; }
 echo "python: $(command -v python)"
-case "$(command -v python)" in "$MAMBA_ROOT_PREFIX"/*) ;; *) echo "WARNING: env python is not under $MAMBA_ROOT_PREFIX";; esac
+case "$(readlink -f "$(command -v python)")" in "$(readlink -f "$MAMBA_ROOT_PREFIX")"/*) ;; *) echo "WARNING: env python is not under $MAMBA_ROOT_PREFIX";; esac
 
 # 4) self-test
 python - <<'PY' || { echo "ENV TEST: FAIL"; exit 2; }

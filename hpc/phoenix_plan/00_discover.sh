@@ -10,15 +10,18 @@
 # ("sbatch --test-only" validates a request and prints an estimated start time;
 # it does not create a job.) Every command tolerates failure (|| true), so the
 # script always runs to the end and records what is and is not available.
-# The "KEY FINDINGS" block at the end is what README_phoenix.md section 10 asks you to confirm.
+# The "KEY FINDINGS" block at the end is summarised in README_phoenix.md section 12; what is still
+# unverified is listed at the end of section 10.
 #
-# Already verified on 2026-09-25 (sinfo / sacctmgr / module avail, Ben's node census) and NOT
-# re-derived here: partition batch has 0 nodes; icelake 93 x 72 cpu, 255,000 MiB, 3541 MiB/cpu, 3 d;
-# a100cpu 43 x 72 cpu, 515,000 MiB, 7152 MiB/cpu, 3 d, CPU-only jobs allowed; highmem 7 x 72 cpu,
-# 1,990,000 MiB, 3 d; interactive 2 nodes, <= 8 cpus/job, 24/user, free, internet; QoS normal,
-# account physci, no MaxTRES; Lmod with full EasyBuild names (CMake/3.26.3-GCCcore-12.3.0 ...).
-# Still UNVERIFIED and queried below: foss/2023a, imkl/2023.1.0, intel/2023a (and GCC/OpenMPI/impi  (VERIFY on Phoenix)
-# versions), mpiicpx, git/curl on the login node, $TMPDIR type, srun MPI plugins, billing weights.
+# RUN ONCE ALREADY: p2-log-2, 2026-09-25, from /hpcfs/users/a1690074/FEMTIC_2026. The output is kept in
+# phoenix_plan/discovery/phoenix_discovery_p2-log-2_2026-09-25.txt. Re-run only to re-check after a
+# Phoenix software or Slurm change, and compare with that file. Results of that run, in brief:
+#   * Lmod 8.2.10; foss/2023a + imkl/2023.1.0 load together (MKLROOT=/apps/icl/software/imkl/2023.1.0/
+#     mkl/2023.1.0); intel/2023a loads, with mpiicpc but no mpiicpx / mpiicx.
+#   * icelake 93 x 72 cpu, 255,000 MiB, MaxMemPerCPU 3541, CPU=1.20; a100cpu MaxCPUsPerNode=36,
+#     MaxMemPerCPU 7152 (a job gets <= 36 cpus / 257,472 MiB per node); highmem 7 x 72 cpu,
+#     MaxMemPerCPU 27126, CPU=2.5; srun --mpi=list: pmi2, none, cray_shasta (no pmix).
+#   * git 2.27, curl and internet on the login node; micromamba 2.9.0 already under /hpcfs.
 # =============================================================================
 
 OUT="$PWD/phoenix_discovery_$(hostname -s 2>/dev/null || hostname).txt"
@@ -61,7 +64,7 @@ echo
 echo "--- terse listing (one module per line) of the toolchain pieces ---"
 TERSE=$(module -t avail 2>&1 | grep -iE '^(foss|gompi|iimpi|intel|intel-compilers|imkl|imkl-FFTW|GCC|GCCcore|OpenMPI|impi|UCX|PMIx|FlexiBLAS|EasyBuild)/' || true)
 echo "$TERSE"
-for m in foss/2023a imkl/2023.1.0 intel/2023a GCC/12.3.0 OpenMPI/4.1.5-GCC-12.3.0 impi/2021.9.0-intel-compilers-2023.1.0; do   # VERIFY on Phoenix
+for m in foss/2023a imkl/2023.1.0 intel/2023a GCC/12.3.0 OpenMPI/4.1.5-GCC-12.3.0 impi/2021.9.0-intel-compilers-2023.1.0; do   # all listed on 2026-09-25
   if echo "$TERSE" | grep -qx "$m"; then key "module $m: listed"; else key "module $m: NOT listed under that exact name (see module avail above)"; fi
 done
 echo
@@ -77,7 +80,7 @@ if [ "$IS_LMOD" = 1 ]; then
     echo; echo "\$ module spider $m | head -30"
     module spider "$m" 2>&1 | head -30 || true
   done
-  for m in imkl/2023.1.0 foss/2023a intel/2023a; do   # VERIFY on Phoenix
+  for m in imkl/2023.1.0 foss/2023a intel/2023a; do
     echo; echo "\$ module spider $m | head -25"
     module spider "$m" 2>&1 | head -25 || true
   done
@@ -87,10 +90,10 @@ fi
 
 # -----------------------------------------------------------------------------
 section "Toolchain load tests (sub-shells; nothing persists)"
-echo "--- A: module load foss/2023a imkl/2023.1.0   (TOOLCHAIN=foss in 01_build_femtic.sh) ---"   # VERIFY on Phoenix
+echo "--- A: module load foss/2023a imkl/2023.1.0   (TOOLCHAIN=foss in 01_build_femtic.sh) ---"
 A=$( (
   module purge >/dev/null 2>&1
-  module load foss/2023a imkl/2023.1.0 >/dev/null 2>&1 || exit 9   # VERIFY on Phoenix
+  module load foss/2023a imkl/2023.1.0 >/dev/null 2>&1 || exit 9
   echo "LOADED"
   module -t list 2>&1 | tr '\n' ' '; echo
   echo "MKLROOT=${MKLROOT:-<unset>}"
@@ -102,17 +105,16 @@ A=$( (
 ) 2>&1 )
 echo "$A"
 case "$A" in
-  *LOADED*) key "foss/2023a + imkl/2023.1.0: loads OK; $(echo "$A" | grep -m1 '^MKLROOT=')" ;;   # VERIFY on Phoenix
-  *)        key "foss/2023a + imkl/2023.1.0: FAILED (try imkl/2023.1.0-gompi-2023a, another generation from 'module avail', or the EasyBuild fallback)" ;;   # VERIFY on Phoenix
+  *LOADED*) key "foss/2023a + imkl/2023.1.0: loads OK; $(echo "$A" | grep -m1 '^MKLROOT=')" ;;
+  *)        key "foss/2023a + imkl/2023.1.0: FAILED (it loaded on 2026-09-25: module retired? try another generation from 'module avail', or the EasyBuild fallback)" ;;
 esac
+# (The former test A2 loaded a toolchain-suffixed imkl variant; no such module exists on Phoenix
+#  (2026-09-25 run printed nothing), so it was removed. imkl/2023.1.0 is the only imkl 2023.1.0 module.)
 echo
-echo "--- A2: module load foss/2023a imkl/2023.1.0-gompi-2023a ---"   # VERIFY on Phoenix
-( module purge >/dev/null 2>&1; module load foss/2023a imkl/2023.1.0-gompi-2023a 2>&1 && echo "LOADED  MKLROOT=${MKLROOT:-<unset>}" ) 2>&1 | tail -3 || true   # VERIFY on Phoenix
-echo
-echo "--- B: module load intel/2023a   (TOOLCHAIN=intel) ---"   # VERIFY on Phoenix
+echo "--- B: module load intel/2023a   (TOOLCHAIN=intel) ---"
 B=$( (
   module purge >/dev/null 2>&1
-  module load intel/2023a >/dev/null 2>&1 || exit 9   # VERIFY on Phoenix
+  module load intel/2023a >/dev/null 2>&1 || exit 9
   echo "LOADED"
   module -t list 2>&1 | tr '\n' ' '; echo
   echo "MKLROOT=${MKLROOT:-<unset>}  I_MPI_ROOT=${I_MPI_ROOT:-<unset>}"
@@ -124,8 +126,8 @@ B=$( (
 ) 2>&1 )
 echo "$B"
 case "$B" in
-  *LOADED*) key "intel/2023a: loads OK; mpiicpx=$(echo "$B" | awk '$1=="mpiicpx"{print $2}') (mpiicpx may or may not exist in impi 2021.9; 01 auto-detects it and falls back to 'mpiicpc -cxx=icpx')" ;;   # VERIFY on Phoenix
-  *)        key "intel/2023a: FAILED to load" ;;   # VERIFY on Phoenix
+  *LOADED*) key "intel/2023a: loads OK; mpiicpc=$(echo "$B" | awk '$1=="mpiicpc"{print $2}') mpiicpx=$(echo "$B" | awk '$1=="mpiicpx"{print $2}') (2026-09-25: mpiicpx MISSING; 01 uses 'mpiicpc -cxx=icpx')" ;;
+  *)        key "intel/2023a: FAILED to load (it loaded on 2026-09-25)" ;;
 esac
 
 # -----------------------------------------------------------------------------
@@ -206,7 +208,9 @@ tst() {   # tst <label> <sbatch options...>
 tst "04 default: icelake 1 node 8x9 --mem=254952M (72 x 3541) tmpfs:200G 3 days" -p icelake -N 1 --ntasks-per-node=8 --cpus-per-task=9 --mem=254952M --gres=tmpfs:200G --time=3-00:00:00
 tst "icelake 1 node --mem=250G (256000 MiB > 254952, expect REJECT)" -p icelake -N 1 --ntasks-per-node=8 --cpus-per-task=9 --mem=250G --time=1:00:00
 tst "icelake 36 cpus --mem=254952M (over 36 x 3541, expect REJECT or cpus raised)" -p icelake -N 1 --ntasks-per-node=4 --cpus-per-task=9 --mem=254952M --time=1:00:00
-tst "04 alt: a100cpu 1 node 8x9 --mem=514944M (72 x 7152) 3 days" -p a100cpu -N 1 --ntasks-per-node=8 --cpus-per-task=9 --mem=514944M --gres=tmpfs:200G --time=3-00:00:00
+# a100cpu has MaxCPUsPerNode=36, so this 72-cpu request must be REJECTED (it was on 2026-09-25: QOS policy).
+# The kit does not use a100cpu (36 cpus, <= 257,472 MiB: icelake's RAM with half the cores); kept as a regression check.
+tst "a100cpu 72 cpus --mem=514944M (MaxCPUsPerNode=36, expect REJECT)" -p a100cpu -N 1 --ntasks-per-node=8 --cpus-per-task=9 --mem=514944M --gres=tmpfs:200G --time=3-00:00:00
 tst "04 alt: highmem 1 node 8x9 --mem=1900G 3 days" -p highmem -N 1 --ntasks-per-node=8 --cpus-per-task=9 --mem=1900G --time=3-00:00:00
 tst "06 forward-only: icelake 1 node 8x9 --mem=254952M 2 h" -p icelake -N 1 --ntasks-per-node=8 --cpus-per-task=9 --mem=254952M --time=02:00:00
 tst "03 mesh: icelake 1 task x 8 cpus --mem=27G 2 h" -p icelake -N 1 -n 1 -c 8 --mem=27G --time=02:00:00
@@ -243,7 +247,7 @@ fi
 echo "(fallback only) Anaconda modules: $(module -t avail Anaconda3 2>&1 | grep -E '^Anaconda3/' | tr '\n' ' ')"
 
 # -----------------------------------------------------------------------------
-section "KEY FINDINGS (see README_phoenix.md, section 10)"
+section "KEY FINDINGS (see README_phoenix.md, sections 10 and 12)"
 for k in "${KEY[@]}"; do echo " * $k"; done
 echo
 echo "Discovery written to: $OUT"

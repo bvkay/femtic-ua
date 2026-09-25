@@ -11,6 +11,7 @@ mesh/**/*.mtr
 mesh/**/*.vtk
 mesh/**/mesh.dat
 **/resistivity_block_iter[1-9]*.dat
+mesh/**/resistivity_block_iter0.dat
 **/sensMat*
 **/ooc_temp*
 **/result_*_iter*.csv
