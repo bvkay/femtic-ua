@@ -1,0 +1,114 @@
+S1 fresh start: expect exit 0, ITERATION '0 3', last iter 3, NUM_THREADS 9, SENSE in TMPDIR, MEM_LIMIT 16848, PE=9 mapping
+  PASS rc (0)
+  PASS iteration (0 3)
+  PASS last (3)
+  PASS threads (9)
+  PASS sense (/tmp/tmp.5EyEqSysmS/tmp/sense)
+  PASS memlimit (16848)
+  PASS mpirun (-np 8 --map-by ppr:8:node:PE=9 --bind-to core --report-bindings /tmp/tmp.5EyEqSysmS/bin/femtic)
+S2 second job continues: expect ITERATION '3 6', last 6, previous logs archived, nfreq read from archive
+  PASS rc (0)
+  PASS iteration (3 6)
+  PASS last (6)
+  PASS archived (1)
+  PASS nfreq_msg (1)
+S3 ITER_MAX cap: expect ITERATION '6 7' with ITER_MAX=7, then a further job exits 0 without running femtic
+  PASS rc (0)
+  PASS iteration (6 7)
+  PASS rc (0)
+  PASS no_run (3)
+S4 convergence: expect exit 0 + CONVERGED; next job exits 0 without running femtic
+  PASS rc (0)
+  PASS marker (yes)
+  PASS rc (0)
+  PASS no_run (1)
+S5 stall (max retrials): expect exit 2 + STALLED; next job exits 2
+  PASS rc (2)
+  PASS marker (yes)
+  PASS rc_next (2)
+S6 crash: expect non-zero exit
+  PASS rc_nonzero (yes)
+S7 guard stops job after progress: expect exit 0, last iter 1
+  PASS rc (0)
+  PASS last (1)
+  PASS guard_msg (1)
+S8 guard stops job with no progress: expect exit 3
+  PASS rc (3)
+S9 DISTORTION=1 without distortion_iter0.dat: expect exit 1 before femtic runs
+  PASS rc (1)
+  PASS no_run (none)
+S10 multi-node: expect SENSE_MAT_DIRECTORY on shared scratch, removed after the job
+  PASS rc (0)
+  PASS sense (/tmp/tmp.5EyEqSysmS/shared/sense_801)
+  PASS cleaned (removed)
+  PASS mpirun16 (-np 16 --map-by ppr:8:node:PE=9)
+S11 05_chain.sh with mocked sbatch: expect 3 submissions, jobs 2-3 with afterok on previous id + kill-on-invalid-dep
+  PASS rc (0)
+  PASS ncalls (3)
+  PASS call1_nodep (0)
+  PASS call2_dep (dependency=afterok:901 --kill-on-invalid-dep=yes)
+  PASS call3_dep (dependency=afterok:902)
+  PASS exports (AUTO_RESTART=1,ITER_STEP=4,ITER_MAX=20)
+  PASS ids_logged (901 902 903)
+S12 05_chain.sh refuses the placeholder e-mail (on a copy of 04 with the placeholder put back)
+  PASS placeholder_present (1)
+  PASS rc_refuse (1)
+S13 truncated last model (iter2 cut inside its block section): expect restart from 1, iter2 renamed *.corrupt_1301, ITERATION '1 4', exit 0
+  PASS rc (0)
+  PASS iteration (1 4)
+  PASS quarantined (yes)
+  PASS reason_logged (1)
+  PASS last_after (4)
+S14 only iteration 0, and it is truncated: expect exit 1, femtic not run, iter0 NOT renamed
+  PASS rc (1)
+  PASS no_run (none)
+  PASS iter0_kept (yes)
+S15 DISTORTION=1: distortion_iter1.dat missing next to a valid block 1 -> restart from 0 (block 1 renamed), ITERATION '0 3'
+  PASS rc (0)
+  PASS iteration (0 3)
+  PASS quarantined (yes)
+  PASS dist_written (yes)
+S16 silent exit-0 death (femtic exits 0 with no end line): expect exit 1, no COMPLETED marker, outcome silent_exit0
+  PASS rc (1)
+  PASS completed (no)
+  PASS outcome (silent_exit0)
+S17 COMPLETED marker: present after S1's normal end (job 101), absent after S6's crash (job 401)
+  PASS completed_101 (yes)
+  PASS completed_line (1)
+  PASS completed_401 (no)
+S18 SIGUSR1 mid-run (femtic busy after writing model 1): expect WALLTIME marker, walltime_usr1 row, stop reason usr1, exit 0
+  PASS rc (0)
+  PASS walltime_marker (yes)
+  PASS usr1_row (1)
+  PASS stop_reason (usr1)
+  PASS last (1)
+  PASS ended_promptly (yes)
+S19 safe-point stop (10 s per iteration, 26 s to the hard stop, 1 s polls): expect stop at the safe point after model 2, exit 0
+  PASS rc (0)
+  PASS stop_reason (safe_point_iter2)
+  PASS last (2)
+  PASS safe_msg (1)
+  PASS safe_rows (3)
+S20 05_chain.sh with a truncated last model: expect a note, start from the previous iteration, no renaming
+  PASS rc (0)
+  PASS note (1)
+  PASS from (1)
+  PASS not_renamed (yes)
+S21 06 forward-only (8 ranks x 2 frequencies, 5 s + 6 s each): expect exit 0, T6 PASS, 16 rows = F, report + COMPLETED, inversion dir untouched
+  PASS rc (0)
+  PASS t6 (1)
+  PASS rows (1)
+  PASS tfwd (1)
+  PASS rank7 (1)
+  PASS iteration00 (0 0)
+  PASS inv_control_untouched (9143378ef87664f41e907bf32e753faf)
+  PASS completed (yes)
+  PASS no_iter1_in_inv (no)
+  PASS interp_pred (1)
+S22 06 forward-only with one frequency missing on rank 7: expect exit 1, T6 FAIL (15 rows), no COMPLETED
+  PASS rc (1)
+  PASS t6_fail (1)
+  PASS completed (no)
+
+CHECKS: 89 passed, 0 failed
+OVERALL: PASS

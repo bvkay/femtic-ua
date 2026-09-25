@@ -8,9 +8,10 @@ Survey: 120 sites over about 13 x 15 km (UTM zone 53S), **impedance only (no tip
 the project at `/hpcfs/users/a1690074/FEMTIC_2026`. Its full output is kept next to these scripts in
 `discovery/phoenix_discovery_p2-log-2_2026-09-25.txt`; the module names, partition limits, billing weights,
 srun plugins, login-node tools and storage facts below are taken from it (summary in section 12). The GCC
-route (`foss/2023a` + `imkl/2023.1.0`) is load-tested and is the primary route. Nothing has been compiled or
-run as a job on Phoenix yet. What is still unverified is listed at the end of section 10; VERIFY tags remain
-only on those items.
+route (`foss/2023a` + `imkl/2023.1.0`) is load-tested and is the primary route. The build ran on p2-log-2 on
+2026-09-25 (all 7 tools, T1 PASS; `discovery/phoenix_build_foss_2026-09-25.log`). The smoke tests T2/T5 have not
+passed yet: the first two attempts stopped before FEMTIC ran (section 3, step 5). What is still unverified is
+listed at the end of section 10; VERIFY tags remain only on those items.
 
 ## 0. Files
 
@@ -18,7 +19,7 @@ only on those items.
 |---|---|---|
 | `00_discover.sh` | login node | Read-only survey: toolchain modules (`module avail foss imkl intel GCC OpenMPI impi`, `module spider imkl`), load tests, per-partition memory caps, billing weights, git/curl/internet, micromamba. Validates the planned requests with `sbatch --test-only`, which submits nothing. **Ran 2026-09-25 on p2-log-2**; re-run only to re-check after a Phoenix change. |
 | `discovery/phoenix_discovery_p2-log-2_2026-09-25.txt` | - | The full output of that run: the evidence for every "verified 2026-09-25" statement in this README and the scripts. |
-| `01_build_femtic.sh` | login node (`FETCH_ONLY=1`), then an interactive session | Gets the 7 sources pinned to audited commits (git clone, pre-copied git-free trees, or GitHub tarballs; never inside a compute job), builds them with the ported Makefiles, installs to `$BIN`, writes `femtic_env.sh`. Runs tests T1, T2 and T5. |
+| `01_build_femtic.sh` | login node only (`FETCH_ONLY=1`, then the build); `SMOKE_ONLY=1` as a batch job | Gets the 7 sources pinned to audited commits (git clone, pre-copied git-free trees, or GitHub tarballs; never inside a compute job), builds them with the ported Makefiles, installs to `$BIN`, writes `femtic_env.sh`, runs test T1. `SMOKE_ONLY=1` runs T1, T2 and T5 on the installed build in a batch job, with no git, make or compiler. |
 | `femtic_lib.sh` | sourced | Shared helpers: control.dat edits, restart-model integrity check and fallback, the wall-limit watcher, launch command, log parsing. Installed to `$BIN`. |
 | `02_env_femticpy.sh` | login node or interactive job | Reuses the micromamba 2.9.0 already under `/hpcfs/users/$USER/micromamba` (envs base, gjoint) and adds only the env `femticpy` from `environment_femticpy.yml` (written next to the script). Self-test includes a UTM 53S check. |
 | `03_mesh.slurm` | icelake (8 cpus) or interactive | The 7-step meshGen, then test T3 (mesh consistency) and sizing inputs. |
@@ -45,7 +46,7 @@ in the discovery output (p2-log-2, 2026-09-25), plus Ben's earlier node census f
 | `newicelake` | 5 | 72 | 255,000 | not queried | not queried | 3 days | not queried | not used by the kit |
 | `a100cpu` | 43 (GPU nodes) | 72, but **MaxCPUsPerNode=36** | 515,000 | 7152 | **36 cpus, 257,472 MiB** | 3 days | 1.2 | **not used**: icelake's RAM with half the cores at the same price, so no advantage for FEMTIC (the wiki's "36 cpus" was right) |
 | `highmem` | 7 | 72 | 1,990,000 | 27126 | 72 cpus, **1,953,072 MiB** (`--mem=1900G` accepted) | 3 days | 2.5 | the only route above about 255 GB per node |
-| `interactive` | 2 (`p2-dmv-*`) | 72 | 255,000 | - (OverSubscribe=FORCE:2) | 8 cpus per job, 24 per user (QoS) | 21 days | free (wiki; VERIFY) | build, smoke tests, mesh; has internet (wiki); cores can be shared 2-way, so take no timings here |
+| `interactive` | 2 (`p2-dmv-*`) | 72 | 255,000 | - (OverSubscribe=FORCE:2) | 8 cpus per job, 24 per user (QoS) | 21 days | free (wiki; VERIFY) | smoke test (`SMOKE_ONLY=1`), mesh; **never the build**: its data-mover nodes `p2-dmv-*` have no git and no `/apps` (2026-09-25; `femtic_env.sh` remaps to `/gpfs/apps`); has internet (wiki); cores can be shared 2-way, so take no timings here |
 | `dm` | 2 | 72 | 255,000 | - | 8 cpus per job, 24 per user (QoS) | infinite | free (wiki) | transfers |
 
 * **RAM is granted per cpu.** `--mem` is capped at cpus x MaxMemPerCPU, so memory is bought with cpus.
@@ -90,6 +91,16 @@ in the discovery output (p2-log-2, 2026-09-25), plus Ben's earlier node census f
   curl 7.61.1 with internet (github HTTP 200, micro.mamba.pm 307, conda-forge 200), `ulimit -s` 8192
   (04 raises it in jobs), `TMPDIR` unset outside jobs (in jobs it exists only with `--gres=tmpfs:<N>G`).
   `rcquota` and `rcstat` are in `/usr/local/bin`.
+* **Node differences (seen 2026-09-25 in two failed smoke jobs):** icelake compute nodes have no `make` and no
+  `git`, so **building is login-node only** (`01` stops with "make not found" elsewhere; `module avail` also lists
+  `make/4.4.1-GCCcore-12.3.0`, untested and not needed). The interactive-partition data-mover nodes `p2-dmv-*`
+  have no git and **no `/apps` at all**, only `/gpfs/apps` (owner root, group phoenix-hpc-support). The modules
+  still load there but set `/apps/icl/...` paths (`MKLROOT`, `LD_LIBRARY_PATH`), so `ldd femtic` found 3 MKL
+  libraries "not found" on p2-dmv-1. The login node and the icelake nodes have both trees: imkl is under
+  `/apps/icl/software`, GCC and OpenMPI under `/gpfs/apps/icl/software`. `femtic_env.sh` therefore calls
+  `femtic_apps_remap` (`femtic_lib.sh`): on a node without `/apps` it rewrites `/apps/` to `/gpfs/apps/` in the
+  exported module paths and prints `femtic_env.sh: /apps absent on <host>; remapped to /gpfs/apps`. 03, 04 and
+  06 source `femtic_env.sh` before they run any tool, so they get the remap too.
 * **Internet:** verified on the login node. The interactive partition has it according to the wiki;
   compute nodes were not tested. `git clone`, downloads, micromamba and conda-forge therefore run on the
   login node or in an interactive job only.
@@ -103,7 +114,8 @@ Ben's established Phoenix workflow, which these scripts follow:
 * Files go to `/hpcfs/users/a1690074/<project>` by **WinSCP**; this project is at
   `/hpcfs/users/a1690074/FEMTIC_2026`. There is **no git** on the Phoenix tree, and every script tolerates
   a git-free tree (01 reads `COMMIT_SHA.txt` or GitHub tarballs instead). The login node does have git 2.27,
-  so `FETCH_ONLY=1` clones the upstream sources.
+  so `FETCH_ONLY=1` clones the upstream sources and records each checked-out commit in `<repo>/COMMIT_SHA.txt`.
+  On a node without git, `01` reads a checkout's commit from `.git/HEAD` (and `.git/refs/` or `.git/packed-refs`).
 * **LF line endings.** All files here are LF. If a copied script fails at the shebang (`bad interpreter: ^M`),
   run `dos2unix *.sh *.slurm`. `05` refuses a CRLF job script.
 * **Python via micromamba** under `/hpcfs/users/$USER/micromamba` (not the Anaconda module).
@@ -125,7 +137,8 @@ Ben's established Phoenix workflow, which these scripts follow:
   femtic_src/                         $SRC: the 7 upstream sources (build objects land here)
     ported/<tool>/Makefile.*          optional copy of FEMTIC_2026/hpc/ported (01's default $PORTED)
     tarballs/                         optional GitHub archives <repo>-<sha>.tar.gz (git-free route)
-    build_<toolchain>_<date>.log      build logs; smoke_<toolchain>_<date>/ holds the T2/T5 runs
+    build_<toolchain>_<date>.log      build logs (fetch_<date>.log for FETCH_ONLY=1)
+    smoke_<toolchain>_<date>.log      SMOKE_ONLY=1 logs; smoke_<toolchain>_<date>/ holds that run's T2/T5 files
   femtic/bin/                         $BIN: femtic makeTetraMesh tetgen makeMtr TetGen2Femtic
                                       makeDHexaMesh mergeResultOfFEMTIC femtic_env.sh femtic_lib.sh
   easybuild/                          EASYBUILD_PREFIX, only if the fallback (section 8) is ever needed (absent now)
@@ -148,29 +161,57 @@ In every step, `PLAN=/hpcfs/users/$USER/FEMTIC_2026/hpc/phoenix_plan`.
    Run `dos2unix` only if a shebang fails.
 2. **Done:** `00_discover.sh` ran on p2-log-2 on 2026-09-25 (output in `$PLAN/discovery/`). The module names
    in `01_build_femtic.sh` match it, so no `MODS=` is needed.
-3. Sources, on the **login node**: `cd $PLAN && FETCH_ONLY=1 bash -l 01_build_femtic.sh`. git 2.27 is there,
-   so it clones and checks out the pinned commits. Alternatively download
-   `https://github.com/<owner>/<repo>/archive/<sha>.tar.gz` on Windows and WinSCP the files to `femtic_src/tarballs/`.
-4. Build in an interactive session: `srun -p interactive -N 1 -n 8 --mem=16GB --time=04:00:00 --pty bash`,
-   then `cd $PLAN && TOOLCHAIN=foss PORTED=/hpcfs/users/$USER/FEMTIC_2026/hpc/ported bash -l 01_build_femtic.sh`.
-   It must end with `T1=PASS T2=PASS T5=PASS`, or `T5=INCONCLUSIVE` (see section 10).
-5. `bash $PLAN/02_env_femticpy.sh` (login node). It reuses the existing micromamba and creates only the env
+3. **Done** (2026-09-25): sources, on the **login node**: `cd $PLAN && FETCH_ONLY=1 bash -l 01_build_femtic.sh`.
+   git 2.27 is there, so it clones and checks out the pinned commits (and now also writes `<repo>/COMMIT_SHA.txt`).
+   Alternatively download `https://github.com/<owner>/<repo>/archive/<sha>.tar.gz` on Windows and WinSCP the
+   files to `femtic_src/tarballs/`.
+4. Build, on the **login node p2-log-2 only** (compute nodes have no `make` or git; the interactive nodes have no
+   `/apps`): `cd $PLAN && TOOLCHAIN=foss PORTED=/hpcfs/users/$USER/FEMTIC_2026/hpc/ported bash -l 01_build_femtic.sh`.
+   It ran on 2026-09-25 in 74 s and ended with `T1=PASS T2=SKIPPED T5=SKIPPED`.
+   **Re-run it once with the current `01_build_femtic.sh` and `femtic_lib.sh`** (about 2 minutes). Only a build
+   writes `$BIN/femtic_env.sh` (now with the `/apps` remap) and installs `$BIN/femtic_lib.sh`, and the copies
+   installed on 2026-09-25 predate both.
+5. Smoke tests T1 + T2 + T5 on the installed build, as a batch job submitted from `/hpcfs/users/$USER/FEMTIC_2026`:
+   ```
+   sbatch -p icelake -N 1 -n 4 --mem=8G --time=00:30:00 -J femtic_smoke -o slurm-%x-%j.out --wrap 'TOOLCHAIN=foss SMOKE_ONLY=1 bash -l hpc/phoenix_plan/01_build_femtic.sh'
+   ```
+   At most 2.4 SU. `SMOKE_ONLY=1` fetches, compiles and installs nothing: it sources `$BIN/femtic_env.sh`, runs
+   T1 (`ldd`; fails on any "not found") and T2/T5 on FEMTIC's example, and logs to
+   `femtic_src/smoke_foss_<date>.log`. `-p interactive` instead of `-p icelake` is free (wiki) and works once
+   step 4 has been re-run; the log then shows the `/apps absent ... remapped to /gpfs/apps` line. icelake is the
+   node type 04 and 06 run on. The job must end with `SMOKE_ONLY DONE  T1=PASS  T2=PASS  T5=PASS`, or
+   `T5=INCONCLUSIVE` (section 10); exit status 3 means a test failed, 1 that the script stopped with ERROR.
+   The first two attempts (`SMOKE=1`, 2026-09-25) stopped before FEMTIC ran: on `interactive` (p2-dmv-1: no git,
+   no `/apps`, so no `libmkl_core` under `MKLROOT`) and on `icelake` ("make: command not found").
+6. `bash $PLAN/02_env_femticpy.sh` (login node). It reuses the existing micromamba and creates only the env
    femticpy. Then prepare the Vulcan inputs with the femticPy notebooks.
    Site coordinates come only from `Vulcan/site_coords_femticpy.txt` (section 11).
-6. Mesh: `cd /hpcfs/users/$USER/vulcan_femtic/meshGen && sbatch $PLAN/03_mesh.slurm` (19.2 SU), or
+7. Mesh: `cd /hpcfs/users/$USER/vulcan_femtic/meshGen && sbatch $PLAN/03_mesh.slurm` (19.2 SU), or
    `sbatch -p interactive $PLAN/03_mesh.slurm` (free according to the wiki). Both requests were accepted by
    `sbatch --test-only`. T3 must pass.
-7. **Forward-only job (T6), the first thing to run on Phoenix after the build and the mesh:**
+8. **Forward-only job (T6), the first thing to run on Phoenix after the build and the mesh:**
    `cd /hpcfs/users/$USER/vulcan_femtic/inversion/inv01 && sbatch $PLAN/06_forward_only.slurm` (at most 172.8 SU).
    Read `logs/fwd0_report_<jobid>.txt`: forward time per frequency, PARDISO per rank, peak node RSS,
    predicted sensitivity-step and rank-0 memory. Change the layout (ranks x threads, partition) here, before
    any inversion is submitted.
-8. **Test inversion (T4):** set `ITERATION` to `0 1` in `inversion/inv01/control.dat` and run
+9. **Test inversion (T4):** set `ITERATION` to `0 1` in `inversion/inv01/control.dat` and run
    `sbatch --time=12:00:00 $PLAN/04_inversion.slurm` (at most 1,036.8 SU). Read the sizing
    report and `rcstat`, then choose ranks, threads and ITER_STEP (section 6).
-9. Production: `bash -l $PLAN/05_chain.sh $PWD 3 <ITER_STEP> <ITER_MAX>`.
+10. Production: `bash -l $PLAN/05_chain.sh $PWD 3 <ITER_STEP> <ITER_MAX>`.
 
 After every job: `rcstat <jobid>` (also printed at the end of `slurm-<jobname>-<jobid>.out`).
+
+Messages seen on Phoenix, and what they mean:
+
+* A Slurm `task_prolog` line ending in `Permission denied` at the top of a job's output on p2-dmv-1 (interactive
+  partition): a cluster quirk, harmless; ignore it.
+* `femtic_env.sh: /apps absent on p2-dmv-...; remapped to /gpfs/apps`: expected on the interactive nodes (section 1).
+* `ERROR: make not found: build on the login node ...`: `01` was started without `SMOKE_ONLY=1` in a compute job.
+* `T1 FAIL: unresolved libraries: libmkl_... => not found` on an interactive node: `$BIN/femtic_env.sh` predates
+  the remap (`01` prints a NOTE saying so); re-run the build on the login node (step 4).
+* `-- <repo>: version UNKNOWN (informational, not an error)`: neither git, `.git/HEAD` nor `COMMIT_SHA.txt` gives the
+  commit; the build continues. `echo <sha> > femtic_src/<repo>/COMMIT_SHA.txt` records it.
+* `bad interpreter: ^M`: CRLF line endings; `dos2unix *.sh *.slurm`.
 
 ## 4. Build path per toolchain
 
@@ -211,8 +252,10 @@ Points that matter:
 * **Pinning.** `PIN=1` requires the exact commits the ported Makefiles' OBJS lists were copied from:
   femtic `26c8606`, makeTetraMesh `92a9a32`, makeMtr `df8e207`, TetGen2Femtic `ceb8bfb`,
   makeDHexaMesh `66afbfc`, mergeResultOfFEMTIC `4fe54e1`, tetgen `e05aca7`. In a git-free tree the commit
-  is read from `<repo>/COMMIT_SHA.txt` (written automatically for tarballs); without it the version is
-  reported as UNKNOWN. A later upstream commit that adds a source file would fail at link time.
+  is read from `<repo>/COMMIT_SHA.txt`, which is written for tarballs and, wherever git runs, after every clone
+  and checkout. On a node without git a checkout's commit is read from `.git/HEAD` (a SHA, or a branch through
+  `.git/refs/heads/` or `.git/packed-refs`). If nothing gives the commit, the version is reported as UNKNOWN,
+  as information only: the build continues. A later upstream commit that adds a source file would fail at link time.
 
 ## 5. SU cost of candidate configurations
 
@@ -231,6 +274,7 @@ the job runs to its full walltime; whether Phoenix charges elapsed or requested 
 | icelake, 2 nodes, 72 h | 144 | 72 | 1.2 | **12,441.6** |
 | highmem, 1 node (1.95 TB usable: 72 x 27126 MiB), 72 h | 72 | 72 | 2.5 | **12,960.0** |
 | chain of 3 x 72 h on 1 icelake node | 72 | 216 | 1.2 | 18,662.4 |
+| smoke test (01 `SMOKE_ONLY=1`): icelake, 4 cpus, 0.5 h (free on interactive) | 4 | 0.5 | 1.2 | 2.4 |
 | mesh job (03): icelake, 8 cpus, 2 h (free on interactive) | 8 | 2 | 1.2 | 19.2 |
 | CSIRO AusLAMP run, re-priced (2 x 56 cores, 144 h) | 112 | 144 | 1.2 | 19,353.6 |
 
@@ -451,15 +495,17 @@ run on the login node or in an interactive job (internet); otherwise pre-place t
 | UTM 53S self-test values in 02 | pyproj on Windows: (135 E, 30 S) -> 500,000.00 E, 6,681,214.65 N; Vulcan A1 within 1 m of `edi_inventory.md` |
 | FEMTIC runtime behaviour (control.dat parsing, defaults, restart files and their write order, log strings, rank-0 reads, OOC file location, frequency split, cell types, no stop hook, `ITERATION 0 0` skips sensitivities, `HOLD_FWD_MEM` is a bare keyword) | Read in `femtic/src` at commit 26c8606 |
 | Script logic | WSL (GNU bash 5.2, sed 4.9, gawk 5.2) harnesses in `validation/wsl_2026-09-25/scripts/`, run 2026-09-25 against these files: `libtest_v2.sh` 48/48 checks (library, incl. restart check and fallback, trapped-signal wait, TERM-to-KILL stop); `chaintest_v2.sh` 22 scenarios, 89/89 checks (mock Slurm for 04, 05, 06: chaining, restart fallback and quarantine, DISTORTION fallback, silent exit-0 death, COMPLETED marker, SIGUSR1 trap, safe-point stop, T6 pass and fail); `unit2_v2.sh` 12/12 (T5 comparator, 03 region/poly/ele logic); `fetchtest_v2.sh` 14/14 (01 tarballs, git-free tree, pin mismatch, no fetch in compute jobs). Each harness was shown able to fail: 8 deliberately broken copies of the scripts were all caught. `bash -n` clean; shellcheck 0.11 clean at warning level. The v1 harnesses are kept unchanged as the record of the earlier run |
-| Compiling, linking and running anything on Phoenix | **Not done yet.** The remaining unverified items are listed at the end of section 10. |
+| Smoke-test hardening of 01 and femtic_lib.sh (2026-09-25, after the two failed smoke jobs) | WSL, runner `smokefix_run_all.sh`, outputs `test_outputs/smokefix_*.out`. The four harnesses above re-run unchanged: 48/48, 89/89, 12/12, 14/14 (chaintest: 89/89 in 3 of 4 runs; one run gave 86/89 when its timing-based S19 safe-point scenario stopped one iteration early under WSL load, in code this change did not touch: `test_outputs/smokefix_chaintest_v2_NOTE.txt`). New: `smokeonly_test.sh` 70/70 (`SMOKE_ONLY=1` with no git, make or compiler on PATH; fake femtic, mpirun and ldd; `femtic_env.sh` written by 01's own section 4; T1 "not found", T5 failure, missing inputs, a second run in the same second; a node without `/apps` with and without the remap, and an icelake-like node, in a private mount namespace), `gitfree_head_test.sh` 28/28 (commit from `.git/HEAD`, loose and packed refs, dangling ref, `COMMIT_SHA.txt` fallback and recording, never "No such file"), `build_guards_test.sh` 34/34 (make missing, versioned MKL names, `/apps` and `/gpfs/apps` fallback both ways, diagnostics), `apps_remap_test.sh` 33/33 (`femtic_apps_remap`). All four also pass under bash 4.4.12 (RHEL 8.4 ships bash 4.4). 13 broken copies (9 single-edit mutants, and the pre-change kit against each new harness) were all caught. shellcheck 0.11: no warning-level finding, no new info-level one |
+| Building on Phoenix | Done on p2-log-2, 2026-09-25: all 7 tools, T1 PASS (`discovery/phoenix_build_foss_2026-09-25.log`) |
+| Running FEMTIC on Phoenix (T2/T5 and later) | **Not done yet** (section 3, step 5). The remaining unverified items are listed at the end of section 10. |
 
 ## 10. Validation tests and their failure criteria
 
 | Test | Where | Fails if |
 |---|---|---|
-| T1 linkage | 01 | `ldd femtic` lacks libmkl_core or libmkl_intel_ilp64, shows "not found", or mixes OpenMP runtimes (foss: must have libgomp and mkl_gnu_thread and no libiomp5; intel: the reverse) |
-| T2 smoke | 01, inside an allocation | FEMTIC example INV_MT_01/Tetra (2 ranks x 2 threads, ITERATION 0 2) exits non-zero or does not write `resistivity_block_iter2.dat` |
-| T5 restart equivalence | 01, inside an allocation | The 0 to 1 then 1 to 2 restart through `femtic_ctl_set` and `femtic_last_iter` does not start at iteration 1, or its misfit differs from the straight run by more than 1e-4 (iteration 1) or 1e-3 (iteration 2) relative. Reported INCONCLUSIVE, not PASS, if a retrial or damping change occurred. The tolerance covers the 7-digit `%15e` model file. A wrong-model restart differs by tens of percent. |
+| T1 linkage | 01 (after the build, and with `SMOKE_ONLY=1`) | `ldd femtic` lacks libmkl_core or libmkl_intel_ilp64, shows "not found", or mixes OpenMP runtimes (foss: must have libgomp and mkl_gnu_thread and no libiomp5; intel: the reverse) |
+| T2 smoke | 01 `SMOKE_ONLY=1` batch job (or `SMOKE=1` on the login node) | FEMTIC example INV_MT_01/Tetra (2 ranks x 2 threads, ITERATION 0 2) exits non-zero or does not write `resistivity_block_iter2.dat` |
+| T5 restart equivalence | as T2 | The 0 to 1 then 1 to 2 restart through `femtic_ctl_set` and `femtic_last_iter` does not start at iteration 1, or its misfit differs from the straight run by more than 1e-4 (iteration 1) or 1e-3 (iteration 2) relative. Reported INCONCLUSIVE, not PASS, if a retrial or damping change occurred. The tolerance covers the 7-digit `%15e` model file. A wrong-model restart differs by tens of percent. |
 | Cross-platform check | manual | The iteration-0 row of the Phoenix smoke run disagrees with the WSL build's run of the same example in the first 6 significant digits |
 | T3 mesh | 03 | `resistivity_block_iter0.dat` line counts disagree with its header, or a region-seed attribute is missing from `resistivity_attr.dat` |
 | T6 forward only | 06 | femtic exits non-zero; no FEMTIC end line in femtic_0.log; the per-frequency times over all ranks do not number exactly F; or the sampled peak node RSS exceeds 90 % of `--mem` |

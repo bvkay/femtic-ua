@@ -1,0 +1,18 @@
+Each line: a deliberately broken copy of the kit and the harness that must reject it (failure criterion: any
+'NOT CAUGHT' or 'NOT APPLIED').
+M1 caught by smokeonly_test (8 failed checks: diag_apps_absent diag_ldpath diag_prefixes rc t1_fail t1_unresolved three_not_found ): T1 no longer fails on 'not found' (requirement D)
+M2 caught by smokeonly_test (6 failed checks: done_line env_file_remaps ldd_core_gpfs mklroot_remapped rc remap_warning ): femtic_env.sh no longer calls femtic_apps_remap
+M3 caught by apps_remap_test (15 failed checks: CPATH LD_LIBRARY_PATH LIBRARY_PATH MKLROOT PATH blank_separated idempotent_no_warning idempotent_values keep_gpfs keep_usr_apps lmod_refcount no_double_gpfs warning ): remap replaces every /apps/ substring (turns /gpfs/apps into /gpfs/gpfs/apps)
+M4 caught by build_guards_test (2 failed checks: make_msg no_build ): no make check after module load
+M5 caught by gitfree_head_test (3 failed checks: makemtr_packed resolved_without_git warning ): git_head_nogit ignores .git/packed-refs
+M6 caught by build_guards_test (4 failed checks: no_mkl_error reached_build swap_warning ): MKL guard back to exact unversioned names
+M7 caught by gitfree_head_test (1 failed checks: no_such_file ): unguarded COMMIT_SHA.txt read, as before the change
+M8 caught by smokeonly_test (7 failed checks: done_line log_suffixed rc t5_pass ): no unique stamp when another run used this second
+M9 caught by build_guards_test (3 failed checks: die_msg reached_build swap_warning ): no /apps <-> /gpfs/apps fallback in the MKL guard
+ORIG caught by smokeonly_test (48 failed checks): the pre-change kit (/mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026/4e858f54-ea4e-47a8-9815-7766aca9830d/scratchpad/smokefix_orig)
+ORIG caught by gitfree_head_test (17 failed checks): the pre-change kit (/mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026/4e858f54-ea4e-47a8-9815-7766aca9830d/scratchpad/smokefix_orig)
+ORIG caught by build_guards_test (17 failed checks): the pre-change kit (/mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026/4e858f54-ea4e-47a8-9815-7766aca9830d/scratchpad/smokefix_orig)
+ORIG caught by apps_remap_test (29 failed checks): the pre-change kit (/mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026/4e858f54-ea4e-47a8-9815-7766aca9830d/scratchpad/smokefix_orig)
+
+MUTANTS: 13 caught, 0 not caught
+OVERALL: PASS

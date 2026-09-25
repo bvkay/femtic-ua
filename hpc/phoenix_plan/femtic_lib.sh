@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # =============================================================================
 # femtic_lib.sh -- helpers shared by 01_build_femtic.sh (smoke/restart test), 03_mesh.slurm,
-# 04_inversion.slurm, 05_chain.sh and 06_forward_only.slurm.
+# 04_inversion.slurm, 05_chain.sh and 06_forward_only.slurm; femtic_env.sh also calls femtic_apps_remap.
 # 01_build_femtic.sh installs it to $BIN and $BIN/femtic_env.sh sources it, so the restart logic
 # that the smoke test exercises is the SAME code the 3-day chain runs.
 # After editing this file on Phoenix, re-install it:   install -m 644 femtic_lib.sh "$BIN"/
@@ -327,4 +327,36 @@ femtic_outcome_row() {
   local f=$1; shift
   [ -s "$f" ] || printf 'job_id\tscript\thost\tstart\tend\toutcome\titer_start\titer_end\texit\tdetail\n' > "$f"
   ( IFS=$'\t'; printf '%s\n' "$*" ) >> "$f"
+}
+
+# femtic_apps_remap -> for nodes WITHOUT /apps but WITH /gpfs/apps. Phoenix's interactive-partition
+#   (data-mover) nodes p2-dmv-* are such nodes (verified 2026-09-25): 'module load foss/2023a imkl/2023.1.0'
+#   still succeeds there but sets MKLROOT, LD_LIBRARY_PATH, ... to /apps/icl/... paths that do not exist, so
+#   'ldd femtic' reports the MKL libraries "not found". There, every exported variable naming a path under
+#   /apps/ is rewritten to /gpfs/apps/, and one warning line goes to stderr. "/apps/" is rewritten only where
+#   a path starts (start of the value, or after ':' ';' ',' '=' or a blank), so /gpfs/apps/... entries stay
+#   as they are and a second call changes nothing. PWD, OLDPWD and Lmod's encoded _ModuleTable* are skipped.
+#   Where /apps exists (login node, icelake nodes) it does nothing. Called by femtic_env.sh after 'module
+#   load'. Always returns 0.
+femtic_apps_remap() {
+  [ ! -d /apps ] && [ -d /gpfs/apps ] || return 0
+  local _ar_v _ar_val _ar_new _ar_sep _ar_from _ar_to _ar_n=0
+  for _ar_v in $(compgen -e); do
+    case "$_ar_v" in PWD|OLDPWD|_ModuleTable*) continue ;; esac
+    _ar_val=${!_ar_v}
+    case "$_ar_val" in *"/apps/"*) ;; *) continue ;; esac
+    _ar_new=$_ar_val
+    case "$_ar_new" in /apps/*) _ar_new="/gpfs$_ar_new" ;; esac
+    for _ar_sep in ':' ';' ',' '=' ' ' $'\t'; do
+      _ar_from="$_ar_sep/apps/"; _ar_to="$_ar_sep/gpfs/apps/"
+      _ar_new=${_ar_new//"$_ar_from"/$_ar_to}
+    done
+    if [ "$_ar_new" != "$_ar_val" ]; then
+      export "$_ar_v=$_ar_new" 2>/dev/null && _ar_n=$((_ar_n + 1))
+    fi
+  done
+  if [ "$_ar_n" -gt 0 ]; then
+    echo "femtic_env.sh: /apps absent on $(hostname 2>/dev/null || uname -n); remapped to /gpfs/apps ($_ar_n exported variables)" >&2
+  fi
+  return 0
 }

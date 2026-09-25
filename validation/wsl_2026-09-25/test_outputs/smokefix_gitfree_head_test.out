@@ -1,0 +1,40 @@
+P0 precondition: git is not reachable through the no-git PATH
+  PASS no_git (0)
+G1 no git, PIN=1, one layout per repo: detached HEAD / branch ref (CRLF) / packed-refs only / dangling ref /
+   git-free tree without COMMIT_SHA.txt / .git without HEAD + COMMIT_SHA.txt (CRLF) / loose ref beating packed-refs.
+   Expect exit 0, 5 commits resolved without git, 2 UNKNOWN (informational), no 'No such file' anywhere
+  PASS rc (0)
+  PASS git_absent_line (1)
+  PASS femtic_detached (1)
+  PASS mtm_loose_ref_crlf (1)
+  PASS makemtr_packed (1)
+  PASS tg2f_unknown (1)
+  PASS dhexa_unknown (1)
+  PASS merge_fallback (1)
+  PASS tetgen_loose_wins (1)
+  PASS warning (1)
+  PASS no_such_file (0)
+  PASS no_error (0)
+  PASS nothing_written (1)
+G2 no git, PIN=1, detached HEAD at another commit: expect exit 1 naming it, with the login-node hint
+  PASS rc (1)
+  PASS refused (1)
+  PASS hint (1)
+  PASS no_such_file (0)
+G3 same with PIN=0: expect exit 0, the other commit reported UNPINNED
+  PASS rc (0)
+  PASS unpinned (1)
+G4 git present, 7 real repositories (git init + commit), PIN=0: expect exit 0 and every COMMIT_SHA.txt = git rev-parse HEAD
+  PASS rc (0)
+  PASS commit_sha_recorded (7)
+  PASS no_such_file (0)
+G5 the same real repositories on a node without git, COMMIT_SHA.txt deleted; makeMtr's refs packed by 'git pack-refs
+   --all' (loose ref gone), femtic on a detached HEAD: expect exit 0, all 7 resolved from .git = git rev-parse HEAD
+  PASS loose_ref_gone (gone)
+  PASS femtic_detached (5ddbc)
+  PASS rc (0)
+  PASS resolved_without_git (7)
+  PASS no_such_file (0)
+
+CHECKS: 28 passed, 0 failed
+OVERALL: PASS

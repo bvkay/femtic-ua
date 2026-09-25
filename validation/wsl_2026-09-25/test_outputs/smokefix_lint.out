@@ -1,0 +1,37 @@
+== bash -n after CR strip, and CR count (failure: any CR or any syntax error)
+00_discover.sh               CR=0  bash -n: ok
+01_build_femtic.sh           CR=0  bash -n: ok
+02_env_femticpy.sh           CR=0  bash -n: ok
+05_chain.sh                  CR=0  bash -n: ok
+femtic_lib.sh                CR=0  bash -n: ok
+03_mesh.slurm                CR=0  bash -n: ok
+04_inversion.slurm           CR=0  bash -n: ok
+06_forward_only.slurm        CR=0  bash -n: ok
+smokeonly_test.sh            CR=0  bash -n: ok
+gitfree_head_test.sh         CR=0  bash -n: ok
+build_guards_test.sh         CR=0  bash -n: ok
+apps_remap_test.sh           CR=0  bash -n: ok
+smokefix_run_all.sh          CR=0  bash -n: ok
+
+version: 0.11.0
+== shellcheck -S warning -s bash -e SC1090,SC1091 on the kit (failure: any finding)
+warning-level exit: 0
+== shellcheck -S warning on the new harnesses (information only)
+
+In apps_remap_test.sh line 88:
+mkdir -p "$T/bin"; ( BIN=$T/bin TOOLCHAIN=foss MODS="foss/2023a imkl/2023.1.0" EB_MODULES=$T/no_eb PLAN_DIR=$PLAN; . "$T/sec4.sh" )
+                     ^-^ SC2034 (warning): BIN appears unused. Verify use (or export if used externally).
+                                ^-------^ SC2034 (warning): TOOLCHAIN appears unused. Verify use (or export if used externally).
+                                               ^--^ SC2034 (warning): MODS appears unused. Verify use (or export if used externally).
+                                                                               ^--------^ SC2034 (warning): EB_MODULES appears unused. Verify use (or export if used externally).
+                                                                                                   ^------^ SC2034 (warning): PLAN_DIR appears unused. Verify use (or export if used externally).
+
+For more information:
+  https://www.shellcheck.net/wiki/SC2034 -- BIN appears unused. Verify use (o...
+exit: 1
+== shellcheck info level, 01_build_femtic.sh and femtic_lib.sh (baseline before the change: SC2012 once in each file)
+01_build_femtic.sh:248:11: note: Use find instead of ls to better handle non-alphanumeric filenames. [SC2012]
+femtic_lib.sh:51:33: note: Use find instead of ls to better handle non-alphanumeric filenames. [SC2012]
+exit: 1
+
+OVERALL: PASS

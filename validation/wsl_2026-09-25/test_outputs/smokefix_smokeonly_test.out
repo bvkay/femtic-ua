@@ -1,0 +1,93 @@
+  PASS sec4_extracted (ok)
+  PASS env_file_loads_modules (1)
+  PASS env_file_remaps (1)
+P0 preconditions: no /apps or /gpfs/apps in WSL; the restricted PATH has no real git/make/compiler, and git/g++/make
+   resolve to the poison stubs; the namespace sandbox works
+  PASS no_apps_in_wsl (0)
+  PASS no_real_git_make_cc (0)
+  PASS poison_first (3)
+  PASS sandbox (/gpfs/apps)
+K1 SMOKE_ONLY=1 as the icelake batch job (SLURM_JOB_ID set, partition icelake), no git/make/compiler, MKLROOT unset
+   before, SRC holding only the example: expect exit 0, T1/T2/T5 PASS, femtic_env.sh sourced, nothing built or rewritten
+  PASS rc (0)
+  PASS header_mode (1)
+  PASS done_line (1)
+  PASS t1_pass (1)
+  PASS t1_saw_core (1)
+  PASS t2_t5_pass (1)
+  PASS env_sourced (1)
+  PASS poison_calls (0)
+  PASS section1_skipped (0)
+  PASS no_remap_warning (0)
+  PASS femtic_runs (0 2,0 1,1 2,)
+  PASS mpirun_calls (3)
+  PASS no_such_file (0)
+  PASS smoke_log (1)
+  PASS log_pairs_workdir (yes)
+  PASS log_has_result (1)
+  PASS no_build_or_fetch_log (0)
+  PASS src_untouched (0)
+  PASS bin_unchanged (a75fba3f8f38ebb8c9ae5fd071d6adf5  -)
+  PASS env_file_unchanged (4c87c34919b51c183b9babb8deeb1115  -)
+K2 imkl's lib/intel64 lacks libmkl_core.so.2 (login-node-like: no Slurm; SMOKE_ONLY still runs T2/T5):
+   expect exit 3, T1 FAIL naming 'libmkl_core.so.2 => not found', LD_LIBRARY_PATH and /apps diagnostics
+  PASS rc (3)
+  PASS t1_unresolved (1)
+  PASS t1_fail (1)
+  PASS diag_ldpath (1)
+  PASS diag_prefixes (1)
+  PASS smoke_ran_anyway (1)
+K3 femtic ignores the restart start iteration: expect exit 3, T2 PASS, T5 FAIL (restart leg did not start at iteration 1)
+  PASS rc (3)
+  PASS t5_start_msg (1)
+  PASS t2_pass_t5_fail (1)
+K4 no $BIN/femtic: expect exit 1 with a clear message, before any run or work directory
+  PASS rc (1)
+  PASS msg (1)
+  PASS no_mpirun (0)
+  PASS no_new_workdir (3)
+K5 example directory missing (empty SRC): expect exit 1 naming the example path
+  PASS rc (1)
+  PASS msg (1)
+K6 $BIN/femtic_env.sh missing: expect exit 1
+  PASS rc (1)
+  PASS msg (1)
+K7 TOOLCHAIN=intel against a foss femtic_env.sh: expect exit 1 (T1's criteria would be the wrong ones)
+  PASS rc (1)
+  PASS msg (1)
+K8 SMOKE_ONLY=1 with FETCH_ONLY=1: expect exit 1
+  PASS rc (1)
+  PASS msg (1)
+K9 control: K1's job WITHOUT SMOKE_ONLY runs section 1: expect exit 1 (sources missing in a compute job) and a poison git call
+  PASS rc (1)
+  PASS fetch_refused (1)
+  PASS poison_git_called (1)
+K10 p2-dmv-like node (sandbox: /gpfs/apps only), module sets MKLROOT=/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0 (dangling), libraries under
+    /gpfs/apps, interactive job: expect exit 0, one remap warning, MKLROOT and ldd on /gpfs/apps, T1/T2/T5 PASS
+  PASS rc (0)
+  PASS remap_warning (1)
+  PASS mklroot_remapped (1)
+  PASS ldd_core_gpfs (1)
+  PASS done_line (1)
+K11 same node with the femtic_env.sh installed on 2026-09-25 (no femtic_apps_remap line): expect exit 3, T1 FAIL with
+    3 libraries not found (as seen on p2-dmv-1), a NOTE to regenerate femtic_env.sh, and '/apps' absent in the diagnostics
+  PASS rc (3)
+  PASS old_env_has_no_remap (0)
+  PASS three_not_found (3)
+  PASS note_regenerate (1)
+  PASS diag_apps_absent (1)
+K12 icelake-like node (sandbox: /apps and /gpfs/apps, libraries under /apps): expect exit 0, no remap, MKLROOT on /apps
+  PASS rc (0)
+  PASS no_remap_warning (0)
+  PASS mklroot_apps (1)
+  PASS done_line (1)
+  PASS wsl_root_untouched (0)
+K13 another run used this second's stamp: stale smoke_foss_<stamp>/ dirs (restart/ holding an iteration-2 model) and
+    .log files exist for the next 4 s: expect exit 0, T5 PASS, and a log + work dir with a _<pid> suffix, paired
+  PASS rc (0)
+  PASS t5_pass (1)
+  PASS log_suffixed (1)
+  PASS log_pairs_workdir (yes)
+
+CHECKS: 70 passed, 0 failed
+OVERALL: PASS

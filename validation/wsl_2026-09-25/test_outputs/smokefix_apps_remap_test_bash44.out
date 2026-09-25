@@ -1,0 +1,43 @@
+BASH_UNDER_TEST=/tmp/tmp.7DwS9hXlI0/bash44 (GNU bash, version 4.4.12(1)-release (x86_64-pc-linux-gnu))
+R1 node without /apps, with /gpfs/apps (p2-dmv-like sandbox), under set -eu: expect 7 exported variables remapped at
+   path starts only, /gpfs/apps entries untouched, unexported/non-path values untouched, one warning, rc 0
+  PASS rc1 (0)
+  PASS bash_version (4.4)
+  PASS MKLROOT (/gpfs/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0)
+  PASS LD_LIBRARY_PATH (/gpfs/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0/lib/intel64:/gpfs/apps/icl/software/GCCcore/12.3.0/lib64:/usr/lib64)
+  PASS LIBRARY_PATH (/gpfs/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0/lib/intel64)
+  PASS CPATH (/gpfs/apps/icl/a/include:/gpfs/apps/icl/b/include)
+  PASS PATH (/gpfs/apps/icl/x/bin:/usr/bin:/bin)
+  PASS lmod_refcount (/gpfs/apps/icl/a/lib:1;/gpfs/apps/icl/b/lib64:1)
+  PASS blank_separated (-x /gpfs/apps/y)
+  PASS keep_gpfs (/gpfs/apps/icl/z)
+  PASS keep_usr_apps (/usr/apps/q)
+  PASS keep_word (hello)
+  PASS keep_unexported (/apps/n)
+  PASS no_double_gpfs (0)
+  PASS warning (femtic_env.sh: /apps absent on Tara; remapped to /gpfs/apps (7 exported variables))
+  PASS idempotent_rc2 (0)
+  PASS idempotent_no_warning (0)
+  PASS idempotent_values (MKLROOT=/gpfs/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0 LD_LIBRARY_PATH=/gpfs/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0/lib/intel64:/gpfs/apps/icl/software/GCCcore/12.3.0/lib64:/usr/lib64)
+  PASS reached_end (1)
+R2 node with /apps and /gpfs/apps (icelake/login-like sandbox), set -eu: expect nothing changed, no warning, rc 0
+  PASS rc1 (0)
+  PASS MKLROOT (/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0)
+  PASS CPATH (/apps/icl/a/include:/apps/icl/b/include)
+  PASS no_warning (0)
+  PASS reached_end (1)
+R3 plain WSL (neither /apps nor /gpfs/apps): expect nothing changed, no warning, rc 0
+  PASS rc1 (0)
+  PASS PATH (/apps/icl/x/bin:/usr/bin:/bin)
+  PASS no_warning (0)
+R4 the femtic_env.sh written by 01's section 4, sourced on the p2-dmv-like node with a mock 'module load' that sets
+   MKLROOT=/apps/... and LD_LIBRARY_PATH: expect both on /gpfs/apps afterwards and exactly one warning line
+  PASS env_file_calls_remap (1)
+  PASS source_rc (0)
+  PASS MKLROOT (/gpfs/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0)
+  PASS LD_LIBRARY_PATH (/gpfs/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0/lib/intel64:/gpfs/apps/icl/software/GCCcore/12.3.0/lib64)
+  PASS one_warning (1)
+  PASS wsl_root_untouched (0)
+
+CHECKS: 33 passed, 0 failed
+OVERALL: PASS

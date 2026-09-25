@@ -1,0 +1,13 @@
+chaintest_v2.sh on the final kit (01_build_femtic.sh and femtic_lib.sh unchanged between these runs), 2026-09-25:
+  18:40  smokefix_run_all.sh old   89/89 PASS (output overwritten by the 18:43 run of the same file name)
+  18:43  smokefix_run_all.sh all   86/89 FAIL -> smokefix_chaintest_v2.out (kept as recorded)
+  18:45  rerun 1                   89/89 PASS -> smokefix_chaintest_v2_rerun1.out
+  18:46  rerun 2                   89/89 PASS -> smokefix_chaintest_v2_rerun2.out
+The 3 failed checks are all in S19 (safe-point stop: fake femtic 10 s per iteration, 26 s to the hard stop, 1 s polls):
+stop_reason safe_point_iter1 instead of safe_point_iter2, last model 1 instead of 2, 2 safe-point rows instead of 3.
+S19 is timing-based: the deadline is fixed when 04 starts, so a slow start (WSL load average 5-7 on 20 cpus at the
+time) leaves less than 1.1 x the iteration time after model 1 and the watcher stops one iteration early. That is the
+conservative direction (earlier, never later than the hard stop). The code S19 exercises (04_inversion.slurm,
+femtic_watch/femtic_stop in femtic_lib.sh) was not changed by the smoke-test hardening, which only appended
+femtic_apps_remap to femtic_lib.sh; chaintest writes its own femtic_env.sh, which does not call it.
+Status: the 86/89 run is superseded by the reruns for the purpose of this change; S19 remains timing-sensitive.

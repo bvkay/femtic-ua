@@ -1,0 +1,48 @@
+BASH_UNDER_TEST=/tmp/tmp.7DwS9hXlI0/bash44 (GNU bash, version 4.4.12(1)-release (x86_64-pc-linux-gnu))
+P0 preconditions: make is on the normal PATH and absent from the no-make PATH; no /apps or /gpfs/apps in WSL
+  PASS make_normal (1)
+  PASS make_absent (0)
+  PASS no_apps_in_wsl (0)
+B1 SMOKE=1 build inside an icelake job with no make on PATH (valid MKL): expect exit 1 with the make message,
+   before the MKL check, the build and T2
+  PASS rc (1)
+  PASS make_msg (1)
+  PASS no_mkl_check_output (0)
+  PASS no_build (0)
+  PASS no_t2 (0)
+  PASS bin_empty (0)
+B2 make present, MKLROOT has ONLY lib/intel64/libmkl_core.so.2 (versioned name): expect the guards to pass
+  PASS rc (1)
+  PASS reached_build (1)
+  PASS no_mkl_error (0)
+B3 MKLROOT has ONLY lib/libmkl_core.so (imkl 2024+ layout): expect the guards to pass
+  PASS rc (1)
+  PASS reached_build (1)
+  PASS no_mkl_error (0)
+B4 MKLROOT (outside /apps) with lib/intel64 but no libmkl_core: expect exit 1 after the diagnostics
+  PASS rc (1)
+  PASS die_msg (1)
+  PASS diag_head (1)
+  PASS diag_hostname (1)
+  PASS diag_ls_ld (1)
+  PASS diag_apps (1)
+  PASS diag_df (1)
+  PASS not_built (0)
+B5 p2-dmv-like node (sandbox: /gpfs/apps only), MKLROOT=/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0, library under /gpfs/apps:
+   expect a warning, MKLROOT switched to /gpfs/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0, the guards pass
+  PASS rc (1)
+  PASS swap_warning (1)
+  PASS reached_build (1)
+B6 the reverse (sandbox: /apps and /gpfs/apps): MKLROOT=/gpfs/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0 empty, library under /apps: expect MKLROOT=/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0
+  PASS rc (1)
+  PASS swap_warning (1)
+  PASS reached_build (1)
+B7 sandbox /gpfs/apps only, library in neither tree: expect exit 1 naming both paths, diagnostics show /apps absent
+  PASS rc (1)
+  PASS die_msg (1)
+  PASS diag_apps_absent (1)
+  PASS diag_gpfs_present (1)
+  PASS wsl_root_untouched (0)
+
+CHECKS: 34 passed, 0 failed
+OVERALL: PASS
