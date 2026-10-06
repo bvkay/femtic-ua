@@ -2,6 +2,34 @@
 
 Files: 120   UTM zone 53S (WGS84)
 
+## Acquisition dates and sensor frame
+
+Written by scripts/edi_inventory.py: the dates are its ACQUISITION table, the header facts are read from the EDIs,
+and the angles come from the per-site CSV and the rotation config named below.
+
+The EDIs carry only the dummy `ACQDATE 01/01/01`, and `DECLINATION 0` and `ZROT 0`. The acquisition dates below
+are Ben's (2026-09-28); the epochs are the ones used for the declination.
+
+| group | sites | acquired | epoch |
+|---|---|---|---|
+| 2022 grid | A1-J10 (100) | October-November 2022 | 2022.83 |
+| 2024 infill | Vul24-13 to Vul24-24 (10) | April 2024 | 2024.29 |
+| 2025 infill | Vul25_004 to Vul25_018 (10) | March 2025 | 2025.21 |
+
+**Frame.** The sensors were aligned to geomagnetic north (decision D2, Ben, 2026-09-28). With DECLINATION 0 and
+ZROT 0, every impedance tensor in these EDIs is in the geomagnetic frame: x = magnetic north, y = magnetic east.
+
+- The FEMTIC mesh x axis is UTM 53S grid north.
+- Magnetic north lies alpha = D - gamma clockwise of grid north. D is the IGRF-14 declination at each site and
+  epoch: 6.380 to 6.438 deg E. gamma is the grid convergence: -1.051 to -0.982 deg.
+- So alpha = 7.362 to 7.488 deg over the 120 sites (mean 7.417; J1 lowest, Vul24-24 highest).
+- config/vulcan_mesh_v2_rot.yml (`data.rotation`) rotates every tensor by the single value 7.42 deg. That is within
+  0.068 deg of every site.
+- Per-site values: validation/rotation_2026-09-28/alpha_per_site.csv. Method and tests:
+  validation/rotation_2026-09-28/README.md.
+
+The summary and the tables below (coordinates, frequencies, header checks) do not depend on the frame.
+
 | quantity | min | max |
 |---|---|---|
 | latitude | -29.9026 | -29.7733 |

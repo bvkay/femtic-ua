@@ -1,0 +1,3 @@
+# x_km y_km z_km(down) attribute max_volume_km3 -- one seed per closed region (scripts/run_mesh_chain.sh)
+0 0 -250 10 1000000000
+0 0 250 20 1000000000

@@ -1,0 +1,206 @@
+--force: once every self-check passes, D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\mesh\vulcan_v2_rot will be deleted and replaced; it holds:
+  18 file(s), 1.1 MB, written by prep and unchanged since (prep_manifest.sha256)
+prep_vulcan: config D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\config\vulcan_mesh_v2_rot.yml -> D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\mesh\vulcan_v2_rot
+femticPy read 120 EDIs: 120 with Z, 0 with tipper; 65 distinct bands
+data.rotation: magnetic -> grid, alpha 7.42 deg (explicit), all 120 stations; Z' = R(-alpha) Z R(-alpha)^T
+origin (bbox centre): E 697.38400 km, N 6697.44045 km
+frequencies: 53 candidates, 21 selected: 100, 62.896, 31.514, 19.985, 10.013, 6.2974, 3.1521, 1.9961, 1.001, 0.63033, 0.31537, 0.19951, 0.1001, 0.063033, 0.031537, 0.019951, 0.01001, 0.0063033, 0.0031521, 0.0019947, 0.0012553
+wrote control.dat, observe.dat, station_map.csv and analysis_domain.dat, bathymetry.dat, coast_line.dat, control.dat, makeMtr.param, obs_site.dat, observing_site.dat, region_seeds.dat, resistivity_attr.dat, topography.dat
+self-checks on D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\mesh\vulcan_v2_rot.staging
+  [PASS] C01  LF line endings: no CR in any file
+  [PASS] C02  site ids: 120 table ids, 120 DATAIDs, 120 files; identical sets: True
+  [PASS] C03  origin: femticPy origin E 697.38400 N 6697.44045 km; bbox centre E 697.38400 N 6697.44045 km
+  [PASS] C04  stations: 120 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.67 m); 120 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+  [PASS] C05  frequency selection: 21 bands selected from 53 candidates; femticPy path chose the same list: True
+  [PASS] C06  frequencies: max relative difference 0.00e+00 over 2520 of 2520 data lines
+  [PASS] C07  data line count: 2520 data lines = sum over 120 sites of selected bands present (2520)
+  [PASS] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 4.9e-05
+  [PASS] C09  error floors: 10080 SE pairs, alpha 7.42 deg, max relative difference 4.9e-05; floor active in 100%/97%/96%/100% of Zxx/Zxy/Zyx/Zyy
+  [PASS] C10  time convention: median phase Zxy -36.9 deg, Zyx 142.1 deg
+  [PASS] C11  mesh-site coordinates: obs_site.dat 120 sites, max 0.67 m; observing_site.dat 120 sites, max 0.67 m; resistivity_attr.dat 120 sites, max 0.67 m
+  [PASS] C12  mesh tables: all tables equal the config
+  [PASS] C13  geometry: sites x -7.255..7.255, y -6.622..6.622 km inside the domain; coast, topography and seeds consistent
+  [PASS] C14  inversion control.dat: all keywords equal the config
+  [PASS] C15  rotation sanity: T1 max|rotate_Z(Z_2D) - Z_grid| 0.0e+00 at 7.42 deg (the opposite sign gives 0.28); T2 strike recovered within 0.000 deg; T3 variances: 1.4e-16 from the explicit formulas, 0.5 % from a 200k-sample Monte Carlo (rotation changes them by up to 103 %)
+  [PASS] C16  isotropic invariance: max relative change 7.0e-17 in Z, 1.5e-16 in the variances, at -60/7.42/30/90 deg
+  [PASS] C17  mesh reuse: mesh/vulcan_v2: 10 of 10 files/* identical; input_md5.txt 9 of 9 md5 match; products.md5 names mesh.dat and resistivity_block_iter0.dat: True
+  [PASS] C18  EDI frame: 120 EDIs, rule of frame_in magnetic: 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+writing prep_manifest.sha256: sha256 of every file of the run directory
+
+----- femticPy output -----
+    reading A1.edi
+    reading A10.edi
+    reading A2.edi
+    reading A3.edi
+    reading A4.edi
+    reading A5.edi
+    reading A6.edi
+    reading A7.edi
+    reading A8.edi
+    reading A9.edi
+    reading B1.edi
+    reading B10.edi
+    reading B2.edi
+    reading B3.edi
+    reading B4.edi
+    reading B5.edi
+    reading B6.edi
+    reading B7.edi
+    reading B8.edi
+    reading B9.edi
+    reading C1.edi
+    reading C10.edi
+    reading C2.edi
+    reading C3.edi
+    reading C4.edi
+    reading C5.edi
+    reading C6_BxByReplaced.edi
+    reading C7.edi
+    reading C8.edi
+    reading C9.edi
+    reading D1.edi
+    reading D10.edi
+    reading D2.edi
+    reading D3.edi
+    reading D4.edi
+    reading D5.edi
+    reading D6.edi
+    reading D7.edi
+    reading D8.edi
+    reading D9.edi
+    reading E1.edi
+    reading E10.edi
+    reading E2_redone.edi
+    reading E3.edi
+    reading E4.edi
+    reading E5.edi
+    reading E6.edi
+    reading E7.edi
+    reading E8.edi
+    reading E9.edi
+    reading F1.edi
+    reading F10.edi
+    reading F2.edi
+    reading F3.edi
+    reading F4.edi
+    reading F5.edi
+    reading F6.edi
+    reading F7.edi
+    reading F8.edi
+    reading F9.edi
+    reading G1.edi
+    reading G10.edi
+    reading G2.edi
+    reading G3.edi
+    reading G4.edi
+    reading G5.edi
+    reading G6.edi
+    reading G7.edi
+    reading G8.edi
+    reading G9.edi
+    reading H1.edi
+    reading H10.edi
+    reading H2.edi
+    reading H3.edi
+    reading H4.edi
+    reading H5.edi
+    reading H6_BxReplaced.edi
+    reading H7.edi
+    reading H8.edi
+    reading H9r_BxReplaced.edi
+    reading I10.edi
+    reading I1_BxReplaced.edi
+    reading I2.edi
+    reading I3.edi
+    reading I4.edi
+    reading I5.edi
+    reading I6.edi
+    reading I7.edi
+    reading I8.edi
+    reading I9.edi
+    reading J1.edi
+    reading J10.edi
+    reading J2.edi
+    reading J3.edi
+    reading J4_BxReplaced.edi
+    reading J5.edi
+    reading J6_BxRepaced.edi
+    reading J7.edi
+    reading J8.edi
+    reading J9.edi
+    reading Vul24-13.edi
+    reading Vul24-14.edi
+    reading Vul24-15.edi
+    reading Vul24-17.edi
+    reading Vul24-19.edi
+    reading Vul24-20.edi
+    reading Vul24-21.edi
+    reading Vul24-22.edi
+    reading Vul24-23.edi
+    reading Vul24-24.edi
+    reading Vul25_004.edi
+    reading Vul25_005.edi
+    reading Vul25_007.edi
+    reading Vul25_008.edi
+    reading Vul25_009.edi
+    reading Vul25_010.edi
+    reading Vul25_011.edi
+    reading Vul25_012.edi
+    reading Vul25_016.edi
+    reading Vul25_018.edi
+Read 120 .edi files
+Inversion data summary: 
+
+  Inverting for 21 frequencies
+
+
+  Impedance Z: 
+
+  120 MT sites
+
+  20160 Impedance tensor data points (full Z tensor, Real and Imag data) 
+
+  Data points per frequencies: 
+
+    T = 7.966E+02s  nData = 120 
+
+    T = 5.013E+02s  nData = 120 
+
+    T = 3.172E+02s  nData = 120 
+
+    T = 1.586E+02s  nData = 120 
+
+    T = 9.990E+01s  nData = 120 
+
+    T = 5.012E+01s  nData = 120 
+
+    T = 3.171E+01s  nData = 120 
+
+    T = 1.586E+01s  nData = 120 
+
+    T = 9.990E+00s  nData = 120 
+
+    T = 5.012E+00s  nData = 120 
+
+    T = 3.171E+00s  nData = 120 
+
+    T = 1.586E+00s  nData = 120 
+
+    T = 9.990E-01s  nData = 120 
+
+    T = 5.010E-01s  nData = 120 
+
+    T = 3.172E-01s  nData = 120 
+
+    T = 1.588E-01s  nData = 120 
+
+    T = 9.987E-02s  nData = 120 
+
+    T = 5.004E-02s  nData = 120 
+
+    T = 3.173E-02s  nData = 120 
+
+    T = 1.590E-02s  nData = 120 
+
+    T = 1.000E-02s  nData = 120 
+

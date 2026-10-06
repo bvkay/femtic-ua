@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """prep_vulcan.py -- config-driven FEMTIC data and mesh-input preparation for the Vulcan MT survey.
 
-    python scripts/prep_vulcan.py config/vulcan_mesh_v1.yml [--out DIR] [--force]
+    python scripts/prep_vulcan.py config/vulcan_mesh_v1.yml [--out DIR] [--force [--force-delete-foreign]]
     python scripts/prep_vulcan.py config/vulcan_mesh_v1.yml --check-only DIR
 
 Reads the EDIs through femticPy DataGen.read_MTdata and the site coordinates from the trusted site table,
@@ -16,6 +16,7 @@ centres the sites, selects frequencies by the rule in the config, and writes
                                    coast_line.dat, topography.dat, bathymetry.dat; plus region_seeds.dat
     DIR/README.md                  everything above plus the tables actually written and the self-checks
     DIR/config_used.yml, DIR/prep.log
+    DIR/prep_manifest.sha256       sha256 of every file above ('sha256sum -c' format)
 
 femticPy is the vendored, patched copy named by paths.femticpy_src (external/femticPy; see its
 UPSTREAM.txt and patches/series). No notebook is involved. Runs with Python >= 3.9, numpy, pandas < 3,
@@ -24,7 +25,37 @@ matplotlib and PyYAML: the WSL conda env 'femticpy' or a Windows Python that has
 Everything is written to DIR.staging first. The self-checks then re-read the written files and compare
 them with an independent parse of the EDIs and the site table. Only if every check passes is DIR.staging
 renamed to DIR; any failure aborts with exit status 1, names the check and leaves DIR.staging for
-inspection. --check-only re-runs the checks on an existing DIR without writing anything.
+inspection. --check-only re-runs the checks on an existing DIR without writing anything; there C03 and
+C05 report N/A (they compare femticPy's in-memory results, which only a full run has).
+
+An existing, non-empty DIR is never replaced without --force, and --force deletes it only when every file in
+it is listed in its prep_manifest.sha256 with an unchanged sha256, i.e. prep wrote it and nobody changed it.
+Anything else (mesh.dat and resistivity_block_iter0.dat copied in, half-space runs, mesh logs, edits, or a
+directory from before the manifest existed) is listed and the run stops, unless --force-delete-foreign is
+given as well. Links (symlinks, junctions) are never followed or deleted: a DIR that holds one, or is reached
+through one (any link among the directories on its path), is refused whatever the flags. So is a DIR that
+is, or contains, the repository root, an input of the run, a .git directory, the home directory or a
+filesystem root; these are compared after resolving links, so an alias cannot hide them. A leftover
+DIR.staging is removed only if it holds prep's staging marker, which a run drops only after its last abort
+point. The safe re-run is a new directory: --out DIR2.
+
+Frame. A data.rotation block (frame_in magnetic|grid|true, rotate_to grid, angle_deg a number or 'auto' = per
+site from a CSV column, provenance) rotates every impedance tensor from the sensor frame into the mesh frame
+(x = UTM grid north): Z' = R(-alpha) Z R(-alpha)^T and Var' = (M o M) Var with M = kron(R(-alpha), R(-alpha)),
+alpha = azimuth of the sensor x axis clockwise from grid north (rotate_Z below). It is applied to femticPy's
+DataGen.data_Z after the id checks and before write_observe, i.e. before the unit conversion, the
+conjugation and the error floor, so the floor is computed from the rotated tensor. frame_in magnetic or true
+without an angle is refused, and 'auto' reads only the column of frame_in (ROT_ANGLE_COLUMN: alpha_deg for
+magnetic, alpha_true_deg for true). The angle(s) go into the READMEs, station_map.csv (column rot_deg) and a
+'#' header line of prep_manifest.sha256 (sha256sum -c skips it). Without the block nothing is rotated and the
+README warns (validation/rotation_2026-09-28/README.md: the Vulcan EDIs are in the geomagnetic frame).
+Check C18 reads ZROT, DECLINATION and the HMEAS/EMEAS azimuths of every EDI and fails if a rotation is
+recorded there (edi_frame_problems), since prep would then rotate an already rotated tensor.
+The sha256 of this script goes into the README provenance and a '#' header line of prep_manifest.sha256.
+mesh.reuse_from names a run directory whose gated mesh these inputs reuse; check C17 then verifies that
+files/ is byte-identical to the inputs that mesh was built from (its mesh_logs/input_md5.txt). A config
+using either key must say 'schema: prep_vulcan/2', which versions of this script from before 2026-09-28
+refuse (they would silently ignore data.rotation).
 """
 import argparse
 import contextlib
@@ -64,6 +95,79 @@ LOG = []
 def log(msg=""):
     print(msg)
     LOG.append(msg)
+
+
+# ============================================================================================ rotation
+ROT_FRAMES = ("magnetic", "grid", "true")
+ROT_KEYS = {"frame_in", "rotate_to", "angle_deg", "angle_file", "angle_column", "provenance"}
+ROT_REF_DEG = 7.42        # the Vulcan magnetic -> grid angle; C15 always tests the sign convention at it
+# angle_deg 'auto': the only angle_file column accepted for each frame_in. Both hold the azimuth of the sensor x
+# axis clockwise from grid north: alpha_deg = D - gamma (magnetic north), alpha_true_deg = -gamma (true north).
+# conv_pyproj_deg of alpha_per_site.csv is gamma itself, i.e. the true-north angle with the WRONG sign.
+ROT_ANGLE_COLUMN = {"magnetic": "alpha_deg", "true": "alpha_true_deg"}
+
+
+def rot_matrix(t_deg):
+    """R(t) = [[cos t, sin t], [-sin t, cos t]]: its rows are the new x and y axes in the old (x, y) frame when
+    the new x axis lies t degrees clockwise (from x = north towards y = east) of the old one"""
+    t = math.radians(t_deg)
+    return np.array([[math.cos(t), math.sin(t)], [-math.sin(t), math.cos(t)]])
+
+
+def rotate_Z(Z4, var4, alpha_deg):
+    """Rotate impedance tensors into the frame whose x axis lies alpha_deg ANTI-clockwise of theirs, i.e. from
+    a sensor frame whose x axis lies alpha_deg clockwise of the target x axis (Vulcan: magnetic north, 7.42 deg
+    clockwise of UTM grid north) into the target frame:
+        Z' = R(-alpha) Z R(-alpha)^T,    Var' = (M o M) Var,    M = kron(R(-alpha), R(-alpha)).
+    Z4: complex (..., 4) in the order xx, xy, yx, yy; var4: real (..., 4), the variances of the complex
+    estimates (EDI ZXX.VAR ...), taken as uncorrelated (the EDIs carry no covariances). R is real, so this
+    commutes with the unit conversion and the complex conjugation, but not with the error floor, which must
+    be computed from the rotated tensor. Pure: returns new arrays (Z4', var4') and changes nothing."""
+    M = np.kron(rot_matrix(-alpha_deg), rot_matrix(-alpha_deg))
+    return np.asarray(Z4, dtype=complex) @ M.T, np.asarray(var4, dtype=float) @ (M * M).T
+
+
+def rotation_angles(c, ids):
+    """{site id: alpha_deg} for the sites ids, from data.rotation (0 for every site without the block)"""
+    r = c["rot"]
+    if r is None or r["angle"] != "auto":
+        return {i: (0.0 if r is None else r["angle"]) for i in ids}
+    import csv
+    with open(r["angle_file"], encoding="utf-8", newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    if not rows or "site_id" not in rows[0] or r["angle_column"] not in rows[0]:
+        fail("data.rotation.angle_file %s needs the columns site_id and %s (frame_in %s takes its per-site angle "
+             "only from %s: the azimuth of the %s x axis clockwise from grid north); refusing to use another "
+             "column" % (r["angle_file"], r["angle_column"], r["frame_in"], r["angle_column"], r["frame_in"]))
+    tab = {}
+    for row in rows:
+        sid = row["site_id"].strip()
+        if sid in tab:
+            fail("data.rotation.angle_file: site %s is listed twice" % sid)
+        try:
+            v = float(row[r["angle_column"]])
+        except (TypeError, ValueError):
+            fail("data.rotation.angle_file: site %s: %r is not a number" % (sid, row[r["angle_column"]]))
+        if not (math.isfinite(v) and abs(v) < 45):
+            fail("data.rotation.angle_file: site %s: angle %r must be finite and within +-45 deg" % (sid, v))
+        tab[sid] = v
+    missing = sorted(set(ids) - set(tab))
+    if missing:
+        fail("data.rotation.angle_file %s has no angle for %d site(s): %s" % (r["angle_file"], len(missing),
+                                                                             missing[:10]))
+    return {i: tab[i] for i in ids}
+
+
+def rotation_text(c, ang):
+    """one line naming the rotation actually applied (README, prep.log, manifest header)"""
+    r = c["rot"]
+    if r is None:
+        return "data.rotation not set: impedances written in the EDI frame, unrotated"
+    v = sorted(set(ang.values()))
+    how = ("%s deg (explicit), all %d stations" % (g(v[0]), len(ang)) if r["angle"] != "auto" else
+           "per site from %s column %s: %s..%s deg over %d stations" % (rel(r["angle_file"], c["root"]),
+                                                                      r["angle_column"], g(v[0]), g(v[-1]), len(ang)))
+    return "data.rotation: %s -> %s, alpha %s; Z' = R(-alpha) Z R(-alpha)^T" % (r["frame_in"], r["rotate_to"], how)
 
 
 # =============================================================================================== config
@@ -128,8 +232,9 @@ def check_increasing_radii(name, rows):
 def load_config(path):
     with open(path, encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh)
-    if not isinstance(cfg, dict) or cfg.get("schema") != "prep_vulcan/1":
-        fail("config %s: expected 'schema: prep_vulcan/1'" % path)
+    if not isinstance(cfg, dict) or cfg.get("schema") not in ("prep_vulcan/1", "prep_vulcan/2"):
+        fail("config %s: expected 'schema: prep_vulcan/1' (or prep_vulcan/2 with data.rotation or "
+             "mesh.reuse_from)" % path)
     c = {"raw": cfg, "config_path": os.path.abspath(path)}
     root = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(path)), str(cget(cfg, "paths.root"))))
     c["root"] = root
@@ -158,6 +263,58 @@ def load_config(path):
         fail("config: data.error_floor_Z must be 4 non-negative numbers [Zxx, Zxy, Zyx, Zyy]")
     c["error_floor_Z"] = [float(v) for v in ef]
     c["error_floor_VTF"] = float(cget(cfg, "data.error_floor_VTF"))
+    # data.rotation (optional): sensor frame -> mesh frame
+    rot = cget(cfg, "data", dict).get("rotation")
+    if rot is None:
+        c["rot"] = None
+    else:
+        if not isinstance(rot, dict):
+            fail("config: data.rotation must be a mapping (frame_in, rotate_to, angle_deg, provenance)")
+        unknown = sorted(set(rot) - ROT_KEYS)
+        if unknown:
+            fail("config: data.rotation has unknown key(s) %s; allowed: %s" % (unknown, sorted(ROT_KEYS)))
+        fin, fto, ang = rot.get("frame_in"), rot.get("rotate_to"), rot.get("angle_deg")
+        if fin not in ROT_FRAMES:
+            fail("config: data.rotation.frame_in must be one of %s, got %r" % (list(ROT_FRAMES), fin))
+        if fto != "grid":
+            fail("config: data.rotation.rotate_to must be 'grid' (the mesh x axis is UTM grid north), got %r" % fto)
+        if ang is None:
+            if fin != "grid":
+                fail("config: data.rotation.frame_in is %s but angle_deg is not given: refusing to guess the "
+                     "rotation. Give the azimuth of the %s x axis clockwise from grid north (a number, e.g. 7.42 "
+                     "for Vulcan: validation/rotation_2026-09-28/README.md) or 'auto' with angle_file" % (fin, fin))
+            ang = 0.0
+        if ang == "auto":
+            if fin == "grid":
+                fail("config: data.rotation: frame_in grid needs no angle ('auto' given)")
+            af = rot.get("angle_file")
+            if not af:
+                fail("config: data.rotation.angle_deg 'auto' needs angle_file (CSV with site_id and the angle column)")
+            af = os.path.normpath(os.path.join(root, str(af)))
+            if not os.path.isfile(af):
+                fail("config: data.rotation.angle_file %s does not exist" % af)
+            # the column must be the one of frame_in: without this rule 'true' + 'auto' used to take the magnetic
+            # alpha_deg (about 7.42 deg instead of about 1.02 deg) without a word
+            want = ROT_ANGLE_COLUMN[fin]
+            col = want if rot.get("angle_column") is None else str(rot.get("angle_column"))
+            if col != want:
+                fail("config: data.rotation.angle_column %r does not match frame_in %s, whose per-site angle (the "
+                     "azimuth of the %s x axis clockwise from grid north) is read only from column %s. alpha_deg is "
+                     "D - gamma (magnetic north); alpha_true_deg is -gamma (true north); conv_pyproj_deg is gamma, "
+                     "the true-north angle with the opposite sign" % (col, fin, fin, want))
+            c["rot"] = {"angle": "auto", "angle_file": af, "angle_column": col}
+        else:
+            if isinstance(ang, bool) or not isinstance(ang, (int, float)) or not math.isfinite(ang) or abs(ang) >= 45:
+                fail("config: data.rotation.angle_deg must be a number within +-45 deg or 'auto', got %r" % (ang,))
+            if fin == "grid" and ang != 0:
+                fail("config: data.rotation: frame_in grid is already the mesh frame; angle_deg must be 0, got %r" % ang)
+            if rot.get("angle_file") is not None or rot.get("angle_column") is not None:
+                fail("config: data.rotation.angle_file and angle_column are used only with angle_deg 'auto'")
+            c["rot"] = {"angle": float(ang)}
+        prov = rot.get("provenance")
+        if fin != "grid" and not (isinstance(prov, str) and prov.strip()):
+            fail("config: data.rotation.provenance must say where the angle comes from (frame_in %s)" % fin)
+        c["rot"].update(frame_in=fin, rotate_to=fto, provenance=" ".join(str(prov or "").split()))
     # frequencies
     c["require_all_sites"] = bool(cget(cfg, "frequencies.require_all_sites"))
     c["fmax"] = float(cget(cfg, "frequencies.fmax_hz"))
@@ -180,6 +337,15 @@ def load_config(path):
     if len(c["center"]) != 3:
         fail("config: mesh.center_km needs 3 values")
     c["rotation"] = float(cget(cfg, "mesh.rotation_deg"))
+    reuse = cget(cfg, "mesh", dict).get("reuse_from")
+    c["reuse_from"] = None if reuse is None else os.path.normpath(os.path.join(root, str(reuse)))
+    if c["reuse_from"] is not None and not os.path.isdir(os.path.join(c["reuse_from"], "files")):
+        fail("config: mesh.reuse_from %s has no files/ directory" % c["reuse_from"])
+    # prep_vulcan.py before 2026-09-28 accepts prep_vulcan/1 and silently ignores data.rotation, so a config that
+    # rotates must say prep_vulcan/2: an old script then refuses it instead of writing unrotated data
+    if (c["rot"] is not None or c["reuse_from"] is not None) and cfg["schema"] != "prep_vulcan/2":
+        fail("config: data.rotation and mesh.reuse_from need 'schema: prep_vulcan/2' (older versions of this "
+             "script accept prep_vulcan/1 and would silently ignore them)")
     c["topo_mode"] = str(cget(cfg, "mesh.topography.mode"))
     if c["topo_mode"] not in ("flat", "dem"):
         fail("config: mesh.topography.mode must be 'flat' or 'dem'")
@@ -250,6 +416,12 @@ def load_config(path):
     need = {0: 1, 1: 2, 2: 3, 3: 2}.get(iv["DISTORTION"])
     if need is None:
         fail("config: inversion.DISTORTION must be 0, 1, 2 or 3")
+    if iv["DISTORTION"] != 0:
+        fail("config: inversion.DISTORTION %d is not supported: with DISTORTION != 0 FEMTIC reads "
+             "distortion_iter<N>.dat at start, distortion_iter0.dat for ITERATION '0 N', and exits if it is "
+             "missing (femtic/src AnalysisControl.cpp:282-286, ObservedData.cpp:489-500), but neither this "
+             "script nor femticPy writes that file. Set DISTORTION: 0, or add a distortion_iter0.dat writer "
+             "(one line per MT station, count = MT stations of observe.dat) first" % iv["DISTORTION"])
     if len(iv["TRADE_OFF_PARAM"]) != need:
         fail("config: DISTORTION %d needs %d TRADE_OFF_PARAM value(s), got %d" %
              (iv["DISTORTION"], need, len(iv["TRADE_OFF_PARAM"])))
@@ -308,11 +480,13 @@ def load_coordinates_into_datagen(dg, rows):
 
 
 def parse_edi(path):
-    """Independent minimal EDI reader (not MTtools): DATAID, NFREQ, FREQ, Z blocks, tipper presence."""
+    """Independent minimal EDI reader (not MTtools): DATAID, NFREQ, FREQ, Z blocks, tipper presence, and the frame
+    fields check C18 tests (the ZROT block, the ROT= option of the Z blocks, DECLINATION, HMEAS/EMEAS lines)."""
     blocks, cur, dataid, nfreq, tipper = {}, None, None, None, False
     want = {"FREQ"} | {"Z%s%s" % (c, s) for c in ZC for s in ("R", "I", ".VAR")}
     info = {"RHOXY", "RHOXY.ERR", "RHOYX", "RHOYX.ERR"}          # optional; only for the README statistics
-    want_all = want | info
+    want_all = want | info | {"ZROT"}                            # ZROT optional; C18
+    zrefs, decl, meas = set(), [], []
     with open(path, encoding="ascii", errors="replace") as fh:
         for line in fh:
             s = line.strip()
@@ -320,6 +494,12 @@ def parse_edi(path):
                 name = s[1:].split()[0].upper() if len(s) > 1 else ""
                 if name.startswith("TXR") or name.startswith("TYR"):
                     tipper = True
+                if name in want and name != "FREQ":              # '>ZXXR ROT=ZROT //62': the rotation block used
+                    m = re.search(r"\bROT=(\S+)", s, re.I)
+                    zrefs.add(m.group(1).upper() if m else "")
+                if name in ("HMEAS", "EMEAS"):
+                    kv = {k.upper(): v for k, v in re.findall(r"(\w+)=(\S+)", s[1:])}
+                    meas.append((name, kv.get("CHTYPE", "").upper(), kv))
                 cur = name if name in want_all else None
                 if cur:
                     blocks[cur] = []
@@ -330,6 +510,12 @@ def parse_edi(path):
             m = re.match(r"NFREQ\s*=\s*(\d+)", s)
             if m and nfreq is None:
                 nfreq = int(m.group(1))
+            m = re.match(r"DECL(?:INATION)?\s*[:=]\s*(\S+)", s, re.I)    # INFO 'DECLINATION : 0.0000' or 'DECL='
+            if m and not cur:
+                try:
+                    decl.append(float(m.group(1)))
+                except ValueError:
+                    decl.append(float("nan"))
             if cur:
                 blocks[cur] += [float(v) for v in s.split()]
     missing = sorted(want - set(blocks))
@@ -346,7 +532,8 @@ def parse_edi(path):
     rho_err = {c: (np.array(blocks["RHO%s" % c]), np.array(blocks["RHO%s.ERR" % c]))
                for c in ("XY", "YX") if "RHO%s" % c in blocks and "RHO%s.ERR" % c in blocks}
     return {"dataid": dataid, "freq": f, "z": z, "var": var, "ok": ok, "tipper": tipper,
-            "file": os.path.basename(path), "rho_err": rho_err}
+            "file": os.path.basename(path), "rho_err": rho_err,
+            "frame": {"zrot": blocks.get("ZROT"), "zrefs": zrefs, "decl": decl, "meas": meas}}
 
 
 def edi_statistics(edis, chosen):
@@ -579,11 +766,21 @@ class Checks:
         self.res = []
 
     def add(self, cid, name, criterion, ok, detail):
-        self.res.append({"id": cid, "name": name, "criterion": criterion, "ok": bool(ok), "detail": detail})
-        log("  [%s] %-4s %s: %s" % ("PASS" if ok else "FAIL", cid, name, detail))
+        """ok None = N/A: the check cannot be evaluated in this mode (never counted as a pass)"""
+        status = "N/A" if ok is None else ("PASS" if ok else "FAIL")
+        self.res.append({"id": cid, "name": name, "criterion": criterion, "ok": None if ok is None else bool(ok),
+                         "status": status, "detail": detail})
+        log("  [%s] %-4s %s: %s" % (status, cid, name, detail))
 
     def failed(self):
-        return [r for r in self.res if not r["ok"]]
+        return [r for r in self.res if r["ok"] is False]
+
+    def count(self, status):
+        return sum(r["status"] == status for r in self.res)
+
+    def summary(self):
+        return "%d checks: %d PASS, %d FAIL, %d N/A" % (len(self.res), self.count("PASS"), self.count("FAIL"),
+                                                        self.count("N/A"))
 
 
 def rel_close(a, b, tol):
@@ -617,6 +814,158 @@ def match_sites(points, site_xy, what):
     if len(used) != len(ids):
         return False, dmax, "%s: %d of %d sites matched" % (what, len(used), len(ids))
     return True, dmax, mapping
+
+
+def rotate_Z_check(z, v, alpha_deg):
+    """The self-checks' own rotation, written independently of rotate_Z: the four explicit formulas of
+    validation/rotation_2026-09-28/README.md (c = cos alpha, s = sin alpha, alpha = azimuth of the sensor x
+    axis clockwise from grid north) and the squares of their coefficients for the variances. z, v: sequences
+    (xx, xy, yx, yy) of complex / real scalars or arrays."""
+    a = math.radians(alpha_deg)
+    c, s = math.cos(a), math.sin(a)
+    cc, ss, cs = c * c, s * s, c * s
+    xx, xy, yx, yy = z
+    zr = (cc * xx - cs * (xy + yx) + ss * yy,
+          cs * xx + cc * xy - ss * yx - cs * yy,
+          cs * xx - ss * xy + cc * yx - cs * yy,
+          ss * xx + cs * (xy + yx) + cc * yy)
+    vxx, vxy, vyx, vyy = v
+    c4, s4, c2s2 = cc * cc, ss * ss, cc * ss
+    vr = (c4 * vxx + c2s2 * (vxy + vyx) + s4 * vyy,
+          c2s2 * vxx + c4 * vxy + s4 * vyx + c2s2 * vyy,
+          c2s2 * vxx + s4 * vxy + c4 * vyx + c2s2 * vyy,
+          s4 * vxx + c2s2 * (vxy + vyx) + c4 * vyy)
+    return zr, vr
+
+
+def rotation_selftest(angles):
+    """C15: T1-T3 of validation/rotation_2026-09-28/rot_test.py run on rotate_Z itself, at ROT_REF_DEG and at the
+    smallest and largest configured angle. Returns (ok, detail)."""
+    zte, ztm = 1.3 - 0.9j, -0.4 + 0.25j
+    zmag = np.array([0, zte, ztm, 0], dtype=complex)            # 2-D earth, strike along the sensor x axis
+    test = sorted({ROT_REF_DEG, min(angles), max(angles)})
+
+    def truth(a):                                               # built in the grid frame: strike at azimuth +a
+        r = math.radians(a)
+        s, n = np.array([math.cos(r), math.sin(r)]), np.array([-math.sin(r), math.cos(r)])
+        return (zte * np.outer(s, n) + ztm * np.outer(n, s)).ravel()
+
+    t1 = max(float(np.abs(rotate_Z(zmag, np.zeros(4), a)[0] - truth(a)).max()) for a in test)
+    wrong = float(np.abs(rotate_Z(zmag, np.zeros(4), -ROT_REF_DEG)[0] - truth(ROT_REF_DEG)).max())
+    phis = np.arange(-45.0, 45.0, 0.005)
+    co, si = np.cos(np.radians(phis)), np.sin(np.radians(phis))
+    t2 = 0.0
+    for a in test:        # T2: strike of rotate_Z's output, found by turning a frame phi clockwise from grid north
+        zg = rotate_Z(zmag, np.zeros(4), a)[0]                  # diagonal of R(phi) Zg R(phi)^T, written out:
+        dxx = co * co * zg[0] + co * si * (zg[1] + zg[2]) + si * si * zg[3]
+        dyy = si * si * zg[0] - co * si * (zg[1] + zg[2]) + co * co * zg[3]
+        t2 = max(t2, abs(float(phis[int(np.argmin(np.abs(dxx) ** 2 + np.abs(dyy) ** 2))]) - a))
+    V = np.array([0.02, 0.5, 0.8, 0.03])                       # T3: variances, deterministic and Monte Carlo
+    vr = rotate_Z(np.zeros(4), V, ROT_REF_DEG)[1]
+    t3a = float(np.max(np.abs(vr - np.array(rotate_Z_check((0, 0, 0, 0), tuple(V), ROT_REF_DEG)[1])) / vr))
+    rng = np.random.default_rng(1)
+    dz = (rng.standard_normal((200000, 4)) + 1j * rng.standard_normal((200000, 4))) * np.sqrt(V / 2)
+    emp = np.array([np.mean(np.abs(w) ** 2) for w in rotate_Z_check(tuple(dz.T), (0, 0, 0, 0), ROT_REF_DEG)[0]])
+    t3b = float(np.max(np.abs(emp / vr - 1)))
+    moved = float(np.max(np.abs(vr / V - 1)))
+    ok = t1 <= 1e-12 and wrong > 0.1 and t2 <= 0.01 and t3a <= 1e-12 and t3b <= 0.02 and moved > 0.1
+    return ok, ("T1 max|rotate_Z(Z_2D) - Z_grid| %.1e at %s deg (the opposite sign gives %.2f); T2 strike "
+                "recovered within %.3f deg; T3 variances: %.1e from the explicit formulas, %.1f %% from a "
+                "200k-sample Monte Carlo (rotation changes them by up to %.0f %%)" %
+                (t1, "/".join(g(a) for a in test), wrong, t2, t3a, 100 * t3b, 100 * moved))
+
+
+def isotropy_selftest(angles):
+    """C16: a 1-D tensor (Zxx = Zyy = 0, Zyx = -Zxy) and equal variances are unchanged by rotate_Z at any angle.
+    Returns (ok, detail)."""
+    z1, v1 = np.array([0, 1.3 - 0.9j, -(1.3 - 0.9j), 0]), np.full(4, 0.37)
+    test = sorted({ROT_REF_DEG, min(angles), max(angles), 30.0, -60.0, 90.0})
+    dz = max(float(np.abs(rotate_Z(z1, v1, a)[0] - z1).max()) for a in test) / abs(z1[1])
+    dv = max(float(np.abs(rotate_Z(z1, v1, a)[1] - v1).max()) for a in test) / v1[0]
+    return dz <= 1e-12 and dv <= 1e-12, ("max relative change %.1e in Z, %.1e in the variances, at %s deg" %
+                                         (dz, dv, "/".join(g(a) for a in test)))
+
+
+FRAME_AXIS = {"HX": 0.0, "EX": 0.0, "HY": 90.0, "EY": 90.0}   # C18; HZ and other channels have no azimuth to test
+TOL_FRAME_DEG = 1e-6        # ZROT, DECLINATION and AZM are plain numbers in the EDI (0.000000E+00, 0.0000, 90.0)
+TOL_DIPOLE_DEG = 0.5        # direction of an EMEAS dipole X,Y -> X2,Y2 (the EDI gives them to 0.1 m)
+
+
+def edi_frame_problems(e, frame_in):
+    """C18 for one EDI (parse_edi output): what contradicts the frame data.rotation.frame_in names (None = no
+    data.rotation). Returns (problems, counts).
+    Every frame: the tensor must be the one the sensors measured, i.e. no rotation may be recorded in the file:
+    each Z block's ROT= option, if any, names ZROT; the ZROT block, if any, is 0 at every band; every HX and EX
+    azimuth is 0 and every HY and EY azimuth 90 deg (the AZM of HMEAS/EMEAS lines where given; an EMEAS without
+    AZM by the direction X,Y -> X2,Y2 of its dipole, polarity ignored, when that has a length). prep rotates
+    such a tensor by the configured angle as if it were in the sensor frame, so a ZROT of 7.42 would be
+    rotated a second time. Which north the sensor x axis pointed to is what frame_in states; the EDI cannot
+    record it. DECLINATION: frame_in magnetic or grid, or no data.rotation (whose README states the Vulcan EDIs
+    are magnetic with DECLINATION 0 and ZROT 0): present and 0, since a non-zero value can mean a declination
+    correction was applied. frame_in true: information only (a true-north layout does not need it)."""
+    fr, bad = e["frame"], []
+    n = {"zrot": 0, "decl": 0, "azm": 0, "dipole": 0, "no_orient": 0}
+    other = sorted(r or "(none)" for r in fr["zrefs"] if r not in ("", "ZROT"))
+    if other:
+        bad.append("Z blocks name ROT=%s, not ZROT" % "/".join(other))
+    if "ZROT" in fr["zrefs"] and fr["zrot"] is None:
+        bad.append("Z blocks name ROT=ZROT but there is no >ZROT block")
+    if fr["zrot"] is not None:
+        n["zrot"] = 1
+        nz = [v for v in fr["zrot"] if not abs(v) <= TOL_FRAME_DEG]
+        if nz:
+            bad.append("ZROT %s at %d of %d bands" % (g(nz[0]), len(nz), len(fr["zrot"])))
+    n["decl"] = int(bool(fr["decl"]))
+    if frame_in != "true":
+        if not fr["decl"]:
+            bad.append("no DECLINATION")
+        elif any(not abs(v) <= TOL_FRAME_DEG for v in fr["decl"]):
+            bad.append("DECLINATION %s" % "/".join(g(v) for v in fr["decl"]))
+    for kind, ch, kv in fr["meas"]:
+        want = FRAME_AXIS.get(ch)
+        if want is None:
+            continue
+        if "AZM" in kv:
+            n["azm"] += 1
+            try:
+                a = float(kv["AZM"])
+            except ValueError:
+                a = float("nan")
+            if not abs((a - want + 180.0) % 360.0 - 180.0) <= TOL_FRAME_DEG:
+                bad.append("%s %s AZM %s (must be %s)" % (kind, ch, kv["AZM"], g(want)))
+        elif kind == "EMEAS":
+            try:
+                dx, dy = float(kv["X2"]) - float(kv["X"]), float(kv["Y2"]) - float(kv["Y"])
+            except (KeyError, ValueError):
+                dx = dy = 0.0
+            if dx == 0 and dy == 0:
+                n["no_orient"] += 1
+                continue
+            n["dipole"] += 1
+            a = math.degrees(math.atan2(dy, dx))              # EDI X north, Y east: clockwise from north
+            if not abs((a - want + 90.0) % 180.0 - 90.0) <= TOL_DIPOLE_DEG:
+                bad.append("EMEAS %s dipole azimuth %.2f deg (must be %s or %s)" % (ch, a, g(want), g(want + 180)))
+    return bad, n
+
+
+def frame_check(c, edis):
+    """C18 over every EDI: (ok, detail)"""
+    fin = c["rot"]["frame_in"] if c["rot"] is not None else None
+    probs, tot = [], {"zrot": 0, "decl": 0, "azm": 0, "dipole": 0, "no_orient": 0}
+    for k in sorted(edis):
+        b, n = edi_frame_problems(edis[k], fin)
+        for key in tot:
+            tot[key] += n[key]
+        if b:
+            probs.append("%s: %s" % (edis[k]["dataid"] or k, "; ".join(b)))
+    rule = ("frame_in %s" % fin) if fin else "no data.rotation (EDI frame written as is; README: magnetic)"
+    det = ("%d EDIs, rule of %s: %d hold a ZROT block, %d a DECLINATION%s; %d HX/HY/EX/EY azimuths (AZM) and %d "
+           "EMEAS dipole directions tested; %d EMEAS without AZM and of zero length (orientation not recorded)" %
+           (len(edis), rule, tot["zrot"], tot["decl"], " (not tested: frame_in true)" if fin == "true" else "",
+            tot["azm"], tot["dipole"], tot["no_orient"]))
+    if probs:
+        det = "%d of %d EDIs contradict it: %s; %s" % (len(probs), len(edis), " | ".join(probs[:5]), det)
+    return not probs, det
 
 
 def run_checks(c, run_dir, sites, edis, origin, femticpy_anchor=None, femticpy_chosen=None):
@@ -653,17 +1002,27 @@ def run_checks(c, run_dir, sites, edis, origin, femticpy_anchor=None, femticpy_c
            (len(ids_tab), len(ids_edi), len(ids_fn), ids_tab == ids_edi == ids_fn))
     by_id = {e["dataid"]: e for e in edis.values()}
 
-    # C03 origin
-    if c["origin"] is None:
+    # C03 origin: femticPy's centring (DataGen.center_data) against an independent bbox centre. Only a full
+    # run has femticPy's origin; under --check-only the origin passed in is this same bbox formula (a
+    # tautology), and with an explicit sites.origin prep subtracts the configured value itself. In both cases
+    # the written coordinates are still tested, by C04 and C11, against the site table minus that origin.
+    crit03 = ("fails if femticPy's origin (DataGen.center_data) differs by more than 1e-9 km from the site "
+              "bounding-box centre recomputed here; N/A under --check-only and with an explicit sites.origin")
+    if c["origin"] is not None:
+        ck.add("C03", "origin", crit03, None, "N/A: sites.origin is explicit (E %.5f N %.5f km), so no femticPy "
+               "centring to compare; C04 and C11 test the written coordinates against it" % (e0, n0))
+    elif femticpy_anchor is None:
+        ck.add("C03", "origin", crit03, None, "N/A under --check-only: femticPy's origin exists only in a full "
+               "run; the bbox centre E %.5f N %.5f km used here is what C04 and C11 test the written "
+               "coordinates against" % (e0, n0))
+    else:
         ee = [s[1] for s in sites]
         nn = [s[2] for s in sites]
         indep = (min(ee) + (max(ee) - min(ee)) / 2, min(nn) + (max(nn) - min(nn)) / 2)
-        ok = abs(indep[0] - e0) < 1e-9 and abs(indep[1] - n0) < 1e-9
-        if femticpy_anchor is not None:
-            ok = ok and abs(femticpy_anchor[1] - e0) < 1e-9 and abs(femticpy_anchor[0] - n0) < 1e-9
-        ck.add("C03", "origin", "fails if the origin differs by more than 1e-9 km from the site bounding-box "
-               "centre recomputed here (and from femticPy's DataGen.anchor when available)", ok,
-               "origin E %.5f N %.5f km; bbox centre E %.5f N %.5f km" % (e0, n0, indep[0], indep[1]))
+        ok = (abs(indep[0] - e0) < 1e-9 and abs(indep[1] - n0) < 1e-9 and
+              abs(femticpy_anchor[1] - indep[0]) < 1e-9 and abs(femticpy_anchor[0] - indep[1]) < 1e-9)
+        ck.add("C03", "origin", crit03, ok, "femticPy origin E %.5f N %.5f km; bbox centre E %.5f N %.5f km" %
+               (femticpy_anchor[1], femticpy_anchor[0], indep[0], indep[1]))
 
     # C04 observe.dat structure and station mapping
     obs = parse_observe(os.path.join(inv_dir, "observe.dat"), oe == -1)
@@ -704,19 +1063,25 @@ def run_checks(c, run_dir, sites, edis, origin, femticpy_anchor=None, femticpy_c
         fs = set(e["freq"][e["ok"]].tolist())
         common = fs if common is None else (common & fs if c["require_all_sites"] else common | fs)
     chosen, _ = select_bands(common, c["fmax"], c["fmin"], c["per_decade"], c["explicit_hz"])
-    ok = True
     det = "%d bands selected from %d candidates" % (len(chosen), len(common))
-    if femticpy_chosen is not None:
+    if femticpy_chosen is None:
+        ok = None
+        det = ("N/A under --check-only: femticPy's frequency table exists only in a full run; the independent "
+               "selection (%s) is what C06 and C07 test observe.dat against" % det)
+    else:
         ok = len(chosen) == len(femticpy_chosen) and all(rel_close(a, b, TOL_FREQ_REL)
                                                          for a, b in zip(chosen, femticpy_chosen))
         det += "; femticPy path chose the same list: %s" % ok
     ck.add("C05", "frequency selection", "fails if the bands selected from femticPy's frequency table differ "
-           "from those selected by the same rule from an independent parse of the EDIs", ok, det)
+           "from those selected by the same rule from an independent parse of the EDIs; N/A under "
+           "--check-only", ok, det)
 
     # C06-C09 per-station data
-    fbad, cbad, zbad, sbad, nlines, nexp_lines = [], [], [], [], 0, 0
+    fbad, cbad, zbad, sbad, nlines, nexp_lines, ncmp = [], [], [], [], 0, 0, 0
     zmax, smax, fmax_rel = 0.0, 0.0, 0.0
     ef = c["error_floor_Z"]
+    ang = rotation_angles(c, sorted(by_id))           # data.rotation; 0 for every site without the block
+    angs = sorted(set(ang.values()))
     phs_xy, phs_yx = [], []
     floored = np.zeros(4)
     total = 0
@@ -739,21 +1104,23 @@ def run_checks(c, run_dir, sites, edis, origin, femticpy_anchor=None, femticpy_c
             j = int(np.argmin(np.abs(e["freq"] - f)))
             rel = abs(e["freq"][j] - f) / e["freq"][j]
             fmax_rel = max(fmax_rel, rel)
+            ncmp += 1
             if rel > TOL_FREQ_REL or not rel_close(fx, e["freq"][j], TOL_FREQ_REL) or not e["ok"][j]:
                 fbad.append("%s %.6g Hz" % (sid, f))
                 continue
             zo = {cc: complex(r[1 + 2 * k], r[2 + 2 * k]) for k, cc in enumerate(ZC)}
             se = {cc: (r[9 + 2 * k], r[10 + 2 * k]) for k, cc in enumerate(ZC)}
-            gm = math.sqrt(abs(e["z"]["XY"][j]) * abs(e["z"]["YX"][j]))
+            zrot, vrot = rotate_Z_check([e["z"][cc][j] for cc in ZC], [e["var"][cc][j] for cc in ZC], ang[sid])
+            gm = math.sqrt(abs(zrot[1]) * abs(zrot[2]))
             total += 1
             for k, cc in enumerate(ZC):
-                zexp = np.conj(e["z"][cc][j]) / C_OHM
+                zexp = np.conj(zrot[k]) / C_OHM
                 for w, v in ((zo[cc].real, zexp.real), (zo[cc].imag, zexp.imag)):
                     d = abs(w - v)
                     zmax = max(zmax, d / max(abs(v), 1e-300))
                     if d > e4_bound(v, w):
                         zbad.append("%s %.6g Hz Z%s %.5g vs %.5g" % (sid, f, cc, w, v))
-                sd = math.sqrt(e["var"][cc][j])
+                sd = math.sqrt(vrot[k])
                 sexp = max(sd, ef[k] * gm) / C_OHM
                 if ef[k] * gm > sd:
                     floored[k] += 1
@@ -766,24 +1133,48 @@ def run_checks(c, run_dir, sites, edis, origin, femticpy_anchor=None, femticpy_c
                     sbad.append("%s %.6g Hz Z%s Re/Im SE differ" % (sid, f, cc))
             phs_xy.append(math.degrees(math.atan2(zo["XY"].imag, zo["XY"].real)))
             phs_yx.append(math.degrees(math.atan2(zo["YX"].imag, zo["YX"].real)) % 360.0)
+    # the angle recorded in station_map.csv (column rot_deg, written only with data.rotation) must be the one
+    # C08 and C09 applied; without the column every angle must be 0
+    for s in mt:
+        m = smap.get(s["id"], {})
+        want, got = ang.get(m.get("site_id"), 0.0), m.get("rot_deg")
+        try:
+            okr = (want == 0.0) if got is None else abs(float(got) - want) <= 1e-9
+        except ValueError:
+            okr = False
+        if not okr:
+            zbad.append("station %d: station_map.csv rot_deg %s, applied %s deg" % (s["id"], got, g(want)))
+    rot_det = "alpha %s deg" % (g(angs[0]) if len(angs) == 1 else "%s..%s" % (g(angs[0]), g(angs[-1])))
+    # C06, C08 and C09 skip every station that fails C07; if that leaves nothing to compare they are N/A
+    skipped = "" if not cbad else "; %d of %d station(s) skipped: they failed C07" % (len(cbad), len(mt))
+    nothing = "nothing compared: %d of %d station(s) failed C07" % (len(cbad), len(mt))
+    nothing_z = nothing + ("" if not fbad else ", and every other data line failed C06")
     ck.add("C06", "frequencies", "fails if any observe.dat frequency differs by more than 1e-6 relative from "
-           "the same band in that site's EDI, or is not one of the selected bands", not fbad,
-           "max relative difference %.2e over %d data lines%s" % (fmax_rel, nlines,
-                                                                   "" if not fbad else "; bad: %s" % fbad[:5]))
+           "the same band in that site's EDI, or is not one of the selected bands; N/A if no station passed C07",
+           (not fbad) if ncmp else None,
+           "max relative difference %.2e over %d of %d data lines%s%s" % (
+               fmax_rel, ncmp, nlines, skipped, "" if not fbad else "; bad: %s" % fbad[:5])
+           if ncmp else nothing)
     ck.add("C07", "data line count", "fails if a station's number of data lines differs from the number of "
            "selected bands present (unmasked) in its EDI, or the total differs from their sum over sites",
            not cbad and nlines == nexp_lines,
            "%d data lines = sum over %d sites of selected bands present (%d)%s" %
            (nlines, len(mt), nexp_lines, "" if not cbad else "; bad stations: %s" % cbad[:5]))
-    ck.add("C08", "impedance values", "fails if any Re/Im Z in observe.dat differs from conj(Z_EDI)/(10000/(4 pi)) "
-           "(EDI mV/km/nT -> ohm, imaginary part negated) by more than the '%.4e' rounding bound",
-           not zbad, "%d values, max relative difference %.1e%s" % (total * 8, zmax,
-                                                                     "" if not zbad else "; bad: %s" % zbad[:3]))
-    ck.add("C09", "error floors", "fails if any SE differs from max(sqrt(VAR_i), floor_i sqrt(|Zxy| |Zyx|)) / "
-           "(10000/(4 pi)) beyond the '%.4e' rounding bound, or the Re and Im SE of a component differ",
-           not sbad, "%d SE pairs, max relative difference %.1e; floor active in %s of Zxx/Zxy/Zyx/Zyy%s" %
-           (total * 4, smax, "/".join("%.0f%%" % (100 * v / max(total, 1)) for v in floored),
-            "" if not sbad else "; bad: %s" % sbad[:3]))
+    ck.add("C08", "impedance values", "fails if any Re/Im Z in observe.dat differs from conj(Z_EDI rotated by "
+           "data.rotation's alpha)/(10000/(4 pi)) (the rotation written out as its four explicit formulas, "
+           "independently of rotate_Z; EDI mV/km/nT -> ohm, imaginary part negated) by more than the '%.4e' "
+           "rounding bound, or station_map.csv's rot_deg is not the alpha applied; N/A if no data line passed "
+           "C06 and C07", (not zbad) if total else None,
+           "%d values, %s, max relative difference %.1e%s%s" % (total * 8, rot_det, zmax, skipped,
+                                                                "" if not zbad else "; bad: %s" % zbad[:3])
+           if total else nothing_z)
+    ck.add("C09", "error floors", "fails if any SE differs from max(sqrt(VAR'_i), floor_i sqrt(|Z'xy| |Z'yx|)) / "
+           "(10000/(4 pi)) beyond the '%.4e' rounding bound, or the Re and Im SE of a component differ (VAR' and "
+           "Z' rotated by the explicit formulas as in C08); N/A if no data line passed C06 and C07",
+           (not sbad) if total else None,
+           "%d SE pairs, %s, max relative difference %.1e; floor active in %s of Zxx/Zxy/Zyx/Zyy%s%s" %
+           (total * 4, rot_det, smax, "/".join("%.0f%%" % (100 * v / max(total, 1)) for v in floored), skipped,
+            "" if not sbad else "; bad: %s" % sbad[:3]) if total else nothing_z)
     mxy, myx = (float(np.median(phs_xy)), float(np.median(phs_yx))) if phs_xy else (float("nan"),) * 2
     stats["floored"] = "/".join("%.0f %%" % (100 * v / max(total, 1)) for v in floored)
     stats["phase"] = (mxy, myx)
@@ -928,7 +1319,53 @@ def run_checks(c, run_dir, sites, edis, origin, femticpy_anchor=None, femticpy_c
     ck.add("C14", "inversion control.dat", "fails if MESH_TYPE is not 1 or NUM_THREADS, INV_METHOD, DISTORTION, "
            "TRADE_OFF_PARAM, ITERATION (0 N), CONVERGE, ALPHA_WEIGHT, BOTTOM_RESISTIVITY or OWNER_ELEMENT "
            "differ from the config", not bad, "all keywords equal the config" if not bad else "; ".join(bad))
-    stats.update(obs=obs, mt=mt, P=P, chosen=chosen, common=common, smap=smap)
+
+    # C15-C16 rotate_Z on synthetic tensors (every run, whatever the angle: the sign convention is always tested)
+    ok, det = rotation_selftest(angs)
+    ck.add("C15", "rotation sanity", "fails if rotate_Z, turning a 2-D tensor with strike along the sensor x axis "
+           "by alpha, misses the tensor built directly in the grid frame with strike at azimuth +alpha by more than "
+           "1e-12 (T1; the opposite sign must miss by more than 0.1), the strike recovered from its output is off "
+           "by more than 0.01 deg (T2), or its variances differ from the explicit formulas by more than 1e-12 "
+           "relative or from a Monte Carlo by more than 2 %% (T3); at %s deg and the configured angle(s)" %
+           g(ROT_REF_DEG), ok, det)
+    ok, det = isotropy_selftest(angs)
+    ck.add("C16", "isotropic invariance", "fails if rotate_Z changes a 1-D tensor (Zxx = Zyy = 0, Zyx = -Zxy) or "
+           "equal variances by more than 1e-12 relative at any of the test angles", ok, det)
+
+    # C17 mesh reuse: these mesh inputs are exactly the ones the reused mesh was built from
+    crit17 = ("fails unless every files/* is byte-identical to mesh.reuse_from's files/ (same names), every file in "
+              "its mesh_logs/input_md5.txt (what the mesh chain read) has that md5 here, and its "
+              "mesh_logs/products.md5 names mesh.dat and resistivity_block_iter0.dat; N/A without mesh.reuse_from")
+    ru = c["reuse_from"]
+    if ru is None:
+        ck.add("C17", "mesh reuse", crit17, None, "N/A: mesh.reuse_from is not set, so these inputs still have to be "
+               "meshed")
+    else:
+        md5 = lambda p: hashlib.md5(open(p, "rb").read()).hexdigest()
+        mine, theirs = sorted(os.listdir(fdir)), sorted(os.listdir(os.path.join(ru, "files")))
+        diff = sorted(set(mine) ^ set(theirs)) + [n for n in mine if n in theirs and
+                                                   sha256(os.path.join(fdir, n)) != sha256(os.path.join(ru, "files", n))]
+        rec, prod = os.path.join(ru, "mesh_logs", "input_md5.txt"), os.path.join(ru, "mesh_logs", "products.md5")
+        used = [ln.split() for ln in open(rec, encoding="utf-8")] if os.path.isfile(rec) else []
+        bad_in = [p[1] for p in used if len(p) != 2 or not os.path.isfile(os.path.join(fdir, p[1]))
+                  or md5(os.path.join(fdir, p[1])) != p[0]]
+        names = {ln.split()[-1] for ln in open(prod, encoding="utf-8") if ln.split()} if os.path.isfile(prod) else set()
+        okp = {"mesh.dat", "resistivity_block_iter0.dat"} <= names
+        ck.add("C17", "mesh reuse", crit17, not diff and used and not bad_in and okp,
+               "%s: %d of %d files/* identical%s; input_md5.txt %s; products.md5 names mesh.dat and "
+               "resistivity_block_iter0.dat: %s" %
+               (os.path.relpath(ru, c["root"]).replace(os.sep, "/"), len(mine) - len(diff), len(set(mine) | set(theirs)),
+                "" if not diff else " (differ: %s)" % diff[:5],
+                ("%d of %d md5 match" % (len(used) - len(bad_in), len(used))) if used else "missing", okp))
+
+    # C18 EDI frame: nothing recorded in the EDIs has rotated the tensors away from the frame frame_in names
+    ok, det = frame_check(c, edis)
+    ck.add("C18", "EDI frame", "fails if any EDI records a rotation of its tensor (a Z block whose ROT= names "
+           "anything but ZROT, a non-zero ZROT, an HX/EX azimuth other than 0 or an HY/EY azimuth other than 90 deg "
+           "in HMEAS/EMEAS AZM or an EMEAS dipole's direction) or, unless data.rotation.frame_in is true, a "
+           "DECLINATION that is missing or non-zero: prep would rotate such a tensor as if it were in the sensor "
+           "frame", ok, det)
+    stats.update(obs=obs, mt=mt, P=P, chosen=chosen, common=common, smap=smap, rot_deg=ang)
     return ck, stats
 
 
@@ -999,6 +1436,26 @@ def data_sections(c, ctx):
         ["real data values (8 per line: Re, Im of Zxx, Zxy, Zyx, Zyy)", nlines * 8],
         ["dummy VTF H-stations (OWNER_ELEMENT -1; 0 frequencies, no data)", len(ctx["obs"].get("VTF", []))],
         ["tipper data", "none (invert_VTF false; the EDIs hold no tipper)"]]))
+    L.append("\n### Frame rotation (config `data.rotation`)\n")
+    r = c["rot"]
+    L.append("- " + rotation_text(c, ctx["rot_deg"]) + ".")
+    if r is None:
+        L.append("- The Vulcan EDIs are in the geomagnetic frame (DECLINATION 0, ZROT 0; decision D2 of "
+                 "2026-09-28), whose x axis lies about 7.42 deg clockwise of the mesh x axis (UTM grid north), so "
+                 "this observe.dat is NOT in the mesh frame. Add a data.rotation block "
+                 "(validation/rotation_2026-09-28/README.md) before inverting it.")
+    else:
+        L.append("- Sensor frame: %s. Provenance: %s" % (r["frame_in"], r["provenance"] or "(none given)"))
+        L.append("- alpha is the azimuth of the sensor x axis clockwise from UTM grid north, the mesh x axis. "
+                 "Each EDI tensor, still in mV/km/nT, is rotated into the mesh frame before femticPy converts units, "
+                 "conjugates and applies the error floor: Z' = R(-alpha) Z R(-alpha)^T with R(t) = [[cos t, sin t], "
+                 "[-sin t, cos t]], and Var' = (M o M) Var with M = kron(R(-alpha), R(-alpha)) (the EDI components "
+                 "are taken as uncorrelated). The floor below uses the rotated |Z'xy| and |Z'yx|. Column rot_deg of "
+                 "station_map.csv holds each station's alpha. Checks C08 and C09 recompute the rotation from its "
+                 "explicit formulas; C15 and C16 test rotate_Z on synthetic tensors "
+                 "(validation/rotation_2026-09-28/README.md). C18 confirms that no EDI records a rotation of its own "
+                 "(ZROT 0, HX/HY azimuths 0/90%s), so no tensor is rotated twice." %
+                 ("" if r["frame_in"] == "true" else ", DECLINATION 0"))
     L.append("\n### Units, time convention, station layout\n")
     L.append("- Z is converted from the EDI unit mV/km/nT to ohm (V/A) by dividing by 10000/(4 pi) = %.6f "
              "(femticPy DataGen.convert_units); VAR is divided by the square of that factor." % C_OHM)
@@ -1006,9 +1463,10 @@ def data_sections(c, ctx):
              "(first quadrant) and %.1f deg for Zyx (third quadrant). FEMTIC requires exp(-i omega t) "
              "(manual.txt:1015: response functions \"in SI units with e-it time dependence\"; the INV_MT_01 "
              "example has Zxy phase -45 deg). femticPy DataGen.conjugate therefore negates Im(Zxx), Im(Zxy), "
-             "Im(Zyx) and Im(Zyy), i.e. observe.dat holds conj(Z_EDI) / (10000/(4 pi)). Check C10 confirms "
+             "Im(Zyx) and Im(Zyy), i.e. observe.dat holds conj(Z_EDI) / (10000/(4 pi))%s. Check C10 confirms "
              "it on the written file: median phase Zxy %.1f deg, Zyx %.1f deg (Zyx taken in [0, 360))." %
-             (ctx["edi_stats"]["edi_phase_xy"], ctx["edi_stats"]["edi_phase_yx"], ctx["phase"][0], ctx["phase"][1]))
+             (ctx["edi_stats"]["edi_phase_xy"], ctx["edi_stats"]["edi_phase_yx"],
+              "" if c["rot"] is None else ", with Z_EDI first rotated as above", ctx["phase"][0], ctx["phase"][1]))
     oe = c["inv"]["OWNER_ELEMENT"]
     if oe == -1:
         L.append("- OWNER_ELEMENT -1: each MT station line is `i  1000+i  0  x  y`. E comes from the element "
@@ -1072,16 +1530,20 @@ def write_readmes(c, ctx, run_dir, final_dir, ck):
     n_d = sum(len(s["rows"]) for s in ctx["mt"]) * 8
     gb = lambda n: n * n * 8 / 1e9
     # ---------------- inversion/README.md
+    ru = rel(c["reuse_from"], root) if c["reuse_from"] else None
     L = ["# FEMTIC inversion data: %s" % c["name"], "",
-         "Generated by `scripts/prep_vulcan.py` on %s from `%s`. Do not edit: change the config and re-run. "
+         "Generated by `%s` (sha256 %s) on %s from `%s`. Do not edit: change the config and re-run. "
          "The full record (mesh inputs, provenance, self-checks) is `../README.md`." %
-         (now, rel(c["config_path"], root)), "",
+         (ctx["script_rel"], ctx["script_sha"], now, rel(c["config_path"], root)), "",
          "| file | content |", "|---|---|",
          "| observe.dat | impedance data, %d stations%s |" %
          (len(ctx["mt"]), ", plus %d dummy VTF H-stations" % len(ctx["obs"].get("VTF", [])) if ctx["obs"].get("VTF") else ""),
          "| control.dat | FEMTIC inversion control |",
          "| station_map.csv | station number -> site id, EDI file, coordinates |",
-         "| mesh.dat, resistivity_block_iter0.dat | not yet: produced by the mesh chain from ../files |", ""]
+         "| mesh.dat, resistivity_block_iter0.dat | not yet: produced by the mesh chain from ../files |" if not ru else
+         "| mesh.dat, resistivity_block_iter0.dat | not in this directory: this run reuses the existing mesh of `%s` "
+         "(../files is byte-identical to its inputs, check C17). Copy both files from the main checkout's `%s/inversion/` "
+         "and check their md5 against `%s/mesh_logs/products.md5`. Do not re-mesh. |" % (ru, ru, ru), ""]
     L += data_sections(c, ctx)
     L += ["## control.dat\n"] + control_listing(os.path.join(run_dir, "inversion", "control.dat"))
     L += ["", "INV_METHOD %d. Normal-matrix sizes: data space N_data^2 = %d^2 x 8 B = %.1f GB; model space "
@@ -1095,25 +1557,43 @@ def write_readmes(c, ctx, run_dir, final_dir, ck):
     # ---------------- README.md
     L = ["# FEMTIC run inputs: %s" % c["name"], "",
          "Generated by `scripts/prep_vulcan.py` on %s from `%s` (sha256 %s). Do not edit by hand: change the "
-         "config and re-run (`python scripts/prep_vulcan.py %s --force`)." %
+         "config and write a new directory (`python scripts/prep_vulcan.py %s --out <new dir>`). `--force` "
+         "replaces this directory only while every file in it is listed, unchanged, in prep_manifest.sha256; "
+         "once mesh products, half-space runs or edits are in it, it refuses and lists them." %
          (now, rel(c["config_path"], root), ctx["cfg_sha"][:16], rel(c["config_path"], root)), "",
          "**Status:** data and mesh inputs only. The mesh chain has not been run on them, and nothing has been "
-         "forward-tested. Before inverting, pass the half-space test of docs/mesh_tetra_pipeline.md section 9.",
+         "forward-tested. Before inverting, pass the half-space test of docs/mesh_tetra_pipeline.md section 9."
+         if not c["reuse_from"] else
+         "**Status:** data inputs for an existing mesh. files/ is byte-identical to the inputs from which `%s` was "
+         "meshed (check C17), so that mesh is this run's mesh: mesh.dat and resistivity_block_iter0.dat, md5 in "
+         "`%s/mesh_logs/products.md5` (the files are gitignored, in the main checkout's `%s/inversion/`). Do not "
+         "re-mesh. The half-space gate tests the mesh, and a uniform half-space is unchanged by a frame rotation, "
+         "so the gate result of `%s` applies (validation/mesh_2026-09-25/halfspace_accuracy.md)." %
+         ((rel(c["reuse_from"], root),) * 4),
          "", "## Contents", "",
          md_table(["path", "what"], [
              ["inversion/observe.dat", "impedance data (femticPy DataGen.write_observe)"],
              ["inversion/control.dat", "FEMTIC inversion control (DataGen.write_inversion_control)"],
              ["inversion/station_map.csv", "FEMTIC station number -> site id, EDI, coordinates"],
              ["inversion/README.md", "the data part of this file"],
-             ["files/", "mesh-chain inputs (femticPy MeshGen), region_seeds.dat for scripts/run_mesh_chain.sh"],
+             ["files/", "mesh-chain inputs (femticPy MeshGen), region_seeds.dat for scripts/run_mesh_chain.sh"
+              if not c["reuse_from"] else "mesh-chain inputs (femticPy MeshGen), byte-identical to the inputs of the "
+              "reused mesh `%s` (check C17); a record, not to be meshed again" % rel(c["reuse_from"], root)],
              ["config_used.yml", "copy of the config that produced this directory"],
-             ["prep.log", "console output, including femticPy's"]]), "",
+             ["prep.log", "console output, including femticPy's"],
+             [MANIFEST, "sha256 of every file above (`sha256sum -c %s`); `--force` deletes only these, "
+              "unchanged" % MANIFEST]]), "",
          "## Provenance", ""]
     L.append(md_table(["input", "detail"], [
+        ["script", "`%s`, sha256 %s (the code that wrote and checked this directory)" % (ctx["script_rel"],
+                                                                                          ctx["script_sha"])],
         ["config", "`%s`, sha256 %s" % (rel(c["config_path"], root), ctx["cfg_sha"])],
         ["EDIs", "`%s`, %d files (read by femticPy MTtools.read; checked by an independent parser)" %
          (rel(c["edi_dir"], root), len(ctx["edis"]))],
         ["site table", "`%s`, %d sites, sha256 %s" % (rel(c["coords_file"], root), len(ctx["sites"]), ctx["site_sha"])],
+        ["frame rotation", rotation_text(c, ctx["rot_deg"]) + (
+            "; angle file sha256 %s" % sha256(c["rot"]["angle_file"]) if c["rot"] and c["rot"]["angle"] == "auto"
+            else "")],
         ["femticPy", "`%s` (%s)" % (rel(c["femticpy_src"], root), ctx["femticpy_desc"])],
         ["python", ctx["pyver"]],
         ["command", "`%s`" % ctx["cmd"]]]))
@@ -1134,7 +1614,9 @@ def write_readmes(c, ctx, run_dir, final_dir, ck):
     L += data_sections(c, ctx)
     L += ["## Mesh inputs (files/)", "",
           "Tables as written (parsed back from the files). Run the chain with `bash scripts/run_mesh_chain.sh "
-          "<copy of files/ on ext4> 5`; it reads region_seeds.dat.", ""]
+          "<copy of files/ on ext4> 5`; it reads region_seeds.dat." if not c["reuse_from"] else
+          "Tables as written (parsed back from the files). They are byte-identical to `%s/files` (check C17): "
+          "do not mesh them again." % rel(c["reuse_from"], root), ""]
     ctl = P["control"]
     L.append("### control.dat (makeTetraMesh: surface triangles)\n")
     L.append("CENTER %s; ROTATION %s; NUM_THREADS %s; SURF_MESH %s; ITER_MAX %s; INTERPOLATE radius %s km, %d points, "
@@ -1192,21 +1674,31 @@ def write_readmes(c, ctx, run_dir, final_dir, ck):
         L += ["## Design warnings", ""] + ["- " + w for w in ctx["warnings"]] + [""]
     L += ["## Self-checks", "",
           "Each check re-reads the written files and compares them with the config, the site table and an "
-          "independent parse of the EDIs (not femticPy's reader). All must pass or the script aborts. Re-run "
-          "them with `python scripts/prep_vulcan.py %s --check-only %s`." %
+          "independent parse of the EDIs (not femticPy's reader). Any FAIL aborts the script; N/A marks a check "
+          "that cannot be evaluated in this mode and is never counted as a pass. Re-run them with "
+          "`python scripts/prep_vulcan.py %s --check-only %s` (C03 and C05 are N/A there)." %
           (rel(c["config_path"], root), rel(final_dir, root)), ""]
     L.append(md_table(["id", "check", "fails if", "result"],
-                      [[r["id"], r["name"], r["criterion"], ("PASS: " if r["ok"] else "FAIL: ") + r["detail"]]
+                      [[r["id"], r["name"], r["criterion"], r["status"] + ": " + r["detail"]]
                        for r in ck.res]))
-    L += ["", "## Next steps", "",
-          "1. Mesh: copy `files/` to ext4 (e.g. /home/tara/femtic_wsl/mesh_runs/%s/) and run "
-          "`bash scripts/run_mesh_chain.sh <dir> 5`; copy mesh.dat and resistivity_block_iter0.dat back into "
-          "`inversion/`." % c["name"],
-          "2. Compare the element and cell counts with docs/mesh_tetra_pipeline.md section 8.4 (about 1.2 M "
-          "tetrahedra, 21 000 cells, each +- a factor 2) and settle INV_METHOD (above).",
-          "3. Half-space forward test (guide section 9) with 3 and 60 ohm-m starting models, with OWNER_ELEMENT -1 "
-          "(this directory) and 0 (set `inversion.OWNER_ELEMENT: 0` in a copy of the config and re-run with "
-          "another --out).", ""]
+    L += ["", "## Next steps", ""] + ([
+          "1. Take the mesh of `%s`: copy its mesh.dat and resistivity_block_iter0.dat next to inversion/observe.dat "
+          "and check their md5 against `%s/mesh_logs/products.md5`. Do not run the mesh chain or "
+          "hpc/phoenix_plan/03_mesh.slurm." % (ru, ru),
+          "2. The element and parameter-cell counts are those of `%s/mesh_logs/mesh_stats.txt`; settle INV_METHOD "
+          "(above)." % ru,
+          "3. The half-space gate result of `%s` applies (validation/mesh_2026-09-25/halfspace_accuracy.md)." % ru,
+          "4. Upload and run on Phoenix: hpc/phoenix_plan/RUNBOOK_first_inversion.md.", ""] if ru else [
+          "1. Mesh these inputs with the gated chain, `bash scripts/run_mesh_chain.sh <copy of files/> 5` "
+          "(docs/mesh_tetra_pipeline.md; it reads files/region_seeds.dat), and keep the md5 of mesh.dat and "
+          "resistivity_block_iter0.dat. hpc/phoenix_plan/03_mesh.slurm is a different, ungated chain: do not "
+          "use it for these inputs.",
+          "2. Compare the element and parameter-cell counts with docs/mesh_tetra_pipeline.md section 8.4 and "
+          "settle INV_METHOD (above).",
+          "3. Before inverting, pass the half-space accuracy gate of validation/mesh_2026-09-25/"
+          "halfspace_accuracy.md: uniform 3 and 100 ohm-m, the OWNER_ELEMENT of inversion/control.dat, and at "
+          "most 5 % in rho_a, 1.5 degrees in phase and 2 % in the diagonal ratio at every site and band.",
+          "4. Upload and run on Phoenix: hpc/phoenix_plan/RUNBOOK_first_inversion.md.", ""])
     L += site_section(c, ctx)
     with open(os.path.join(run_dir, "README.md"), "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(L) + "\n")
@@ -1275,6 +1767,21 @@ def build(c, run_dir, ctx):
               sorted(set(ids_tab) - set(ids_z))[:10]))
     if len(ids_z) != c["expected_count"]:
         fail("%d sites found, but sites.expected_count is %d" % (len(ids_z), c["expected_count"]))
+
+    # ---- frame rotation (data.rotation): the EDI tensors, still in mV/km/nT and exp(+i omega t), are rotated
+    # here, before write_observe -> prep_data converts units, conjugates and applies the error floor
+    ang = rotation_angles(c, ids_z)
+    ctx["rot_deg"] = ang
+    if c["rot"] is not None:
+        for rx, sid in enumerate(ids_z):
+            df = dg.data_Z[rx].copy()
+            z4 = np.column_stack([df["Z%sR" % k].to_numpy(float) + 1j * df["Z%sI" % k].to_numpy(float) for k in ZC])
+            v4 = np.column_stack([df["Z%s.VAR" % k].to_numpy(float) for k in ZC])
+            zr, vr = rotate_Z(z4, v4, ang[sid])
+            for i, k in enumerate(ZC):
+                df["Z%sR" % k], df["Z%sI" % k], df["Z%s.VAR" % k] = zr[:, i].real, zr[:, i].imag, vr[:, i]
+            dg.data_Z[rx] = df
+    log(rotation_text(c, ang))
     if c["origin"] is None:
         dg.center_data()
     else:
@@ -1316,14 +1823,15 @@ def build(c, run_dir, ctx):
     tab = {s[0]: s for s in sites}
     mc = dg.mt_coords
     with open(os.path.join(inv_dir, "station_map.csv"), "w", encoding="utf-8", newline="\n") as fh:
+        rotated = c["rot"] is not None          # without data.rotation the file keeps its pre-rotation layout
         fh.write("femtic_station_id,h_station_id,site_id,edi_file,x_north_km,y_east_km,easting_km,northing_km,"
-                 "elev_km,n_freq\n")
+                 "elev_km,n_freq%s\n" % (",rot_deg" if rotated else ""))
         for rx, sid in enumerate(ids_z):
             k = int(np.where(mc["id"].astype(str).values == sid)[0][0])
             s = tab[sid]
-            fh.write("%d,%d,%s,%s.edi,%.5f,%.5f,%.4f,%.4f,%.5f,%d\n" %
+            fh.write("%d,%d,%s,%s.edi,%.5f,%.5f,%.4f,%.4f,%.5f,%d%s\n" %
                      (rx + 1, rx + 1001 if oe == -1 else rx + 1, sid, sid, mc["north"][k], mc["east"][k],
-                      s[1], s[2], s[3], len(dg.data_Z[rx])))
+                      s[1], s[2], s[3], len(dg.data_Z[rx]), ",%s" % g(ang[sid]) if rotated else ""))
 
     # ---- mesh inputs: femticPy MeshGen
     mt_mesh = dg.mt_coords.copy(deep=True)
@@ -1371,6 +1879,10 @@ def build(c, run_dir, ctx):
 
 def design_warnings(c, sites, origin):
     w = []
+    if c["rot"] is None:
+        w.append("data.rotation is not set: observe.dat holds the tensors in the EDI frame, unrotated. The Vulcan "
+                 "EDIs are in the geomagnetic frame, about 7.42 deg clockwise of the mesh x axis (UTM grid north): "
+                 "validation/rotation_2026-09-28/README.md")
     r1 = c["ctl_ellipsoids"][0]
     e0, n0 = origin
     for s in sites:
@@ -1389,12 +1901,206 @@ def design_warnings(c, sites, origin):
     return w
 
 
+# ================================================================================= guarded replacement
+MANIFEST = "prep_manifest.sha256"      # written last into every run directory; --force trusts only it
+STAGE_MARK = ".prep_vulcan_staging"    # marks DIR.staging as prep's own scratch; removed just before the
+                                       # rename, after the last abort point, and never listed in the manifest
+
+
+def is_link(path):
+    """symlink, Windows junction or other reparse point: never descended into and never deleted through"""
+    if os.path.islink(path):
+        return True
+    isj = getattr(os.path, "isjunction", None)                                 # Python >= 3.12
+    if isj is not None and isj(path):
+        return True
+    return bool(getattr(os.lstat(path), "st_file_attributes", 0) & 0x400)    # FILE_ATTRIBUTE_REPARSE_POINT
+
+
+def link_components(path):
+    """every component of abspath(path), from the root down to path itself, that is a link. A directory
+    reached through a symlinked or junctioned parent is treated like a link itself. A component that exists
+    but cannot be examined counts as a link (fail closed)."""
+    p, out = os.path.abspath(path), []
+    while True:
+        if os.path.lexists(p):
+            try:
+                if is_link(p):
+                    out.append(p)
+            except OSError:
+                out.append(p)
+        up = os.path.dirname(p)
+        if up == p:
+            return out[::-1]
+        p = up
+
+
+def inventory(top):
+    """(files, dirs, links) below top as sorted '/'-separated relative paths; no link is followed"""
+    files, dirs, links = [], [], []
+
+    def walk(d, pre):
+        with os.scandir(d) as it:
+            ents = sorted(it, key=lambda e: e.name)
+        for e in ents:
+            r = pre + e.name
+            if is_link(e.path):
+                links.append(r)
+            elif e.is_dir(follow_symlinks=False):
+                dirs.append(r)
+                walk(e.path, r + "/")
+            else:
+                files.append(r)
+
+    walk(top, "")
+    return files, dirs, links
+
+
+def read_manifest(top):
+    """{relative path: sha256} from top/prep_manifest.sha256; None if absent or not in sha256sum format"""
+    p = os.path.join(top, MANIFEST)
+    if not os.path.isfile(p) or is_link(p):
+        return None
+    out = {}
+    with open(p, encoding="utf-8") as fh:
+        for ln in fh:
+            if ln.startswith("#"):          # header comments (script sha256, data.rotation); sha256sum -c skips them
+                continue
+            m = re.fullmatch(r"([0-9a-f]{64}) [ *](\S.*)", ln.rstrip("\n"))
+            if not m:
+                return None
+            out[m.group(2)] = m.group(1)
+    return out
+
+
+def mark_staging(stage, run_dir):
+    with open(os.path.join(stage, STAGE_MARK), "w", encoding="utf-8", newline="\n") as fh:
+        fh.write("prep_vulcan.py staging directory for %s; deleted by the next run\n" % run_dir)
+
+
+def write_manifest(top, header=()):
+    files = [r for r in inventory(top)[0] if r not in (MANIFEST, STAGE_MARK)]
+    with open(os.path.join(top, MANIFEST), "w", encoding="utf-8", newline="\n") as fh:
+        for h in header:
+            fh.write("# %s\n" % " ".join(h.split()))
+        for r in files:
+            fh.write("%s  %s\n" % (sha256(os.path.join(top, *r.split("/"))), r))
+    return len(files)
+
+
+def inside(path, anc):
+    """True if path is anc or lies below it, compared after resolving every link on both sides (realpath),
+    so no symlink or junction alias can hide a protected path (case-insensitive where the file system is)"""
+    p, a = os.path.normcase(os.path.realpath(path)), os.path.normcase(os.path.realpath(anc))
+    try:
+        return os.path.commonpath([p, a]) == a
+    except ValueError:                                                         # different drives
+        return False
+
+
+def delete_plan(top, c, owned_by_marker=False):
+    """What deleting the directory `top` would remove, file by file. PrepError (whatever the flags) if top is
+    a link, a filesystem root, the home directory, contains the repository root, an input of the run, this
+    script or a .git directory, or holds any link. Otherwise returns the inventory split into 'prep' (listed
+    in top's prep_manifest.sha256 with that sha256; with owned_by_marker, every file of a directory that holds
+    prep's staging marker) and 'foreign' (everything else, including files changed since prep wrote them).
+    top counts as a link if it, or any directory above it, is a symlink or junction; the protected paths are
+    compared after resolving links on both sides."""
+    top = os.path.abspath(top)
+    links_up = link_components(top)
+    if links_up:
+        fail("refusing to delete %s: %s on that path is a link (symlink or junction); prep never deletes through "
+             "links. If you mean the directory it points to, give its real path (%s)" %
+             (top, " and ".join(links_up), os.path.realpath(top)))
+    if not os.path.isdir(top):
+        fail("%s exists and is not a directory" % top)
+    if os.path.dirname(top) == top:
+        fail("refusing to delete %s: it is a filesystem root" % top)
+    if ".git" in re.split(r"[\\/]", top) + re.split(r"[\\/]", os.path.realpath(top)):
+        fail("refusing to delete %s: it lies inside a .git directory" % top)
+    protected = [("the repository root (paths.root)", c["root"]), ("the config", c["config_path"]),
+                 ("the EDI directory", c["edi_dir"]), ("the site table", c["coords_file"]),
+                 ("femticPy", c["femticpy_src"]), ("this script", os.path.abspath(__file__)),
+                 ("the home directory", os.path.expanduser("~"))]
+    if c.get("dem_file"):
+        protected.append(("the DEM", c["dem_file"]))
+    for what, p in protected:
+        if inside(p, top):
+            fail("refusing to delete %s: it is or contains %s (%s)" % (top, what, p))
+    files, dirs, links = inventory(top)
+    if links:
+        fail("refusing to delete %s: it contains %d link(s) (symlink or junction), which prep never follows or "
+             "deletes: %s. Remove them by hand first" % (top, len(links), ", ".join(links[:10])))
+    gits = [r for r in files + dirs if r.split("/")[-1] == ".git"]
+    if gits:
+        fail("refusing to delete %s: it contains a git repository (%s)" % (top, ", ".join(gits[:5])))
+    man = None if owned_by_marker else read_manifest(top)
+    marked = owned_by_marker and os.path.isfile(os.path.join(top, STAGE_MARK))
+    prep, foreign, changed = [], [], []
+    for r in files:
+        if marked or (man is not None and r == MANIFEST):
+            prep.append(r)
+        elif man is not None and r in man:
+            if sha256(os.path.join(top, *r.split("/"))) == man[r]:
+                prep.append(r)
+            else:
+                foreign.append(r)
+                changed.append(r)
+        else:
+            foreign.append(r)
+    keep = {"/".join(r.split("/")[:k]) for r in prep for k in range(1, r.count("/") + 1)}
+    fdirs = [d for d in dirs if d not in keep and not any(f.startswith(d + "/") for f in foreign)
+             and not any(d.startswith(x + "/") for x in dirs if x not in keep)]
+    size = lambda r: os.path.getsize(os.path.join(top, *r.split("/")))
+    return {"top": top, "files": files, "dirs": dirs, "prep": prep, "foreign": foreign, "changed": changed,
+            "foreign_dirs": fdirs, "manifest": man is not None, "marked": marked,
+            "entries": set(files) | set(dirs), "prep_bytes": sum(size(r) for r in prep),
+            "foreign_sizes": {r: size(r) for r in foreign}}
+
+
+def describe_plan(plan, limit=40):
+    """lines naming everything deleting plan['top'] would remove; foreign files grouped by the first
+    directory that holds no prep product"""
+    mb = lambda b: "%.1f MB" % (b / 1e6) if b >= 1e5 else "%d B" % b
+    keep = {"/".join(r.split("/")[:k]) for r in plan["prep"] for k in range(1, r.count("/") + 1)}
+    L = ["  %d file(s), %s, written by prep and unchanged since (%s)" %
+         (len(plan["prep"]), mb(plan["prep_bytes"]),
+          "staging marker" if plan["marked"] else (MANIFEST if plan["manifest"] else "no manifest"))]
+    groups = {}
+    for r in plan["foreign"]:
+        parts = r.split("/")
+        k = next((k for k in range(1, len(parts)) if "/".join(parts[:k]) not in keep), len(parts))
+        key = "/".join(parts[:k]) + ("/" if k < len(parts) else "")
+        n, b = groups.get(key, (0, 0))
+        groups[key] = (n + 1, b + plan["foreign_sizes"][r])
+    for d in plan["foreign_dirs"]:
+        groups.setdefault(d + "/", (0, 0))
+    ch = set(plan["changed"])
+    for i, (k, (n, b)) in enumerate(sorted(groups.items())):
+        if i == limit:
+            L.append("  ... and %d more foreign entries" % (len(groups) - limit))
+            break
+        if k.endswith("/"):
+            L.append("  FOREIGN %s  (%d file(s), %s)" % (k, n, mb(b)))
+        else:
+            L.append("  %s %s  (%s)" % ("CHANGED" if k in ch else "FOREIGN", k, mb(b)))
+    if not plan["manifest"] and not plan["marked"] and plan["files"]:
+        L.append("  (no %s: a directory written before 2026-09-28 or not by prep, so every file counts as "
+                 "foreign)" % MANIFEST)
+    return L
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("config", help="YAML config, e.g. config/vulcan_mesh_v1.yml")
     ap.add_argument("--out", help="output run directory (default: paths.run_dir of the config)")
-    ap.add_argument("--force", action="store_true", help="replace an existing output directory")
+    ap.add_argument("--force", action="store_true",
+                    help="replace an existing output directory, only if every file in it is listed unchanged in "
+                         "its %s" % MANIFEST)
+    ap.add_argument("--force-delete-foreign", action="store_true",
+                    help="with --force: also delete files prep did not write or that changed since (listed "
+                         "first); links, inputs and the repository are still refused")
     ap.add_argument("--check-only", metavar="DIR", help="only re-run the self-checks on an existing DIR")
     a = ap.parse_args(argv)
     try:
@@ -1407,31 +2113,63 @@ def main(argv=None):
         if any(e["tipper"] for e in edis.values()) and not c["invert_VTF"]:
             log("note: some EDIs hold tipper blocks; they are not inverted")
         ctx.update(sites=sites, edis=edis)
+        # resolve the rotation angle of every site now, so a bad 'auto' angle file stops the run before anything
+        # is written (build and the checks resolve it again the same way)
+        ang0 = rotation_angles(c, sorted(e["dataid"] for e in edis.values()))
 
         if a.check_only:
             run_dir = os.path.abspath(a.check_only)
             ee, nn = [s[1] for s in sites], [s[2] for s in sites]
             origin = (min(ee) + (max(ee) - min(ee)) / 2, min(nn) + (max(nn) - min(nn)) / 2) \
                 if c["origin"] is None else tuple(c["origin"])
+            log(rotation_text(c, ang0))
             ck = run_checks(c, run_dir, sites, edis, origin)[0]
             bad = ck.failed()
-            log("%d checks, %d failed" % (len(ck.res), len(bad)))
+            log(ck.summary())
             return 1 if bad else 0
 
         run_dir = os.path.abspath(a.out) if a.out else c["run_dir"]
         stage = run_dir.rstrip("/\\") + ".staging"
-        if os.path.exists(run_dir) and os.listdir(run_dir) and not a.force:
-            fail("%s exists; use --force to replace it (this deletes everything in it, including any mesh "
-                 "products copied there)" % run_dir)
-        if os.path.exists(stage):
+        if a.force_delete_foreign and not a.force:
+            fail("--force-delete-foreign only widens --force; give both")
+        plan0 = None
+        if os.path.lexists(run_dir):
+            plan0 = delete_plan(run_dir, c)
+            if plan0["entries"]:
+                if not a.force:
+                    for ln in ["%s exists and is not empty:" % run_dir] + describe_plan(plan0):
+                        log(ln)
+                    fail("%s exists. Write to a new directory with --out DIR, or use --force to replace it (allowed "
+                         "only while every file in it is listed unchanged in its %s)" % (run_dir, MANIFEST))
+                for ln in ["--force: once every self-check passes, %s will be deleted and replaced; it holds:" %
+                           run_dir] + describe_plan(plan0):
+                    log(ln)
+                if plan0["foreign"] or plan0["foreign_dirs"]:
+                    if not a.force_delete_foreign:
+                        fail("nothing deleted: %s holds %d file(s) and %d empty dir(s) that prep did not write or "
+                             "that changed since (listed above), e.g. mesh products or half-space runs copied "
+                             "there. Move them out, write to a new --out directory, or add --force-delete-foreign "
+                             "to delete them too" % (run_dir, len(plan0["foreign"]), len(plan0["foreign_dirs"])))
+                    log("--force-delete-foreign: the foreign entries above will be deleted too")
+        if os.path.lexists(stage):
+            splan = delete_plan(stage, c, owned_by_marker=True)
+            if not splan["marked"] and splan["entries"] and not a.force_delete_foreign:
+                for ln in ["%s exists without prep's staging marker %s:" % (stage, STAGE_MARK)] + describe_plan(splan):
+                    log(ln)
+                fail("nothing deleted: %s was not created by this version of prep; move it away (or add --force "
+                     "--force-delete-foreign)" % stage)
+            log("removing %s (%d file(s)) left by an earlier run" % (stage, len(splan["files"])))
             shutil.rmtree(stage)
         os.makedirs(stage)
+        mark_staging(stage, run_dir)
         log("prep_vulcan: config %s -> %s" % (c["config_path"], run_dir))
         ctx["femticPy"] = import_femticpy(c["femticpy_src"])
         import pandas as pd
         ctx["pyver"] = "Python %s on %s; numpy %s, pandas %s" % (platform.python_version(), platform.system(),
                                                                  np.__version__, pd.__version__)
         ctx["femticpy_desc"] = femticpy_description(c["femticpy_src"])
+        ctx["script_sha"] = sha256(os.path.abspath(__file__))     # README provenance and the manifest header
+        ctx["script_rel"] = rel(os.path.abspath(__file__), c["root"])
         ctx["cfg_sha"] = sha256(c["config_path"])
         ctx["site_sha"] = sha256(c["coords_file"])
         build(c, stage, ctx)
@@ -1455,8 +2193,11 @@ def main(argv=None):
             ctx["warnings"].append(w)
             log("design warning: " + w)
         write_readmes(c, ctx, stage, run_dir, ck)
+        log("writing %s: sha256 of every file of the run directory" % MANIFEST)
         with open(os.path.join(stage, "prep.log"), "w", encoding="utf-8", newline="\n") as fh:
             fh.write("\n".join(LOG) + "\n\n----- femticPy output -----\n" + "".join(ctx["femticpy_out"]))
+        write_manifest(stage, ("written by %s sha256 %s" % (ctx["script_rel"], ctx["script_sha"]),) +
+                       (() if c["rot"] is None else (rotation_text(c, ctx["rot_deg"]),)))
         # the READMEs and the log are written after the checks: re-check line endings over the final tree
         crs = []
         for dp, _, fns in os.walk(stage):
@@ -1466,10 +2207,25 @@ def main(argv=None):
                         crs.append(fn)
         if crs:
             fail("CR bytes in %s (inspect %s)" % (crs, stage))
-        if os.path.exists(run_dir):
+        if os.path.lexists(run_dir):
+            # re-inventory just before deleting: anything added or changed during the run stops it here
+            plan1 = delete_plan(run_dir, c)
+            new = sorted(plan1["entries"] - (plan0["entries"] if plan0 else set()))
+            if new or (plan1["entries"] and not a.force) or (
+                    (plan1["foreign"] or plan1["foreign_dirs"]) and not a.force_delete_foreign):
+                fail("nothing deleted: %s changed during the run (%s); the new products are in %s" %
+                     (run_dir, ", ".join(new[:10]) or "foreign or changed files", stage))
             shutil.rmtree(run_dir)
-        os.replace(stage, run_dir)
-        log("OK: %d checks passed; wrote %s" % (len(ck.res), run_dir))
+        # every abort point is behind us (checks, CR scan, re-inventory): only now is the staging marker
+        # dropped, so a run that stopped anywhere above leaves a marked DIR.staging that the next run removes
+        os.remove(os.path.join(stage, STAGE_MARK))
+        try:
+            os.replace(stage, run_dir)
+        except OSError as e:
+            mark_staging(stage, run_dir)
+            fail("could not rename %s to %s (%s); nothing else was changed and the staging directory keeps its "
+                 "marker" % (stage, run_dir, e))
+        print("OK: %s; wrote %s" % (ck.summary(), run_dir))
         return 0
     except PrepError as e:
         print("PREP FAILED: %s" % e, file=sys.stderr)

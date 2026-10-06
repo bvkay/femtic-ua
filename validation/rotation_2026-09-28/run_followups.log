@@ -1,0 +1,394 @@
+# C5 follow-ups (2026-09-28, late evening): run log
+
+Windows conda base python 3.13.5 (C:/Users/joint/anaconda3/python), run from the worktree root. No WSL, no
+FEMTIC, no mesh tool. Scratch paths are shown as <scratch>.
+
+## Part A. Fail cases first: the new tests on the script BEFORE this round
+
+scripts/prep_vulcan.py as it was at the start (sha256 1a4e7ca536d7d2b8, 17 checks):
+python validation/rotation_2026-09-28/rot_prep_checks.py <scratch>/w_base --prep <scratch>/base/prep_vulcan.py --only R10a,R10b,R10c,R10d,R10e,R11a,R11b,R11c,R11d,R12
+
+rot_prep_checks.py: prep under test <scratch>\c5fu\base\prep_vulcan.py (sha256 1a4e7ca536d7d2b8); python 3.13.5; numpy 2.3.4
+[R10a] frame guard: E5's ZROT set to 7.42 at every band in a scratch copy of the 120 EDIs (the tensor claims to be rotated already), run with config/vulcan_mesh_v2_rot.yml
+  This test fails if prep exits other than 1, C18 is not FAIL, C18 does not name E5 and 'ZROT 7.42', or the output directory is created (prep would rotate E5 a second time)
+  -> FAIL: exit 0; C18 None; output written: True; (no C18 line)
+[R10b] frame guard: E5's DECLINATION set to 6.4 under frame_in magnetic
+  This test fails if prep exits other than 1, C18 is not FAIL, C18 does not name E5 and 'DECLINATION 6.4', or the output directory is created
+  -> FAIL: exit 0; C18 None; output written: True; (no C18 line)
+[R10c] frame guard: E5's first HMEAS HX AZM set to 7.42
+  This test fails if prep exits other than 1, C18 is not FAIL, C18 does not name E5 and 'AZM 7.42', or the output directory is created
+  -> FAIL: exit 0; C18 None; output written: True; (no C18 line)
+[R10d] frame guard, documented exception: DECLINATION 6.4 at E5 under frame_in true (angle 1.02)
+  This test fails if prep exits non-zero or any of C01-C18 is not PASS (under frame_in true DECLINATION is information only)
+  -> FAIL: exit 0; C18 None; output written: True; (no C18 line)
+[R10e] frame guard: E5's ZROT 7.42 under frame_in true (angle 1.02): the ZROT rule holds in every frame
+  This test fails if prep exits other than 1, C18 is not FAIL, C18 does not name E5 and 'ZROT 7.42', or the output directory is created
+  -> FAIL: exit 0; C18 None; output written: True; (no C18 line)
+[R11a] angle column: frame_in true with angle_deg 'auto' and no angle_column, on alpha_per_site.csv (which has no true-north column)
+  This test fails if prep exits other than 1, writes an output or staging directory, or does not name the column 'alpha_true_deg' (it would then use the magnetic alpha_deg, about 7.42 instead of about 1.02 deg)
+  -> FAIL: exit 0; message 'alpha_true_deg' present: False; output written: True; 
+[R11b] angle column: frame_in true with angle_column alpha_deg (the magnetic angle)
+  This test fails if prep exits other than 1, writes output, or does not say 'does not match frame_in true'
+  -> FAIL: exit 0; message 'does not match frame_in true' present: False; output written: True; 
+[R11c] angle column: frame_in magnetic with angle_column conv_pyproj_deg
+  This test fails if prep exits other than 1, writes output, or does not say 'does not match frame_in magnetic'
+  -> FAIL: exit 0; message 'does not match frame_in magnetic' present: False; output written: True; 
+[R11d] angle column, accepted case: frame_in true, 'auto', a CSV with alpha_true_deg = -conv_pyproj_deg
+  This test fails if prep exits non-zero, any of C01-C18 is not PASS, station_map.csv's rot_deg differs from the CSV's alpha_true_deg by more than 1e-9 for any of the 120 sites, or any rot_deg is outside (0.9, 1.1) deg
+  -> FAIL: exit 0; not PASS: ['C18=None']; k_iter0.dat: True
+[R12] generated records of a mesh-reuse run (config/vulcan_mesh_v2_rot.yml): no 'not yet produced' mesh row, and the sha256 of the script under test in both READMEs and the manifest header
+  This test fails if inversion/README.md contains 'not yet' or does not say it reuses the existing mesh of mesh/vulcan_v2, either README lacks the sha256 of the script under test (README.md in its provenance row 'script'), or prep_manifest.sha256 has no header line '# written by <path> sha256 <that sha256>'
+  -> FAIL: script under test sha256 1a4e7ca536d7d2b8; inversion/README.md without 'not yet': False; inversion/README.md says it reuses mesh/vulcan_v2: False; inversion/README.md names the script sha256: False; README.md provenance row 'script' has it: False; manifest header '# written by ... sha256' has it: False; manifest heade
+  FAIL  R10a             frame guard: E5's ZROT set to 7.42 at every band in a scratch copy of the 120 EDIs (the te
+  FAIL  R10b             frame guard: E5's DECLINATION set to 6.4 under frame_in magnetic
+  FAIL  R10c             frame guard: E5's first HMEAS HX AZM set to 7.42
+  FAIL  R10d             frame guard, documented exception: DECLINATION 6.4 at E5 under frame_in true (angle 1.02)
+  FAIL  R10e             frame guard: E5's ZROT 7.42 under frame_in true (angle 1.02): the ZROT rule holds in every
+  FAIL  R11a             angle column: frame_in true with angle_deg 'auto' and no angle_column, on alpha_per_site.c
+  FAIL  R11b             angle column: frame_in true with angle_column alpha_deg (the magnetic angle)
+  FAIL  R11c             angle column: frame_in magnetic with angle_column conv_pyproj_deg
+  FAIL  R11d             angle column, accepted case: frame_in true, 'auto', a CSV with alpha_true_deg = -conv_pypr
+  FAIL  R12              generated records of a mesh-reuse run (config/vulcan_mesh_v2_rot.yml): no 'not yet produce
+==== summary ====
+  FAIL  R10a             frame guard: E5's ZROT set to 7.42 at every band in a scratch copy of the 120 EDIs (the te
+  FAIL  R10b             frame guard: E5's DECLINATION set to 6.4 under frame_in magnetic
+  FAIL  R10c             frame guard: E5's first HMEAS HX AZM set to 7.42
+  FAIL  R10d             frame guard, documented exception: DECLINATION 6.4 at E5 under frame_in true (angle 1.02)
+  FAIL  R10e             frame guard: E5's ZROT 7.42 under frame_in true (angle 1.02): the ZROT rule holds in every
+  FAIL  R11a             angle column: frame_in true with angle_deg 'auto' and no angle_column, on alpha_per_site.c
+  FAIL  R11b             angle column: frame_in true with angle_column alpha_deg (the magnetic angle)
+  FAIL  R11c             angle column: frame_in magnetic with angle_column conv_pyproj_deg
+  FAIL  R11d             angle column, accepted case: frame_in true, 'auto', a CSV with alpha_true_deg = -conv_pypr
+  FAIL  R12              generated records of a mesh-reuse run (config/vulcan_mesh_v2_rot.yml): no 'not yet produce
+10 tests: 0 PASS, 10 FAIL; 0 observations
+
+## Part B. rot_prep_checks.py on the final script (section R, R9b/R9c, and section M: mutants of the final script)
+
+python validation/rotation_2026-09-28/rot_prep_checks.py <scratch>/w_rot2 --old-prep <scratch>/prep_vulcan_base_52c25de1.py   (2 min 24 s)
+
+rot_prep_checks.py: prep under test D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts\prep_vulcan.py (sha256 328932c2e714d586); python 3.13.5; numpy 2.3.4
+repository D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4; config/vulcan_mesh_v2_rot.yml sha256 b9546871b5d8ffc8; alpha_per_site.csv sha256 2d5412a088c2e5e1
+
+New tests (R10-R12) and their mutants:
+
+[R2] full prep of config/vulcan_mesh_v2_rot.yml (7.42 deg): checks, records and unchanged mesh inputs
+  This test fails if prep exits non-zero, any of C01-C18 is not PASS, station_map.csv is not v2's plus a rot_deg column of 7.42, prep_manifest.sha256 lacks the one '# data.rotation: magnetic -> grid, alpha 7.42 deg (explicit)' header line or does not list every other file with its sha256, inversion/control.dat or a files/* differs from mesh/vulcan_v2, or observe.dat does NOT differ from v2's
+  -> PASS: exit 0, 18 PASS; [PASS] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 4.9e-0 | [PASS] C17  mesh reuse: mesh/vulcan_v2: 10 of 10 files/* identical; input_md5.txt 9 of 9 md5 match; products.md5 names m; station_map = v2's plus rot_deg ['7.42']: True; manifest header ['# written by scripts/prep_vulcan.py sha256 328932c2e714d5863b60c80c42aae48ca04737544bafe0a5c94150ee7d4ea479', "
+[R5a] --check-only of R2's output with its own config
+  This test fails if it exits non-zero, a check other than C03/C05 (N/A under --check-only) is not PASS, or the directory changes
+  -> PASS: exit 0; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS C15=PASS C16=PASS C17=PASS C18=PASS; C08  C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 4.9e-05; C09 PASS; tree unchanged: True
+[R10a] frame guard: E5's ZROT set to 7.42 at every band in a scratch copy of the 120 EDIs (the tensor claims to be rotated already), run with config/vulcan_mesh_v2_rot.yml
+  This test fails if prep exits other than 1, C18 is not FAIL, C18 does not name E5 and 'ZROT 7.42', or the output directory is created (prep would rotate E5 a second time)
+  -> PASS: exit 1; C18 FAIL; output written: False; [FAIL] C18  EDI frame: 1 of 120 EDIs contradict it: E5: ZROT 7.42 at 62 of 62 bands; 120 EDIs, rule of frame_in magnetic: 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[R10b] frame guard: E5's DECLINATION set to 6.4 under frame_in magnetic
+  This test fails if prep exits other than 1, C18 is not FAIL, C18 does not name E5 and 'DECLINATION 6.4', or the output directory is created
+  -> PASS: exit 1; C18 FAIL; output written: False; [FAIL] C18  EDI frame: 1 of 120 EDIs contradict it: E5: DECLINATION 6.4; 120 EDIs, rule of frame_in magnetic: 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[R10c] frame guard: E5's first HMEAS HX AZM set to 7.42
+  This test fails if prep exits other than 1, C18 is not FAIL, C18 does not name E5 and 'AZM 7.42', or the output directory is created
+  -> PASS: exit 1; C18 FAIL; output written: False; [FAIL] C18  EDI frame: 1 of 120 EDIs contradict it: E5: HMEAS HX AZM 7.42 (must be 0); 120 EDIs, rule of frame_in magnetic: 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[R10d] frame guard, documented exception: DECLINATION 6.4 at E5 under frame_in true (angle 1.02)
+  This test fails if prep exits non-zero or any of C01-C18 is not PASS (under frame_in true DECLINATION is information only)
+  -> PASS: exit 0; C18 PASS; output written: True; [PASS] C18  EDI frame: 120 EDIs, rule of frame_in true: 120 hold a ZROT block, 120 a DECLINATION (not tested: frame_in true); 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[R10e] frame guard: E5's ZROT 7.42 under frame_in true (angle 1.02): the ZROT rule holds in every frame
+  This test fails if prep exits other than 1, C18 is not FAIL, C18 does not name E5 and 'ZROT 7.42', or the output directory is created
+  -> PASS: exit 1; C18 FAIL; output written: False; [FAIL] C18  EDI frame: 1 of 120 EDIs contradict it: E5: ZROT 7.42 at 62 of 62 bands; 120 EDIs, rule of frame_in true: 120 hold a ZROT block, 120 a DECLINATION (not tested: frame_in true); 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[R11a] angle column: frame_in true with angle_deg 'auto' and no angle_column, on alpha_per_site.csv (which has no true-north column)
+  This test fails if prep exits other than 1, writes an output or staging directory, or does not name the column 'alpha_true_deg' (it would then use the magnetic alpha_deg, about 7.42 instead of about 1.02 deg)
+  -> PASS: exit 1; message 'alpha_true_deg' present: True; output written: False; PREP FAILED: data.rotation.angle_file D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\validation\rotation_2026-09-28\alpha_per_site.csv needs the columns site_id and alpha_true_deg (frame_in true takes its per-si
+[R11b] angle column: frame_in true with angle_column alpha_deg (the magnetic angle)
+  This test fails if prep exits other than 1, writes output, or does not say 'does not match frame_in true'
+  -> PASS: exit 1; message 'does not match frame_in true' present: True; output written: False; PREP FAILED: config: data.rotation.angle_column 'alpha_deg' does not match frame_in true, whose per-site angle (the azimuth of the true x axis clockwise from grid north) is read only from column alpha_true_deg. alpha_deg
+[R11c] angle column: frame_in magnetic with angle_column conv_pyproj_deg
+  This test fails if prep exits other than 1, writes output, or does not say 'does not match frame_in magnetic'
+  -> PASS: exit 1; message 'does not match frame_in magnetic' present: True; output written: False; PREP FAILED: config: data.rotation.angle_column 'conv_pyproj_deg' does not match frame_in magnetic, whose per-site angle (the azimuth of the magnetic x axis clockwise from grid north) is read only from column alpha_deg. 
+[R11d] angle column, accepted case: frame_in true, 'auto', a CSV with alpha_true_deg = -conv_pyproj_deg
+  This test fails if prep exits non-zero, any of C01-C18 is not PASS, station_map.csv's rot_deg differs from the CSV's alpha_true_deg by more than 1e-9 for any of the 120 sites, or any rot_deg is outside (0.9, 1.1) deg
+  -> PASS: exit 0, 18 PASS; station_map rot_deg 0.98181..1.05062 deg = the CSV's alpha_true_deg for 120 sites, max diff 0.0e+00
+[R12] generated records of a mesh-reuse run (config/vulcan_mesh_v2_rot.yml): no 'not yet produced' mesh row, and the sha256 of the script under test in both READMEs and the manifest header
+  This test fails if inversion/README.md contains 'not yet' or does not say it reuses the existing mesh of mesh/vulcan_v2, either README lacks the sha256 of the script under test (README.md in its provenance row 'script'), or prep_manifest.sha256 has no header line '# written by <path> sha256 <that sha256>'
+  -> PASS: script under test sha256 328932c2e714d586; inversion/README.md without 'not yet': True; inversion/README.md says it reuses mesh/vulcan_v2: True; inversion/README.md names the script sha256: True; README.md provenance row 'script' has it: True; manifest header '# written by ... sha256' has it: True; manifest header ['# written by scripts/prep_vulcan.py sha256 328932c2e714d5863b60c80c42aae48ca04737544bafe0a5
+[M MR10/R2] R2 must FAIL on mutant MR10
+  This test fails if the mutant cannot be built, or R2 still PASSes on it
+  -> PASS: R2 on MR10: FAIL: exit 0, 18 PASS; [PASS] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 4.9e-0 | [PASS] C17  mesh reuse: mesh/vulcan_v2: 10 of 10 files/* identical; input_md5.txt 9 of 9 md5 match; products.md5 names m; station_map = v2's plus rot_deg ['7.42']: True; manifest header [], 17 files, mismatches []; control.dat and files/* as v2: True; observe.dat differs from v2's
+[M MR10/R12] R12 must FAIL on mutant MR10
+  This test fails if the mutant cannot be built, or R12 still PASSes on it
+  -> PASS: R12 on MR10: FAIL: script under test sha256 f715d0aaf6dea203; inversion/README.md without 'not yet': True; inversion/README.md says it reuses mesh/vulcan_v2: True; inversion/README.md names the script sha256: True; README.md provenance row 'script' has it: True; manifest header '# written by ... sha256' has it: False; manifest header []
+[M MR22/R10a] R10a must FAIL on mutant MR22
+  This test fails if the mutant cannot be built, or R10a still PASSes on it
+  -> PASS: R10a on MR22: FAIL: exit 0; C18 PASS; output written: True; [PASS] C18  EDI frame: 1 of 120 EDIs contradict it: E5: ZROT 7.42 at 62 of 62 bands; 120 EDIs, rule of frame_in magnetic: 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[M MR22/R10b] R10b must FAIL on mutant MR22
+  This test fails if the mutant cannot be built, or R10b still PASSes on it
+  -> PASS: R10b on MR22: FAIL: exit 0; C18 PASS; output written: True; [PASS] C18  EDI frame: 1 of 120 EDIs contradict it: E5: DECLINATION 6.4; 120 EDIs, rule of frame_in magnetic: 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[M MR22/R10c] R10c must FAIL on mutant MR22
+  This test fails if the mutant cannot be built, or R10c still PASSes on it
+  -> PASS: R10c on MR22: FAIL: exit 0; C18 PASS; output written: True; [PASS] C18  EDI frame: 1 of 120 EDIs contradict it: E5: HMEAS HX AZM 7.42 (must be 0); 120 EDIs, rule of frame_in magnetic: 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[M MR22/R10e] R10e must FAIL on mutant MR22
+  This test fails if the mutant cannot be built, or R10e still PASSes on it
+  -> PASS: R10e on MR22: FAIL: exit 0; C18 PASS; output written: True; [PASS] C18  EDI frame: 1 of 120 EDIs contradict it: E5: ZROT 7.42 at 62 of 62 bands; 120 EDIs, rule of frame_in true: 120 hold a ZROT block, 120 a DECLINATION (not tested: frame_in true); 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[M MR25/R10a] R10a must FAIL on mutant MR25
+  This test fails if the mutant cannot be built, or R10a still PASSes on it
+  -> PASS: R10a on MR25: FAIL: exit 0; C18 PASS; output written: True; [PASS] C18  EDI frame: 120 EDIs, rule of frame_in magnetic: 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[M MR25/R10e] R10e must FAIL on mutant MR25
+  This test fails if the mutant cannot be built, or R10e still PASSes on it
+  -> PASS: R10e on MR25: FAIL: exit 0; C18 PASS; output written: True; [PASS] C18  EDI frame: 120 EDIs, rule of frame_in true: 120 hold a ZROT block, 120 a DECLINATION (not tested: frame_in true); 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[M MR26/R10b] R10b must FAIL on mutant MR26
+  This test fails if the mutant cannot be built, or R10b still PASSes on it
+  -> PASS: R10b on MR26: FAIL: exit 0; C18 PASS; output written: True; [PASS] C18  EDI frame: 120 EDIs, rule of frame_in magnetic: 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[M MR27/R10c] R10c must FAIL on mutant MR27
+  This test fails if the mutant cannot be built, or R10c still PASSes on it
+  -> PASS: R10c on MR27: FAIL: exit 0; C18 PASS; output written: True; [PASS] C18  EDI frame: 120 EDIs, rule of frame_in magnetic: 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[M MR30/R10d] R10d must FAIL on mutant MR30
+  This test fails if the mutant cannot be built, or R10d still PASSes on it
+  -> PASS: R10d on MR30: FAIL: exit 1; C18 FAIL; output written: False; [FAIL] C18  EDI frame: 1 of 120 EDIs contradict it: E5: DECLINATION 6.4; 120 EDIs, rule of frame_in true: 120 hold a ZROT block, 120 a DECLINATION (not tested: frame_in true); 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orientation not recorded)
+[M MR23/R11a] R11a must FAIL on mutant MR23
+  This test fails if the mutant cannot be built, or R11a still PASSes on it
+  -> PASS: R11a on MR23: FAIL: exit 0; message 'alpha_true_deg' present: False; output written: True; 
+[M MR23/R11b] R11b must FAIL on mutant MR23
+  This test fails if the mutant cannot be built, or R11b still PASSes on it
+  -> PASS: R11b on MR23: FAIL: exit 0; message 'does not match frame_in true' present: False; output written: True; 
+[M MR23/R11d] R11d must FAIL on mutant MR23
+  This test fails if the mutant cannot be built, or R11d still PASSes on it
+  -> PASS: R11d on MR23: FAIL: exit 0, 18 PASS; station_map rot_deg 7.36233..7.4883 deg = the CSV's alpha_true_deg for 120 sites, max diff 6.4e+00
+[M MR24/R11a] (observation, not a test)
+  R11a on MR24 alone: PASS: exit 1; message 'alpha_true_deg' present: True; output written: False; PREP FAILED: data.rotation.angle_file D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\validation\rotation_2026-09-28\alpha_per_site.csv needs the columns site_id and alpha_true_deg (frame_in true takes its per-si (a second guard still holds, so this mutant alone cannot show R11a failing)
+[M MR24/R11b] R11b must FAIL on mutant MR24
+  This test fails if the mutant cannot be built, or R11b still PASSes on it
+  -> PASS: R11b on MR24: FAIL: exit 0; message 'does not match frame_in true' present: False; output written: True; 
+[M MR24/R11c] R11c must FAIL on mutant MR24
+  This test fails if the mutant cannot be built, or R11c still PASSes on it
+  -> PASS: R11c on MR24: FAIL: exit 0; message 'does not match frame_in magnetic' present: False; output written: True; 
+[M MR28/R12] R12 must FAIL on mutant MR28
+  This test fails if the mutant cannot be built, or R12 still PASSes on it
+  -> PASS: R12 on MR28: FAIL: script under test sha256 812195cb32186e4b; inversion/README.md without 'not yet': False; inversion/README.md says it reuses mesh/vulcan_v2: False; inversion/README.md names the script sha256: True; README.md provenance row 'script' has it: True; manifest header '# written by ... sha256' has it: True; manifest header ['# written by <scratch>...
+[M MR31/R12] R12 must FAIL on mutant MR31
+  This test fails if the mutant cannot be built, or R12 still PASSes on it
+  -> PASS: R12 on MR31: FAIL: script under test sha256 0a540aadbb538d65; inversion/README.md without 'not yet': True; inversion/README.md says it reuses mesh/vulcan_v2: True; inversion/README.md names the script sha256: False; README.md provenance row 'script' has it: False; manifest header '# written by ... sha256' has it: False; manifest header ['# written by <scratch>...
+  PASS  R1               regression: data.rotation with angle 0 (frame_in grid) reproduces mesh/vulcan_v2 byte for 
+  PASS  R2               full prep of config/vulcan_mesh_v2_rot.yml (7.42 deg): checks, records and unchanged mesh 
+  PASS  R3               rotational invariants at full precision (all 120 EDIs, every unmasked band)
+  PASS  R4               rotational invariants on the written files (R2's observe.dat against mesh/vulcan_v2's)
+  PASS  R5a              --check-only of R2's output with its own config
+  PASS  R5b              --check-only of R2's (rotated) output with config/vulcan_mesh_v2.yml (no data.rotation)
+  PASS  R5c              --check-only of mesh/vulcan_v2 (unrotated) with config/vulcan_mesh_v2_rot.yml
+  PASS  R6               data.rotation angle_deg 'auto': per-site alpha from alpha_per_site.csv
+  PASS  R7a              refusal: frame_in magnetic without angle_deg
+  PASS  R7b              refusal: frame_in grid with angle_deg 7.42
+  PASS  R7c              refusal: a misspelt key (angle_degs)
+  PASS  R7d              refusal: angle_deg 'auto' without angle_file
+  PASS  R7e              refusal: angle_deg 'auto' with a CSV that lacks one site (J6_BxRepaced)
+  PASS  R8               mesh.reuse_from pointing at a mesh built from other inputs (mesh/vulcan_v3)
+  PASS  R9a              refusal: data.rotation under 'schema: prep_vulcan/1'
+  PASS  R10a             frame guard: E5's ZROT set to 7.42 at every band in a scratch copy of the 120 EDIs (the te
+  PASS  R10b             frame guard: E5's DECLINATION set to 6.4 under frame_in magnetic
+  PASS  R10c             frame guard: E5's first HMEAS HX AZM set to 7.42
+  PASS  R10d             frame guard, documented exception: DECLINATION 6.4 at E5 under frame_in true (angle 1.02)
+  PASS  R10e             frame guard: E5's ZROT 7.42 under frame_in true (angle 1.02): the ZROT rule holds in every
+  PASS  R11a             angle column: frame_in true with angle_deg 'auto' and no angle_column, on alpha_per_site.c
+  PASS  R11b             angle column: frame_in true with angle_column alpha_deg (the magnetic angle)
+  PASS  R11c             angle column: frame_in magnetic with angle_column conv_pyproj_deg
+  PASS  R11d             angle column, accepted case: frame_in true, 'auto', a CSV with alpha_true_deg = -conv_pypr
+  PASS  R12              generated records of a mesh-reuse run (config/vulcan_mesh_v2_rot.yml): no 'not yet produce
+  PASS  R9b              an older prep_vulcan.py (--old-prep, which ignores data.rotation) refuses config/vulcan_me
+  PASS  R9c              the hazard R9b guards against: the older script given the rotation config under prep_vulca
+  -     R4 per-component change (7.42 deg, written files) observation
+  -     R6 per-site against single angle observation
+  PASS  M MZ/R1          R1 must FAIL on MZ
+  PASS  M MR1/R2         R2 must FAIL on MR1
+  PASS  M MR2/R2         R2 must FAIL on MR2
+  PASS  M MR3/R2         R2 must FAIL on MR3
+  PASS  M MR3b/R2        R2 must FAIL on MR3b
+  PASS  M MR4/R2         R2 must FAIL on MR4
+  PASS  M MR4/R3         R3 must FAIL on MR4
+  PASS  M MR5/R7a        R7a must FAIL on MR5
+  PASS  M MR6/R2         R2 must FAIL on MR6
+  PASS  M MR9/R2         R2 must FAIL on MR9
+  PASS  M MR10/R2        R2 must FAIL on MR10
+  PASS  M MR10/R12       R12 must FAIL on MR10
+  PASS  M MR11/R8        R8 must FAIL on MR11
+  PASS  M MR14/R6        R6 must FAIL on MR14
+  -     M MR15/R5c       observation
+  PASS  M MR15/R5a       R5a must FAIL on MR15
+  PASS  M MR15+MR16/R5c  R5c must FAIL on MR15+MR16
+  PASS  M MR6+MR15/R2    R2 must FAIL on MR6+MR15
+  PASS  M MR6+MR15/R4    R4 must FAIL on MR6+MR15
+  PASS  M MR17/R7e       R7e must FAIL on MR17
+  PASS  M MR18/R7b       R7b must FAIL on MR18
+  PASS  M MR19/R7c       R7c must FAIL on MR19
+  PASS  M MR20/R7d       R7d must FAIL on MR20
+  PASS  M MR21/R9a       R9a must FAIL on MR21
+  PASS  M MR22/R10a      R10a must FAIL on MR22
+  PASS  M MR22/R10b      R10b must FAIL on MR22
+  PASS  M MR22/R10c      R10c must FAIL on MR22
+  PASS  M MR22/R10e      R10e must FAIL on MR22
+  PASS  M MR25/R10a      R10a must FAIL on MR25
+  PASS  M MR25/R10e      R10e must FAIL on MR25
+  PASS  M MR26/R10b      R10b must FAIL on MR26
+  PASS  M MR27/R10c      R10c must FAIL on MR27
+  PASS  M MR30/R10d      R10d must FAIL on MR30
+  PASS  M MR23/R11a      R11a must FAIL on MR23
+  PASS  M MR23/R11b      R11b must FAIL on MR23
+  PASS  M MR23/R11d      R11d must FAIL on MR23
+  -     M MR24/R11a      observation
+  PASS  M MR24/R11b      R11b must FAIL on MR24
+  PASS  M MR24/R11c      R11c must FAIL on MR24
+  PASS  M MR28/R12       R12 must FAIL on MR28
+  PASS  M MR31/R12       R12 must FAIL on MR31
+
+==== summary ====
+  PASS  R1               regression: data.rotation with angle 0 (frame_in grid) reproduces mesh/vulcan_v2 byte for 
+  PASS  R2               full prep of config/vulcan_mesh_v2_rot.yml (7.42 deg): checks, records and unchanged mesh 
+  PASS  R3               rotational invariants at full precision (all 120 EDIs, every unmasked band)
+  PASS  R4               rotational invariants on the written files (R2's observe.dat against mesh/vulcan_v2's)
+  PASS  R5a              --check-only of R2's output with its own config
+  PASS  R5b              --check-only of R2's (rotated) output with config/vulcan_mesh_v2.yml (no data.rotation)
+  PASS  R5c              --check-only of mesh/vulcan_v2 (unrotated) with config/vulcan_mesh_v2_rot.yml
+  PASS  R6               data.rotation angle_deg 'auto': per-site alpha from alpha_per_site.csv
+  PASS  R7a              refusal: frame_in magnetic without angle_deg
+  PASS  R7b              refusal: frame_in grid with angle_deg 7.42
+  PASS  R7c              refusal: a misspelt key (angle_degs)
+  PASS  R7d              refusal: angle_deg 'auto' without angle_file
+  PASS  R7e              refusal: angle_deg 'auto' with a CSV that lacks one site (J6_BxRepaced)
+  PASS  R8               mesh.reuse_from pointing at a mesh built from other inputs (mesh/vulcan_v3)
+  PASS  R9a              refusal: data.rotation under 'schema: prep_vulcan/1'
+  PASS  R10a             frame guard: E5's ZROT set to 7.42 at every band in a scratch copy of the 120 EDIs (the te
+  PASS  R10b             frame guard: E5's DECLINATION set to 6.4 under frame_in magnetic
+  PASS  R10c             frame guard: E5's first HMEAS HX AZM set to 7.42
+  PASS  R10d             frame guard, documented exception: DECLINATION 6.4 at E5 under frame_in true (angle 1.02)
+  PASS  R10e             frame guard: E5's ZROT 7.42 under frame_in true (angle 1.02): the ZROT rule holds in every
+  PASS  R11a             angle column: frame_in true with angle_deg 'auto' and no angle_column, on alpha_per_site.c
+  PASS  R11b             angle column: frame_in true with angle_column alpha_deg (the magnetic angle)
+  PASS  R11c             angle column: frame_in magnetic with angle_column conv_pyproj_deg
+  PASS  R11d             angle column, accepted case: frame_in true, 'auto', a CSV with alpha_true_deg = -conv_pypr
+  PASS  R12              generated records of a mesh-reuse run (config/vulcan_mesh_v2_rot.yml): no 'not yet produce
+  PASS  R9b              an older prep_vulcan.py (--old-prep, which ignores data.rotation) refuses config/vulcan_me
+  PASS  R9c              the hazard R9b guards against: the older script given the rotation config under prep_vulca
+  -     R4 per-component change (7.42 deg, written files) observation
+  -     R6 per-site against single angle observation
+  PASS  M MZ/R1          R1 must FAIL on MZ
+  PASS  M MR1/R2         R2 must FAIL on MR1
+  PASS  M MR2/R2         R2 must FAIL on MR2
+  PASS  M MR3/R2         R2 must FAIL on MR3
+  PASS  M MR3b/R2        R2 must FAIL on MR3b
+  PASS  M MR4/R2         R2 must FAIL on MR4
+  PASS  M MR4/R3         R3 must FAIL on MR4
+  PASS  M MR5/R7a        R7a must FAIL on MR5
+  PASS  M MR6/R2         R2 must FAIL on MR6
+  PASS  M MR9/R2         R2 must FAIL on MR9
+  PASS  M MR10/R2        R2 must FAIL on MR10
+  PASS  M MR10/R12       R12 must FAIL on MR10
+  PASS  M MR11/R8        R8 must FAIL on MR11
+  PASS  M MR14/R6        R6 must FAIL on MR14
+  -     M MR15/R5c       observation
+  PASS  M MR15/R5a       R5a must FAIL on MR15
+  PASS  M MR15+MR16/R5c  R5c must FAIL on MR15+MR16
+  PASS  M MR6+MR15/R2    R2 must FAIL on MR6+MR15
+  PASS  M MR6+MR15/R4    R4 must FAIL on MR6+MR15
+  PASS  M MR17/R7e       R7e must FAIL on MR17
+  PASS  M MR18/R7b       R7b must FAIL on MR18
+  PASS  M MR19/R7c       R7c must FAIL on MR19
+  PASS  M MR20/R7d       R7d must FAIL on MR20
+  PASS  M MR21/R9a       R9a must FAIL on MR21
+  PASS  M MR22/R10a      R10a must FAIL on MR22
+  PASS  M MR22/R10b      R10b must FAIL on MR22
+  PASS  M MR22/R10c      R10c must FAIL on MR22
+  PASS  M MR22/R10e      R10e must FAIL on MR22
+  PASS  M MR25/R10a      R10a must FAIL on MR25
+  PASS  M MR25/R10e      R10e must FAIL on MR25
+  PASS  M MR26/R10b      R10b must FAIL on MR26
+  PASS  M MR27/R10c      R10c must FAIL on MR27
+  PASS  M MR30/R10d      R10d must FAIL on MR30
+  PASS  M MR23/R11a      R11a must FAIL on MR23
+  PASS  M MR23/R11b      R11b must FAIL on MR23
+  PASS  M MR23/R11d      R11d must FAIL on MR23
+  -     M MR24/R11a      observation
+  PASS  M MR24/R11b      R11b must FAIL on MR24
+  PASS  M MR24/R11c      R11c must FAIL on MR24
+  PASS  M MR28/R12       R12 must FAIL on MR28
+  PASS  M MR31/R12       R12 must FAIL on MR31
+66 tests: 66 PASS, 0 FAIL; 4 observations
+
+## Part C. validation/prep_checks_2026-09-28/inject_and_check.py
+
+Two mutants of the edited harness, copied to <scratch> with REPO pointed at the worktree:
+- HM1: N_CHECKS = 14 (the old line 348). This test fails if the negative controls C1-C4 do not all PASS.
+  Result: 85 tests: 81 PASS, 4 FAIL
+| C | C1 swap whole rows 1 and 2 of station_map.csv | FAIL | inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 0; FAIL none; 18 check lines; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the
+| C | C2 frequency + 1e-5 Hz at 100 Hz (1e-7 relative), station 1 | FAIL | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; 18 check lines; [PASS] C06  frequencies: max relative difference 1.00e-07 over 126
+| C | C3 frequency x (1 + 5e-7), station 1, 100 Hz | FAIL | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; 18 check lines; [PASS] C06  frequencies: max relative difference 5.00e-07 over 126 of 126 data li
+| C | C4 move station 1 (and its VTF H-station) 0.2 m north | FAIL | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; 18 check lines; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the
+
+- HM2: no -B for the subprocesses and no sys.dont_write_bytecode, the harness itself run without -B.
+  This test fails if a __pycache__ is left in the worktree (other than hpc/phoenix_plan/tools/__pycache__,
+  19:54, which predates this work). Result: 85 tests: 85 PASS, 0 FAIL, but it left
+  scripts/__pycache__/prep_vulcan.cpython-313.pyc (23:42:57): FAIL of this criterion. Deleted at once.
+
+- The edited harness, run as plain 'python validation/prep_checks_2026-09-28/inject_and_check.py <scratch>/w_inject'
+  (no -B, PYTHONDONTWRITEBYTECODE unset), prep_vulcan.py sha256 328932c2e714d586:
+  Result: 85 tests: 85 PASS, 0 FAIL; no new __pycache__ anywhere in the worktree.
+| C | C1 swap whole rows 1 and 2 of station_map.csv | PASS | inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 0; FAIL none; 18 check lines; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the
+| C | C2 frequency + 1e-5 Hz at 100 Hz (1e-7 relative), station 1 | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; 18 check lines; [PASS] C06  frequencies: max relative difference 1.00e-07 over 126
+| C | C3 frequency x (1 + 5e-7), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; 18 check lines; [PASS] C06  frequencies: max relative difference 5.00e-07 over 126 of 126 data li
+| C | C4 move station 1 (and its VTF H-station) 0.2 m north | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; 18 check lines; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the
+
+## Part D. mesh/vulcan_v2_rot regenerated (light prep, no mesh tool)
+
+python -B scripts/prep_vulcan.py config/vulcan_mesh_v2_rot.yml --force   (2.8 s; the old manifest verified first:
+sha256sum -c --strict, 17 OK). This test fails if inversion/observe.dat's sha256 is not d501abcf5a7dde5f... .
+sha256 (first 16 hex) of every file, before -> after:
+
+  README.md                          e2ea3ddd9b276476 -> 6482d4e97d15a65c CHANGED
+  config_used.yml                    1f23c58a23094178 -> b9546871b5d8ffc8 CHANGED
+  files/analysis_domain.dat          a0715636321d6bbe -> a0715636321d6bbe same
+  files/bathymetry.dat               a45f54c15363b376 -> a45f54c15363b376 same
+  files/coast_line.dat               3e7123b08f2e9705 -> 3e7123b08f2e9705 same
+  files/control.dat                  bee0d4fadb779646 -> bee0d4fadb779646 same
+  files/makeMtr.param                7c2550b50f107de8 -> 7c2550b50f107de8 same
+  files/obs_site.dat                 ac427d963865dd1c -> ac427d963865dd1c same
+  files/observing_site.dat           81a89f039faaa4d4 -> 81a89f039faaa4d4 same
+  files/region_seeds.dat             0d27060db3eccb66 -> 0d27060db3eccb66 same
+  files/resistivity_attr.dat         4f6f53ae018fcf1f -> 4f6f53ae018fcf1f same
+  files/topography.dat               6fce1153edcd4b28 -> 6fce1153edcd4b28 same
+  inversion/README.md                4741bce46f49c991 -> a48b186f7b5b08ea CHANGED
+  inversion/control.dat              8fba4e299c817ab3 -> 8fba4e299c817ab3 same
+  inversion/observe.dat              d501abcf5a7dde5f -> d501abcf5a7dde5f same
+  inversion/station_map.csv          12701a8c38881ebc -> 12701a8c38881ebc same
+  prep.log                           e55dd59ebd4caeaf -> b1760a1cc5beb00b CHANGED
+  prep_manifest.sha256               54049d38a6af593a -> 4ac420662fa2d5e5 CHANGED
+
+observe.dat after: d501abcf5a7dde5fc8e45c03fc41d4d7be9bda84ef4514a9d138cd8b621f21dd (unchanged: PASS).
+Changed: README.md, inversion/README.md (template), config_used.yml (config comment lines only; the parsed
+YAML is identical), prep.log, prep_manifest.sha256. Full run: 18 checks, 18 PASS. sha256sum -c --strict of the
+new manifest (two '#' header lines): 17 OK, exit 0. 0 CR bytes. The harness's R2 run (Part B) reproduces all 13
+data files of the product byte for byte.
+
+## Part E. scripts/edi_inventory.py writes the acquisition-dates/frame section
+
+This test fails if re-running the script drops the section or changes any line of Vulcan/edi_inventory.md other
+than the provenance sentence that said the section was added by hand.
+- Fail case, the script before this round (scratch output): the whole 28-line section is missing (diff 4a5,32).
+  Its two CSVs differ from Vulcan/'s only by CR bytes (121 and 65: pandas writes os.linesep on Windows).
+- Mutant MI1 of the new script (2024 epoch 2024.30 in ACQUISITION): exit 1, 'epoch or group of [Vul24-13, ...]
+  in validation/rotation_2026-09-28/alpha_per_site.csv differs from ACQUISITION'.
+- MI2, the new script on a scratch EDI copy with E5's ZROT 7.42: the section says 'Header check failed ... ZROT
+  missing or non-zero in 1 ['E5']' instead of the ZROT 0 sentence.
+- Pass case, the new script on Vulcan/Processed_Data (scratch output), diff against the hand-edited file:
+    7,8c7,8
+    < Added by hand on 2026-09-28. scripts/edi_inventory.py does not write this section, so re-running it drops the
+    < section; copy it back.
+    ---
+    > Written by scripts/edi_inventory.py: the dates are its ACQUISITION table, the header facts are read from the EDIs,
+    > and the angles come from the per-site CSV and the rotation config named below.
+  site_coords_femticpy.txt, site_coords_utm53.csv and frequency_table.csv: byte-identical to Vulcan/'s.
+  A second run gives a file byte-identical to Vulcan/edi_inventory.md.
+
+## Part F. --check-only on the committed run directories (final script, sha256 328932c2e714d586)
+
+python scripts/prep_vulcan.py config/vulcan_mesh_v2.yml --check-only mesh/vulcan_v2: exit 0; 18 checks: 15 PASS, 0 FAIL, 3 N/A; N/A: C03 C05 C17 
+  [PASS] C18  EDI frame: 120 EDIs, rule of no data.rotation (EDI frame written as is; README: magnetic): 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 
+python scripts/prep_vulcan.py config/vulcan_mesh_v2_rot.yml --check-only mesh/vulcan_v2_rot: exit 0; 18 checks: 16 PASS, 0 FAIL, 2 N/A; N/A: C03 C05 
+  [PASS] C18  EDI frame: 120 EDIs, rule of frame_in magnetic: 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 EMEAS without AZM and of zero length (orien
+python scripts/prep_vulcan.py config/vulcan_mesh_v1.yml --check-only mesh/vulcan_v1: exit 0; 18 checks: 15 PASS, 0 FAIL, 3 N/A; N/A: C03 C05 C17 
+  [PASS] C18  EDI frame: 120 EDIs, rule of no data.rotation (EDI frame written as is; README: magnetic): 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 
+python scripts/prep_vulcan.py config/vulcan_mesh_v3.yml --check-only mesh/vulcan_v3: exit 0; 18 checks: 15 PASS, 0 FAIL, 3 N/A; N/A: C03 C05 C17 
+  [PASS] C18  EDI frame: 120 EDIs, rule of no data.rotation (EDI frame written as is; README: magnetic): 120 hold a ZROT block, 120 a DECLINATION; 440 HX/HY/EX/EY azimuths (AZM) and 0 EMEAS dipole directions tested; 220 
+

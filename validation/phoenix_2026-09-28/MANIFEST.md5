@@ -1,0 +1,82 @@
+# MANIFEST.md5 - md5, size (bytes) and path of every file Ben copied from Phoenix into D:/BEN/FEMTIC_2026/hpc
+# for the B2 smoke job 16153670 (2026-09-28): the five logs and EVERY file under smoke_foss_20260928_211308/.
+# Written 2026-09-30 08:03 +0800 on the PC by reading Ben's files (read-only). Paths are relative to D:/BEN/FEMTIC_2026/hpc.
+# Column 4 names the copy in this folder, '-' if the file was not copied (FEMTIC's bundled example INV_MT_01/Tetra
+# and its binary/model outputs; they stay on Ben's disk and are identified by this list).
+# Check Ben's disk against it (Git Bash):
+#   cd /d/BEN/FEMTIC_2026/hpc && grep -v '^#' <this file> | awk '{print $1"  "$3}' | md5sum -c
+# md5                               size_B  path                                                         copied_as
+26d5e4fb2b8dd6a3d0539802f7c6c215     4576  build_foss_20260925_193715.log                               build_foss_20260925_193715.log
+ae41777299b21bd29f6db30368bf8869     5159  build_foss_20260925_194435.log                               build_foss_20260925_194435.log
+628051ed80868bb48290f6e591bd6b27    32179  build_foss_20260928_211021.log                               build_foss_20260928_211021.log
+7f0694797199957b2263913e83029303     4474  slurm-femtic_smoke-16153670.out                              slurm-femtic_smoke-16153670.out
+7f0694797199957b2263913e83029303     4474  smoke_foss_20260928_211308.log                               smoke_foss_20260928_211308.log
+8a40f261b19b1fa276f31ab4e3f04528   138480  smoke_foss_20260928_211308/restart/BlockIDs                  -
+0778b76fb3aacae4839e5a912cc40c95   623452  smoke_foss_20260928_211308/restart/Mesh.geo                  -
+14cf0a1bee76d6b0be048b522584b61b   138480  smoke_foss_20260928_211308/restart/NormalizedSensitivity.iter0 -
+4ad84dfb14be6991f6c1a17e03450c99   138480  smoke_foss_20260928_211308/restart/NormalizedSensitivity.iter1 -
+b956a129b10b82e71f98f2808cea8bb8   138480  smoke_foss_20260928_211308/restart/NormalizedSensitivityDensity.iter0 -
+01864a467fafd65c5ace2a0e5d10eb4a   138480  smoke_foss_20260928_211308/restart/NormalizedSensitivityDensity.iter1 -
+b85c203fd789362ee90d3575afe40446   138480  smoke_foss_20260928_211308/restart/Resistivity.iter0         -
+d1d65d4451ab3a42524f93887f51fff1   138480  smoke_foss_20260928_211308/restart/Resistivity.iter1         -
+5d2cea8bbe14f04919c0b6efd82930b2   138480  smoke_foss_20260928_211308/restart/Resistivity.iter2         -
+6ada6de322c4ab1b26622c843ac20a74   138480  smoke_foss_20260928_211308/restart/Sensitivity.iter0         -
+5f804957ffa425866d28a6ef212cf762   138480  smoke_foss_20260928_211308/restart/Sensitivity.iter1         -
+57de3a806a864237d4310f436d81764b   138480  smoke_foss_20260928_211308/restart/SensitivityDensity.iter0  -
+019acaa0b410683449327e2a8050ee46   138480  smoke_foss_20260928_211308/restart/SensitivityDensity.iter1  -
+9eb82a3b66812692f1db6f198c9e9ffd      178  smoke_foss_20260928_211308/restart/control.dat               restart/control.dat
+18007e252591da0dd164ec4e69db3320      333  smoke_foss_20260928_211308/restart/femtic.cnv                restart/femtic.cnv
+e0dfd67c9163256db2d20ebadc20ab95      333  smoke_foss_20260928_211308/restart/femtic.cnv.leg1           restart/femtic.cnv.leg1
+18007e252591da0dd164ec4e69db3320      333  smoke_foss_20260928_211308/restart/femtic.cnv.leg2           restart/femtic.cnv.leg2
+524fdbd0f92dde1ea35eea865df42de5    25824  smoke_foss_20260928_211308/restart/femtic_0.log              restart/femtic_0_leg2.log.txt
+ce7932dba1c4e9807a1a2400547a7ca6    25834  smoke_foss_20260928_211308/restart/femtic_0.log.leg1         restart/femtic_0.log.leg1
+524fdbd0f92dde1ea35eea865df42de5    25824  smoke_foss_20260928_211308/restart/femtic_0.log.leg2         restart/femtic_0.log.leg2
+f4ddc7453b87ec15c4b00f099eea1d10    25368  smoke_foss_20260928_211308/restart/femtic_1.log              restart/femtic_1_leg2.log.txt
+8f542202210636ec7c8654d0d267aaf6  3622384  smoke_foss_20260928_211308/restart/mesh.dat                  -
+15b1c6d8cb5fb04fe42e2e98224ef3e1     2376  smoke_foss_20260928_211308/restart/obs_loc.vtk               -
+f79d91e1ecb7860099305a6a68e0524f    30577  smoke_foss_20260928_211308/restart/observe.dat               -
+8a5633c860d8a8b039d574fffea6192e   741077  smoke_foss_20260928_211308/restart/resistivity_block_iter0.dat -
+ea1ff241bf544864360c8bfb596781fe   750614  smoke_foss_20260928_211308/restart/resistivity_block_iter1.dat -
+e025b5df4f4c468f79548a4c521facca   750614  smoke_foss_20260928_211308/restart/resistivity_block_iter2.dat -
+74ffe898b01c9b0fb4f339500faaba32      536  smoke_foss_20260928_211308/restart/result.case               restart/result.case
+6f34ead5e94659aa6c30af1551fb972f    41833  smoke_foss_20260928_211308/restart/result_0_iter0.csv        -
+afb79ca0bc21d3cc1e6a0aae596febb0    41833  smoke_foss_20260928_211308/restart/result_0_iter1.csv        -
+1f34655cb00920854893cf2937c2d7f1    41833  smoke_foss_20260928_211308/restart/result_0_iter2.csv        -
+cbefb2aea7a29b7f346fbbc1e94894ae    41833  smoke_foss_20260928_211308/restart/result_1_iter0.csv        -
+10a8a87f5c02c7d02cb27c2db9a3719a    41833  smoke_foss_20260928_211308/restart/result_1_iter1.csv        -
+88dd36cff84328dee2213d33b63b9ded    41833  smoke_foss_20260928_211308/restart/result_1_iter2.csv        -
+d41d8cd98f00b204e9800998ecf8427e        0  smoke_foss_20260928_211308/restart/stdout_leg1.txt           restart/stdout_leg1.txt
+1c647d48d3ec61ea8d3d4b7d1c4aac29      720  smoke_foss_20260928_211308/restart/stdout_leg2.txt           restart/stdout_leg2.txt
+0e7dbcfcf328688126098e0f0f9b15e5   138480  smoke_foss_20260928_211308/straight/BlockIDs                 -
+833f29396a629a1758efc7d85688131a   623452  smoke_foss_20260928_211308/straight/Mesh.geo                 -
+27544ac8376ad16854a9724b7ab6d0d2   138480  smoke_foss_20260928_211308/straight/NormalizedSensitivity.iter0 -
+c78cf73c9255df4d7b90cf9a177e6b02   138480  smoke_foss_20260928_211308/straight/NormalizedSensitivity.iter1 -
+0d0f4fbc3c33af911777c33155203a93   138480  smoke_foss_20260928_211308/straight/NormalizedSensitivityDensity.iter0 -
+720c73ded0ecc610bcf4915b0eed69c8   138480  smoke_foss_20260928_211308/straight/NormalizedSensitivityDensity.iter1 -
+5822f8e06810eece168cf67d5323299e   138480  smoke_foss_20260928_211308/straight/Resistivity.iter0        -
+1e9d33aef8fe9f4ebe30819b90a89912   138480  smoke_foss_20260928_211308/straight/Resistivity.iter1        -
+048ce9c72725843f0501a3b56973ae2b   138480  smoke_foss_20260928_211308/straight/Resistivity.iter2        -
+779c8018bef310eae5559372455e29fe   138480  smoke_foss_20260928_211308/straight/Sensitivity.iter0        -
+d3045132a2da9cc637df6367efdade44   138480  smoke_foss_20260928_211308/straight/Sensitivity.iter1        -
+8f72706bb6c39bd11287fa90de7eb8c3   138480  smoke_foss_20260928_211308/straight/SensitivityDensity.iter0 -
+b01b9888d365dbb06e8a2143a86c6d3e   138480  smoke_foss_20260928_211308/straight/SensitivityDensity.iter1 -
+91648282e2fbbac8b7b86d714a2ab3fc      178  smoke_foss_20260928_211308/straight/control.dat              straight/control.dat
+d85794024018b1d724aa35d80fd3c089      444  smoke_foss_20260928_211308/straight/femtic.cnv               straight/femtic.cnv
+d85794024018b1d724aa35d80fd3c089      444  smoke_foss_20260928_211308/straight/femtic.cnv.straight      straight/femtic.cnv.straight
+d9d7599b30cb24132c86267e0eb48b27    36758  smoke_foss_20260928_211308/straight/femtic_0.log             straight/femtic_0_straight.log.txt
+d9d7599b30cb24132c86267e0eb48b27    36758  smoke_foss_20260928_211308/straight/femtic_0.log.straight    straight/femtic_0.log.straight
+7e67891af827ccd02fc02979cf53cffa    35850  smoke_foss_20260928_211308/straight/femtic_1.log             straight/femtic_1_straight.log.txt
+8f542202210636ec7c8654d0d267aaf6  3622384  smoke_foss_20260928_211308/straight/mesh.dat                 -
+15b1c6d8cb5fb04fe42e2e98224ef3e1     2376  smoke_foss_20260928_211308/straight/obs_loc.vtk              -
+f79d91e1ecb7860099305a6a68e0524f    30577  smoke_foss_20260928_211308/straight/observe.dat              -
+8a5633c860d8a8b039d574fffea6192e   741077  smoke_foss_20260928_211308/straight/resistivity_block_iter0.dat -
+ea1ff241bf544864360c8bfb596781fe   750614  smoke_foss_20260928_211308/straight/resistivity_block_iter1.dat -
+709398b8293173be3c2a497f6c18a664   750614  smoke_foss_20260928_211308/straight/resistivity_block_iter2.dat -
+0f65f36a93019a71436bc4433a68de6e      538  smoke_foss_20260928_211308/straight/result.case              straight/result.case
+4439adbcdc32c797ea634950707f204a    41833  smoke_foss_20260928_211308/straight/result_0_iter0.csv       -
+3d371a8a786eab58c40fb8d99d779ed7    41833  smoke_foss_20260928_211308/straight/result_0_iter1.csv       -
+f49120c3e25a48b461b606177a248a8b    41833  smoke_foss_20260928_211308/straight/result_0_iter2.csv       -
+cbefb2aea7a29b7f346fbbc1e94894ae    41833  smoke_foss_20260928_211308/straight/result_1_iter0.csv       -
+ec565d2e95f3875cc5d1587e05e128e2    41833  smoke_foss_20260928_211308/straight/result_1_iter1.csv       -
+ed1d13e6a6aa8594d5a82034a2c1b89c    41833  smoke_foss_20260928_211308/straight/result_1_iter2.csv       -
+825b68af653630050cde5f66156f051d      720  smoke_foss_20260928_211308/straight/stdout_straight.txt      straight/stdout_straight.txt

@@ -10,15 +10,36 @@ sites, while their HEAD coordinates sit on the 1 km grid (verified by an affine 
 Converts to UTM (WGS84) and writes:
   <out>/site_coords_utm<zone>.csv      id, lat, lon, elev_m, east_m, north_m
   <out>/site_coords_femticpy.txt       id  east_km  north_km  elev_km   (femticPy coord file format)
-  <out>/edi_inventory.md               QC summary: extent, spacing, NFREQ, masked counts, header mismatches
+  <out>/edi_inventory.md               QC summary: acquisition dates and sensor frame, extent, spacing, NFREQ,
+                                       masked counts, header mismatches
   <out>/frequency_table.csv            union of frequencies with site counts
 
-Usage: python edi_inventory.py <edi_dir> <out_dir> [--zone 53] [--north]
+The "Acquisition dates and sensor frame" section of edi_inventory.md is written from the ACQUISITION table
+below (the EDIs carry only a dummy ACQDATE), the ACQDATE, DECLINATION, ZROT and HMEAS AZM of the EDIs, the
+per-site angles of --alpha-csv and the rotation angle of --rot-config; a missing file drops only the lines
+that need it. Every EDI must belong to exactly one ACQUISITION group, with the epoch the CSV used.
+
+Usage: python edi_inventory.py <edi_dir> <out_dir> [--zone 53] [--north] [--alpha-csv F] [--rot-config F]
+Run it with <out_dir> a scratch directory and copy edi_inventory.md into Vulcan/: the site table
+Vulcan/site_coords_femticpy.txt is the project's trusted copy and is not to be rewritten in place.
 """
 import sys, re, glob, os, argparse
 import numpy as np
 import pandas as pd
 from pyproj import Proj
+
+REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+# Acquisition dates (Ben, 2026-09-28). The EDIs carry only the dummy ACQDATE 01/01/01. The epochs are those
+# validation/rotation_2026-09-28/decl.py used for the declination (its EPOCH; CSV column 'group').
+# (group, id pattern (full match), site-range format, acquired, epoch, CSV group)
+ACQUISITION = [
+    ("2022 grid", r"[A-J](?:10|[1-9])[a-z]?(?:_\w+)?", "{}-{} ({})", "October-November 2022", 2022.83, "grid"),
+    ("2024 infill", r"Vul24-\d+", "{} to {} ({})", "April 2024", 2024.29, "Vul24"),
+    ("2025 infill", r"Vul25_\d+", "{} to {} ({})", "March 2025", 2025.21, "Vul25"),
+]
+FRAME_DECISION = ("**Frame.** The sensors were aligned to geomagnetic north (decision D2, Ben, 2026-09-28). With "
+                  "DECLINATION 0 and\nZROT 0, every impedance tensor in these EDIs is in the geomagnetic frame: "
+                  "x = magnetic north, y = magnetic east.")
 
 
 def dms_to_deg_naive(s):
@@ -52,9 +73,15 @@ def parse_edi(path):
     for blk in re.finditer(r'^>(Z[XY][XY](R|I|\.VAR))\s*//\s*\d+\s*\n(.*?)(?=\n>)', txt, re.S | re.M):
         zmask += len(re.findall(r'1\.0+[eE]\+0*32', blk.group(3)))
     m = g(r'^ELEV=([-\d.]+)', re.M);     head_elev = float(m.group(1)) if m else np.nan
+    # frame fields (the acquisition-dates/frame section)
+    m = g(r'^\s*ACQDATE\s*=\s*(\S+)', re.M); acqdate = m.group(1) if m else None
+    m = g(r'^\s*DECLINATION\s*[:=]\s*([-+\d.eE]+)', re.M); decl = float(m.group(1)) if m else np.nan
+    m = g(r'^>ZROT[^\n]*\n([^>]*)', re.M); zrot = [float(x) for x in m.group(1).split()] if m else None
+    azm = [(ch.upper(), float(v)) for ch, v in
+           re.findall(r'^>HMEAS[^\n]*CHTYPE=(\w+)[^\n]*AZM=([-+\d.eE]+)', txt, re.M)]
     hlat = dms_to_deg_naive(head_lat) if head_lat else np.nan
     hlon = dms_to_deg_naive(head_lon) if head_lon else np.nan
-    return dict(id=site, lat=hlat, lon=hlon, elev_m=head_elev,
+    return dict(id=site, lat=hlat, lon=hlon, elev_m=head_elev, acqdate=acqdate, decl=decl, zrot=zrot, azm=azm,
                 info_lat=lat, info_lon=lon, info_elev=elev,
                 head_lat_dms=head_lat, head_lon_dms=head_lon,
                 head_lat_naive=hlat,
@@ -65,12 +92,101 @@ def parse_edi(path):
                 z_masked=zmask, has_tipper=has_tipper, freqs=freqs)
 
 
+def natural_key(s):
+    return [int(t) if t.isdigit() else t for t in re.split(r'(\d+)', s)]
+
+
+def rel(path):
+    r = os.path.relpath(os.path.abspath(path), REPO)
+    return path if r.startswith('..') else r.replace(os.sep, '/')
+
+
+def frame_section(df, zone_label, alpha_csv, rot_config):
+    """markdown of the 'Acquisition dates and sensor frame' section, from ACQUISITION, the EDI headers, the
+    per-site angle CSV and the rotation config. Exits if an EDI is in no group or in two, or if the CSV's epoch
+    of a site differs from its group's."""
+    ids = list(df['id'])
+    groups = []
+    for name, pat, fmt, acquired, epoch, csv_group in ACQUISITION:
+        members = sorted((i for i in ids if re.fullmatch(pat, i)), key=natural_key)
+        groups.append((name, members, fmt, acquired, epoch, csv_group))
+    count = {i: sum(i in gr[1] for gr in groups) for i in ids}
+    bad = sorted(i for i, n in count.items() if n != 1)
+    if bad:
+        sys.exit('edi_inventory: %d EDI id(s) are in no ACQUISITION group or in several: %s' % (len(bad), bad[:10]))
+    L = ["## Acquisition dates and sensor frame\n",
+         "Written by scripts/edi_inventory.py: the dates are its ACQUISITION table, the header facts are read from "
+         "the EDIs,\nand the angles come from the per-site CSV and the rotation config named below.\n"]
+    acq = sorted(set(str(v) for v in df['acqdate']))
+    decl_bad = [i for i, v in zip(ids, df['decl']) if not v == 0]
+    zrot_bad = [i for i, v in zip(ids, df['zrot']) if v is None or any(x != 0 for x in v)]
+    azm_bad = [i for i, v in zip(ids, df['azm']) if any((ch == 'HX' and a != 0) or (ch == 'HY' and a != 90)
+                                                        for ch, a in v) or not v]
+    if acq == ['01/01/01'] and not decl_bad and not zrot_bad:
+        L.append("The EDIs carry only the dummy `ACQDATE 01/01/01`, and `DECLINATION 0` and `ZROT 0`. The acquisition "
+                 "dates below\nare Ben's (2026-09-28); the epochs are the ones used for the declination.\n")
+    else:
+        L.append("**Header check failed.** ACQDATE values: %s. DECLINATION missing or non-zero in %d EDI(s) %s; ZROT "
+                 "missing or non-zero in %d %s. The frame statement below does not hold for them. The acquisition "
+                 "dates below are Ben's (2026-09-28).\n" % (acq, len(decl_bad), decl_bad[:10], len(zrot_bad),
+                                                          zrot_bad[:10]))
+    if azm_bad:
+        L.append("**Sensor azimuths.** HMEAS HX AZM is not 0 or HY AZM not 90 (or no HMEAS AZM) in %d EDI(s): %s.\n" %
+                 (len(azm_bad), azm_bad[:10]))
+    L.append("| group | sites | acquired | epoch |\n|---|---|---|---|")
+    for name, members, fmt, acquired, epoch, _ in groups:
+        L.append("| %s | %s | %s | %.2f |" % (name, fmt.format(members[0], members[-1], len(members)) if members
+                                             else "none (0)", acquired, epoch))
+    L.append("\n" + FRAME_DECISION + "\n")
+    L.append("- The FEMTIC mesh x axis is %s grid north." % zone_label)
+    if os.path.isfile(alpha_csv):
+        tab = pd.read_csv(alpha_csv)
+        tab['site_id'] = tab['site_id'].astype(str)
+        if sorted(tab['site_id']) != sorted(ids):
+            sys.exit('edi_inventory: %s does not hold exactly the %d EDI ids' % (alpha_csv, len(ids)))
+        ep = dict(zip(tab['site_id'], tab['epoch']))
+        cg = dict(zip(tab['site_id'], tab['group']))
+        wrong = [i for name, members, fmt, acquired, epoch, csv_group in groups for i in members
+                 if abs(ep[i] - epoch) > 1e-9 or cg[i] != csv_group]
+        if wrong:
+            sys.exit('edi_inventory: epoch or group of %s in %s differs from ACQUISITION' % (wrong[:10], alpha_csv))
+        a = tab['alpha_deg']
+        L.append("- Magnetic north lies alpha = D - gamma clockwise of grid north. D is the IGRF-14 declination at each "
+                 "site and\n  epoch: %.3f to %.3f deg E. gamma is the grid convergence: %.3f to %.3f deg." %
+                 (tab['D_igrf14_deg'].min(), tab['D_igrf14_deg'].max(), tab['conv_pyproj_deg'].min(),
+                  tab['conv_pyproj_deg'].max()))
+        L.append("- So alpha = %.3f to %.3f deg over the %d sites (mean %.3f; %s lowest, %s highest)." %
+                 (a.min(), a.max(), len(a), a.mean(), tab['site_id'][a.idxmin()], tab['site_id'][a.idxmax()]))
+        rot = None
+        if os.path.isfile(rot_config):
+            import yaml
+            with open(rot_config, encoding='utf-8') as fh:
+                rot = ((yaml.safe_load(fh) or {}).get('data') or {}).get('rotation')
+        ang = rot.get('angle_deg') if isinstance(rot, dict) else None
+        if isinstance(ang, (int, float)) and not isinstance(ang, bool):
+            L.append("- %s (`data.rotation`) rotates every tensor by the single value %g deg. That is within\n"
+                     "  %.3f deg of every site." % (rel(rot_config), ang, float((a - ang).abs().max())))
+        else:
+            L.append("- %s: no single data.rotation.angle_deg (%r)." % (rel(rot_config), ang))
+        L.append("- Per-site values: %s. Method and tests:\n  %s/README.md." % (rel(alpha_csv),
+                                                                             os.path.dirname(rel(alpha_csv))))
+    else:
+        L.append("- Per-site angles: %s not found." % rel(alpha_csv))
+    L.append("\nThe summary and the tables below (coordinates, frequencies, header checks) do not depend on the frame.\n")
+    return "\n".join(L)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('edi_dir')
     ap.add_argument('out_dir')
     ap.add_argument('--zone', type=int, default=53)
     ap.add_argument('--north', action='store_true', help='northern hemisphere (default south)')
+    ap.add_argument('--alpha-csv', default=os.path.join(REPO, 'validation', 'rotation_2026-09-28',
+                                                        'alpha_per_site.csv'),
+                    help='per-site declination, convergence and alpha (validation/rotation_2026-09-28/decl.py)')
+    ap.add_argument('--rot-config', default=os.path.join(REPO, 'config', 'vulcan_mesh_v2_rot.yml'),
+                    help='prep config whose data.rotation.angle_deg is quoted')
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
     files = sorted(glob.glob(os.path.join(a.edi_dir, '*.edi')))
@@ -82,7 +198,8 @@ def main():
     df['north_m'] = north
 
     cols = ['id', 'lat', 'lon', 'elev_m', 'east_m', 'north_m']
-    df[cols].to_csv(os.path.join(a.out_dir, f'site_coords_utm{a.zone}.csv'), index=False, float_format='%.3f')
+    df[cols].to_csv(os.path.join(a.out_dir, f'site_coords_utm{a.zone}.csv'), index=False, float_format='%.3f',
+                    lineterminator='\n')     # LF on Windows too (pandas writes os.linesep by default)
     with open(os.path.join(a.out_dir, 'site_coords_femticpy.txt'), 'w', newline='\n') as fh:
         for _, r in df.iterrows():
             fh.write(f"{r['id']}\t{r['east_m']/1000:.4f}\t{r['north_m']/1000:.4f}\t{r['elev_m']/1000:.5f}\n")
@@ -103,7 +220,7 @@ def main():
                 ftab.loc[idx, 'n_sites'] += 1
                 seen.add(idx)
     ftab['period_s'] = 1.0 / ftab['freq_hz']
-    ftab.to_csv(os.path.join(a.out_dir, 'frequency_table.csv'), index=False, float_format='%.6g')
+    ftab.to_csv(os.path.join(a.out_dir, 'frequency_table.csv'), index=False, float_format='%.6g', lineterminator='\n')
 
     xy = df[['east_m', 'north_m']].values
     d = np.sqrt(((xy[:, None, :] - xy[None, :, :]) ** 2).sum(-1))
@@ -122,6 +239,7 @@ def main():
     md = []
     md.append(f"# EDI inventory: {a.edi_dir}\n")
     md.append(f"Files: {len(df)}   UTM zone {a.zone}{'N' if a.north else 'S'} (WGS84)\n")
+    md.append(frame_section(df, f"UTM {a.zone}{'N' if a.north else 'S'}", a.alpha_csv, a.rot_config))
     md.append("| quantity | min | max |\n|---|---|---|")
     md.append(f"| latitude | {df['lat'].min():.4f} | {df['lat'].max():.4f} |")
     md.append(f"| longitude | {df['lon'].min():.4f} | {df['lon'].max():.4f} |")

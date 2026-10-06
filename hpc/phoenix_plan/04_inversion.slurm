@@ -2,8 +2,8 @@
 #SBATCH --job-name=vulcan_inv01
 #SBATCH -p icelake
 #SBATCH -N 1
-#SBATCH --ntasks-per-node=8
-#SBATCH --cpus-per-task=9
+#SBATCH --ntasks-per-node=2
+#SBATCH --cpus-per-task=36
 #SBATCH --mem=254952M
 #SBATCH --time=3-00:00:00
 #SBATCH --gres=tmpfs:200G
@@ -14,9 +14,10 @@
 # =============================================================================
 # 04_inversion.slurm -- FEMTIC hybrid MPI/OpenMP inversion on Phoenix (icelake: 72 cores/node, SMT off)
 #
-# Submit FROM the inversion directory on /hpcfs (run 06_forward_only.slurm there first):
-#     cd /hpcfs/users/$USER/vulcan_femtic/inversion/inv01 && sbatch /path/to/04_inversion.slurm
-# or let 05_chain.sh submit K dependent copies (it sets AUTO_RESTART=1).
+# Submit FROM a work directory, work/<mesh>/t4 or inv01, never from inputs/ (RUNBOOK section 0); 06 ran in gate100:
+#     cd /hpcfs/users/$USER/vulcan_femtic/work/v2/inv01 && sbatch /path/to/04_inversion.slurm
+# or let 05_chain.sh submit K dependent copies (it sets AUTO_RESTART=1, and takes the layout from the LAYOUT file
+# that a passing 06 writes, or from an explicit SBATCH_EXTRA; it refuses to fall back on this header's 2 x 36).
 #
 # ---- partition and memory: RAM is granted PER CPU (scontrol show partition + sbatch --test-only,
 #      00_discover.sh on p2-log-2, 2026-09-25; phoenix_plan/discovery/) ----
@@ -39,18 +40,34 @@
 #   'df -hT' line below prints its type (2,400 GB on a 255 GB node suggests it is disk-backed).
 #
 # ---- layout knobs (sbatch options or --export=ALL,KNOB=value,...) ----
-#   --ntasks-per-node  MPI ranks per node (header 8). FEMTIC gives each rank a contiguous block of
+#   --ntasks-per-node  MPI ranks per node (header 2). FEMTIC gives each rank a contiguous block of
 #                      frequencies (ObservedData::calcFrequenciesCalculatedByThisPE; the last F%R
 #                      ranks get one extra), so ranks <= F (number of frequencies), ideally a divisor.
 #                      Every rank factorises the FULL mesh: node memory grows linearly with ranks.
-#   --cpus-per-task    cpus per rank (header 9). 8 x 9 = 72. Alternatives: 6 x 12, 12 x 6, 4 x 18, 24 x 3.
+#   --cpus-per-task    cpus per rank (header 36). Production layouts (README section 6), F = 21:
+#                        v2 (2.45 M tets): sbatch --ntasks-per-node=3 --cpus-per-task=24 04_inversion.slurm
+#                        v3 (3.07 M tets): the header's 2 x 36 on icelake, or
+#                                          sbatch -p highmem --mem=1900G --ntasks-per-node=7 --cpus-per-task=10 ...
+#                      The old default 8 x 9 is refused for both meshes (below).
 #   RANKS=N            run N ranks although more tasks were allocated (cpus bought for RAM), e.g.
 #                      sbatch --export=ALL,RANKS=4,THREADS=18 04_inversion.slurm
 #   THREADS=T          OpenMP + MKL threads per rank (default --cpus-per-task). Written to NUM_THREADS in
 #                      control.dat, because FEMTIC calls omp_set_num_threads(NUM_THREADS) and
 #                      mkl_set_num_threads(NUM_THREADS), overriding OMP_NUM_THREADS.
-#   Others (defaults below): AUTO_RESTART ITER_STEP ITER_MAX MEM_LIMIT_MB NONPARDISO_MB
-#                      RANK0_RESERVE_MB FWD_SOLVER WALL_MARGIN_MIN GUARD_MIN_S WATCH_S USE_SRUN SRUN_MPI
+#   Others (defaults below): AUTO_RESTART ITER_STEP ITER_MAX MEM_LIMIT_MB NONPARDISO_MB FWD_MB NIV NEQ
+#                      MEM_SAFETY_PCT RANK0_RESERVE_MB FWD_SOLVER WALL_MARGIN_MIN GUARD_MIN_S WATCH_S USE_SRUN SRUN_MPI
+#
+# ---- memory: the layout rule (README section 6) ----
+#   Before femtic starts, the job is REFUSED (exit 1, nothing launched, a layout_refused row) unless
+#       ranks per node x (FWD_MB + NONPARDISO_MB) + EXTRA <= MEM_SAFETY_PCT (95) % of --mem
+#   FWD_MB = one rank's forward-phase memory (logs/fwd_rank_mb from 06, else 1.25 x the PARDISO line of earlier
+#   logs, else 11,000 MiB per 10^6 equations); NONPARDISO_MB = 2 x N_eq x N_iv x 16 B + 2 x N_iv x M x 16 B + Nd_f x M x 8 B, from
+#   the logs, mesh.dat, observe.dat and resistivity_block_iter0.dat (femtic_mem_model); EXTRA = RANK0_RESERVE_MB
+#   under HOLD_FWD_MEM, plus the sensitivity files when $TMPDIR turns out to be RAM-backed (tmpfs counts against
+#   --mem). NONPARDISO_MB and MEM_LIMIT do NOT prevent an out-of-memory kill: FEMTIC's default solver is in-core
+#   and MEM_LIMIT only steers FWD_SOLVER 1/2. The number of ranks per node is the only lever.
+#   Vulcan (F = 21, N_iv = 480): v2 about 27,645 + 43,109 MiB per rank -> 3 ranks per icelake node;
+#   v3 about 32,869 + 53,783 MiB per rank -> 2 ranks. With N_iv = 840 (unmeasured, see README) v3 fits 1 rank.
 #
 # ---- what the script does ----
 #   * archives the previous femtic.cnv / femtic_<rank>.log (FEMTIC truncates both on every start)
@@ -84,7 +101,11 @@ AUTO_RESTART=${AUTO_RESTART:-0}         # 1 = continue from the highest VALID re
 ITER_STEP=${ITER_STEP:-5}               # iterations per job when AUTO_RESTART=1
 ITER_MAX=${ITER_MAX:-}                  # optional absolute cap on the iteration number
 MEM_LIMIT_MB=${MEM_LIMIT_MB:-auto}      # auto = femtic_mem_limit_auto (below); "keep" = leave control.dat; or MB per rank
-NONPARDISO_MB=${NONPARDISO_MB:-10240}   # per-rank sensitivity-step arrays outside PARDISO (README section 5)
+NONPARDISO_MB=${NONPARDISO_MB:-auto}    # per-rank sensitivity-step arrays outside PARDISO, MiB; auto = femtic_mem_model (README section 6)
+FWD_MB=${FWD_MB:-auto}                  # per-rank forward-phase memory, MiB; auto = femtic_fwd_mb_auto (06's logs/fwd_rank_mb first)
+NIV=${NIV:-auto}                        # interpolator right-hand sides per frequency; auto = 4 x MT stations (840 = pessimistic)
+NEQ=${NEQ:-auto}                        # equations after degeneration; auto = femtic logs, else mesh.dat nodes + elements
+MEM_SAFETY_PCT=${MEM_SAFETY_PCT:-95}    # the layout rule may fill this % of --mem
 RANK0_RESERVE_MB=${RANK0_RESERVE_MB:-0} # rank-0 dense matrices; subtracted ONLY if control.dat has HOLD_FWD_MEM
 FWD_SOLVER=${FWD_SOLVER:-}              # empty = keep control.dat (FEMTIC default 0 = in-core); 1 = in/out-of-core by MEM_LIMIT
 WALL_MARGIN_MIN=${WALL_MARGIN_MIN:-20}  # hard stop this many minutes before the wall limit
@@ -96,7 +117,7 @@ export USE_SRUN SRUN_MPI
 
 # shellcheck disable=SC1091
 source "$BIN/femtic_env.sh" || { echo "ERROR: $BIN/femtic_env.sh missing -- run 01_build_femtic.sh"; exit 1; }
-[ "${FEMTIC_LIB_VERSION:-0}" -ge 2 ] || { echo "ERROR: $BIN/femtic_lib.sh predates this script -- install -m 644 <phoenix_plan>/femtic_lib.sh $BIN/"; exit 1; }
+[ "${FEMTIC_LIB_VERSION:-0}" -ge 4 ] || { echo "ERROR: $BIN/femtic_lib.sh is version ${FEMTIC_LIB_VERSION:-unset}; this script needs FEMTIC_LIB_VERSION >= 4 (version 2, installed 2026-09-25, misreads PARDISO memory and has no layout rule; version 3 loses N_iv when DIV_NUM_RHS_FWD > N_iv) -- install -m 644 <phoenix_plan>/femtic_lib.sh $BIN/"; exit 1; }
 cd "$INV_DIR" || exit 1
 for f in control.dat mesh.dat observe.dat; do [ -f "$f" ] || { echo "ERROR: $f missing in $INV_DIR"; exit 1; }; done
 mkdir -p logs
@@ -179,18 +200,40 @@ fi
 mkdir -p "$SENSE_DIR" || exit 1
 echo "--- df -hT sense dir (the filesystem type tells whether it is RAM-backed):"
 df -hT "$SENSE_DIR" 2>/dev/null | tail -1
+SENSE_FSTYPE=$(df -PT "$SENSE_DIR" 2>/dev/null | awk 'NR > 1 {t = $2} END {print t}')
 # PARDISO out-of-core files (FWD_SOLVER 1/2) are named ooc_temp_3D_PE<rank>* / ooc_temp_inv_3D_PE<rank>*
 # relative to the CURRENT directory (pardiso_setenv in PARDISOSolver.cpp), i.e. here on /hpcfs.
 # No keyword moves them, so size the job to stay in-core.
+
+# ---------------------------------------------------------------- memory model and layout rule (README section 6)
+# Refused here, before any SU are spent: nothing else can stop an in-core FEMTIC from being killed at --mem.
+HOLD=0; femtic_ctl_has control.dat HOLD_FWD_MEM && HOLD=1
+femtic_mem_model "$INV_DIR" || { echo "ERROR: memory model incomplete (message above)"; row setup_error "" 1 "memory model incomplete"; exit 1; }
+EXTRA_MB=0; [ "$HOLD" = 1 ] && EXTRA_MB=$RANK0_RESERVE_MB
+if [ "$SENSE_FSTYPE" = tmpfs ] && [ -n "$FM_ND" ] && [ -n "$FM_M" ]; then
+  # sensitivity files on a RAM-backed $TMPDIR count against --mem: Nd x M x 8 B (model space), twice that (data space)
+  SF=$(awk -v nd="$FM_ND" -v m="$FM_M" -v meth="$(femtic_ctl_get control.dat INV_METHOD | awk '{print $1}')" 'BEGIN {b = nd * m * 8 * (meth == 1 ? 2 : 1); x = b / 1048576; n = int(x); if (n < x) n++; print n}')
+  echo "WARNING: $SENSE_DIR is tmpfs (RAM-backed): its sensitivity files, $SF MiB per iteration, count against --mem and are added to the layout rule"
+  EXTRA_MB=$(( EXTRA_MB + SF ))
+fi
+[ -n "$NODE_MEM" ] || { echo "ERROR: --mem per node unknown (SLURM_MEM_PER_NODE unset), so the layout rule cannot be checked: submit with --mem"; row setup_error "" 1 "no --mem"; exit 1; }
+if ! LC=$(femtic_layout_check "$RPN" "$FM_FWD_MB" "$FM_NONP_MB" "$NODE_MEM" "$MEM_SAFETY_PCT" "$EXTRA_MB"); then
+  echo "$LC"
+  echo "ERROR: layout REFUSED: $RPN ranks per node would not fit in --mem=${NODE_MEM}M. Use fewer ranks per node"
+  echo "       (sbatch --ntasks-per-node=R --cpus-per-task=72/R, or --export=ALL,RANKS=R,THREADS=T) or -p highmem --mem=1900G."
+  echo "       Production layouts (README section 6): v2 3 x 24, v3 2 x 36 on icelake."
+  row layout_refused "" 1 "$LC"
+  exit 1
+fi
+echo "$LC"
 
 # ---------------------------------------------------------------- control.dat rewrite
 femtic_ctl_set control.dat NUM_THREADS "$NTHR" || exit 1
 femtic_ctl_set control.dat SENSE_MAT_DIRECTORY "$SENSE_DIR" || exit 1
 [ -n "$FWD_SOLVER" ] && { femtic_ctl_set control.dat FWD_SOLVER "$FWD_SOLVER" || exit 1; }
-HOLD=0; femtic_ctl_has control.dat HOLD_FWD_MEM && HOLD=1
 if [ "$MEM_LIMIT_MB" = auto ] && [ -n "$NODE_MEM" ]; then
-  MEM_LIMIT_MB=$(femtic_mem_limit_auto "$NODE_MEM" "$RPN" "$HOLD" "$RANK0_RESERVE_MB" "$NONPARDISO_MB")
-  echo "MEM_LIMIT auto = (0.85 x $NODE_MEM MB - $([ "$HOLD" = 1 ] && echo "$RANK0_RESERVE_MB rank-0 reserve [HOLD_FWD_MEM]" || echo "0 [no HOLD_FWD_MEM: forward memory is freed before the rank-0 update]")) / $RPN ranks - $NONPARDISO_MB non-PARDISO = $MEM_LIMIT_MB MB per rank"
+  MEM_LIMIT_MB=$(femtic_mem_limit_auto "$NODE_MEM" "$RPN" "$HOLD" "$RANK0_RESERVE_MB" "$FM_NONP_MB")
+  echo "MEM_LIMIT auto = (0.85 x $NODE_MEM MB - $([ "$HOLD" = 1 ] && echo "$RANK0_RESERVE_MB rank-0 reserve [HOLD_FWD_MEM]" || echo "0 [no HOLD_FWD_MEM: forward memory is freed before the rank-0 update]")) / $RPN ranks - $FM_NONP_MB non-PARDISO = $MEM_LIMIT_MB MB per rank"
   [ "$MEM_LIMIT_MB" -ge 1024 ] || { echo "ERROR: MEM_LIMIT auto = $MEM_LIMIT_MB MB per rank is below 1 GB -- fewer ranks per node, or -p highmem --mem=1900G"; exit 1; }
 fi
 if [ "$MEM_LIMIT_MB" != keep ] && [ "$MEM_LIMIT_MB" != auto ]; then
@@ -296,9 +339,16 @@ grep -m1 -E '# Total number of model parameter' femtic_0.log 2>/dev/null
 grep -m1 -E '# Number of data' femtic_0.log 2>/dev/null
 PGB=$(femtic_pardiso_max_gb .)
 echo "largest per-rank in-core PARDISO memory: ${PGB:-?} GB   (MEM_LIMIT $(femtic_ctl_get control.dat MEM_LIMIT) MB; FWD_SOLVER $(femtic_ctl_get control.dat FWD_SOLVER))"
-if [ -n "$PGB" ] && [ -n "$(femtic_ctl_get control.dat MEM_LIMIT)" ] && [ "$(femtic_ctl_get control.dat FWD_SOLVER)" = 1 ]; then
-  awk -v g="$PGB" -v m="$(femtic_ctl_get control.dat MEM_LIMIT)" 'BEGIN{ if (g*1024 > m) print "WARNING: in-core need exceeds MEM_LIMIT -> PARDISO ran OUT-OF-CORE (ooc_temp_* files on /hpcfs, slow)"}'
+PKB=$(femtic_pardiso_kb femtic_*.log)
+if [ -n "$PKB" ] && [ -n "$(femtic_ctl_get control.dat MEM_LIMIT)" ] && [ "$(femtic_ctl_get control.dat FWD_SOLVER)" = 1 ]; then
+  awk -v k="$PKB" -v m="$(femtic_ctl_get control.dat MEM_LIMIT)" 'BEGIN{ if (k / 1024 > m) print "WARNING: in-core need exceeds MEM_LIMIT -> PARDISO ran OUT-OF-CORE (ooc_temp_* files on /hpcfs, slow)"}'
 fi
+NIV_MEAS=$(femtic_niv_measured femtic_*.log)
+echo "N_iv (right-hand sides per interpolator solve): measured ${NIV_MEAS:-? (no sensitivity step logged)}; the layout rule used $FM_NIV ($FM_NIV_SRC)"
+if [ -n "$NIV_MEAS" ] && [ "$NIV_MEAS" != "$FM_NIV" ]; then
+  echo "WARNING: measured N_iv $NIV_MEAS differs from the $FM_NIV the layout rule used: pass NIV=$NIV_MEAS to the next job (README section 6)"
+fi
+echo "predicted per rank (layout rule): $FM_FWD_MB forward + $FM_NONP_MB sensitivity-step = $(( FM_FWD_MB + FM_NONP_MB )) MiB; compare with sacct MaxRSS below (per task) and rcstat"
 [ -s "$FEMTIC_RSS_FILE" ] && echo "peak summed RSS of the node's femtic processes (sampled every $WATCH_S s): $(awk '{printf "%.1f GB", $1/1024/1024}' "$FEMTIC_RSS_FILE")  of $(( ${NODE_MEM:-0} / 1024 )) GB requested"
 awk -F'\t' -v j="$SLURM_JOB_ID" '$1==j && $4!="" {n++; s+=$4} END {if (n) printf "safe-point interval (one iteration incl. retrials) this job: %.1f h mean over %d\n", s/n/3600, n}' logs/safe_points.tsv 2>/dev/null
 echo "sensitivity scratch used: $(du -sh "$SENSE_DIR" 2>/dev/null | cut -f1)   in $SENSE_DIR"

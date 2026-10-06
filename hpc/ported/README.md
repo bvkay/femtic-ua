@@ -1,8 +1,20 @@
 # FEMTIC v5.0 + mesh tools: EasyBuild toolchain port (build files only)
 
-Nothing here has been compiled. These are drop-in makefiles for a later build stage,
-written after a static audit of the sources. Copy each file next to the sources it
-belongs to (e.g. `femtic/src/`) and run `make -f <name> -j N`.
+These are drop-in makefiles, written after a static audit of the sources. Copy each file
+next to the sources it belongs to (e.g. `femtic/src/`) and run `make -f <name> -j N`.
+
+**Build status (2026-09-28).** The GCC makefiles have been compiled twice, both on 2026-09-25:
+
+* in WSL: all 7 tools, with the makefiles unchanged and no source patches
+  (`validation/wsl_2026-09-25/build_logs/SUMMARY.md`);
+* on Phoenix, on the login node p2-log-2, with `foss/2023a` + `imkl/2023.1.0`: all 7 tools installed, and the
+  linkage test T1 passed (`hpc/phoenix_plan/build_foss_20260925_181212.log`).
+
+The two `intel_oneapi` makefiles have never been compiled. FEMTIC has not yet run on Phoenix: its smoke
+tests T2 and T5 have not passed (`hpc/phoenix_plan/README_phoenix.md`, section 3 step 5). The mesh tools built there
+(makeTetraMesh, tetgen, makeMtr, TetGen2Femtic) have not run on Phoenix either: there is no tested Phoenix
+mesh-build route yet (`docs/mesh_tetra_pipeline.md`, section 8.5).
+<!-- src: validation/wsl_2026-09-25/build_logs/SUMMARY.md:3,40-46; hpc/phoenix_plan/build_foss_20260925_181212.log:33,183,210,217,224,238,246,255,271; intel route: hpc/phoenix_plan/README_phoenix.md section 4 ("The intel route has never been compiled"); mesh tools installed but never run: hpc/phoenix_plan/build_foss_20260925_181212.log:208,215,222,246 (T1 at :249-255 is ldd of femtic only) -->
 
 | Project | File | Toolchain | Compiler | Notes |
 |---|---|---|---|---|

@@ -1,0 +1,776 @@
+rot_prep_checks run log, 2026-09-28 (work item C5: data.rotation in scripts/prep_vulcan.py)
+
+prep under test: scripts/prep_vulcan.py sha256 1a4e7ca536d7d2b86972f33d3be6e177ac09cd4128208afc5e5f6055a0972626
+pre-C5 script (round-2 prep fixes, the state before this work): sha256 52c25de114503165 (copied to <scratch>)
+config/vulcan_mesh_v2_rot.yml sha256 1f23c58a23094178; alpha_per_site.csv sha256 2d5412a088c2e5e1
+<scratch> = this session's scratch directory (outside the repository).
+
+Part 1   rot_prep_checks.py on the final script, Windows base Anaconda Python 3.13.5 (numpy 2.3.4, pandas 2.3.3),
+         with --old-prep <the pre-C5 script>: 39 tests, 39 PASS, 0 FAIL, 3 observations. Wall 82 s.
+Part 1b  the same in the WSL conda env femticpy (Python 3.12.14, numpy 2.5.3): section R complete (17 of 17 PASS)
+         and mutants MZ, MR1, MR2 PASS; stopped by hand during MR3 because each prep took about 2 min through
+         /mnt (the Windows run covers every mutant). Not a full run.
+Part 2   rot_prep_checks.py with --prep <the pre-C5 script> --skip-mutants: 15 tests, 0 PASS, 15 FAIL. Every
+         failure is the pre-C5 script refusing 'schema: prep_vulcan/2' (or R3 lacking rotate_Z): a trivially
+         different condition, NOT the evidence that the tests can fail. That evidence is section M of Part 1.
+Part 3   validation/prep_checks_2026-09-28/inject_and_check.py (the prep harness, not edited) on the final script:
+         85 tests, 81 PASS, 4 FAIL. The 4 are the negative controls C1-C4, which require exactly 14 check lines
+         (inject_and_check.py:348 'len(st) == 14'); prep now reports 17 (C15-C17 added). Summary table only.
+Part 3b  a scratch copy of that harness with only 'len(st) == 14' -> '== 17' (and REPO made a literal path so it
+         can run from <scratch>): 85 tests, 85 PASS. Summary table only.
+Part 4   decl.py (conda base env: ppigrf, pyproj, scipy): the regenerated alpha_per_site.csv.
+Part 5   mesh/vulcan_v2_rot, written by the WSL femticpy env (python scripts/prep_vulcan.py
+         config/vulcan_mesh_v2_rot.yml --force, replacing this session's first write of it), checked.
+
+==============================================================================================================
+Part 1
+==============================================================================================================
+rot_prep_checks.py: prep under test D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts\prep_vulcan.py (sha256 1a4e7ca536d7d2b8); python 3.13.5; numpy 2.3.4
+repository D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4; config/vulcan_mesh_v2_rot.yml sha256 1f23c58a23094178; alpha_per_site.csv sha256 2d5412a088c2e5e1
+
+[R1] regression: data.rotation with angle 0 (frame_in grid) reproduces mesh/vulcan_v2 byte for byte
+  This test fails if prep exits non-zero, or observe.dat, inversion/control.dat or any files/* differs from mesh/vulcan_v2 by sha256, or station_map.csv differs from v2's in anything but an added rot_deg column of zeros
+  -> PASS: exit 0; differ from mesh/vulcan_v2: none; observe.dat sha256 f4678d0522a6a8d0 (v2 f4678d0522a6a8d0); station_map.csv = v2's plus a rot_deg column ['0']: True
+
+[R2] full prep of config/vulcan_mesh_v2_rot.yml (7.42 deg): checks, records and unchanged mesh inputs
+  This test fails if prep exits non-zero, any of C01-C17 is not PASS, station_map.csv is not v2's plus a rot_deg column of 7.42, prep_manifest.sha256 lacks the one '# data.rotation: magnetic -> grid, alpha 7.42 deg (explicit)' header or does not list every other file with its sha256, inversion/control.dat or a files/* differs from mesh/vulcan_v2, or observe.dat does NOT differ from v2's
+  -> PASS: exit 0, 17 PASS; [PASS] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 4.9e-0 | [PASS] C17  mesh reuse: mesh/vulcan_v2: 10 of 10 files/* identical; input_md5.txt 9 of 9 md5 match; products.md5 names m; station_map = v2's plus rot_deg ['7.42']: True; manifest header ["# data.rotation: magnetic -> grid, alpha 7.42 deg (explicit), all 120 stations; Z' = R(-alpha) Z R(-alpha)^T"], 17 files, mismatches []; control.dat and files/* as v2: True; observe.dat differs from v2's: True
+
+[R3] rotational invariants at full precision (all 120 EDIs, every unmasked band)
+  This test fails if for any tensor, rotate_Z at 7.42 deg changes |det Z| by more than 1e-10 relative, det Z by more than 1e-10 |Z|_F^2, Zxx+Zyy or Zxy-Zyx by more than 1e-10 |Z|_F, or |Z|_F by more than 1e-10 relative
+  -> PASS: 7257 tensors of 120 EDIs (every unmasked band), rotate_Z at 7.42 deg: max relative change of |det Z| 6.5e-16, of det Z 2.3e-16 (/|Z|^2), of Zxx+Zyy 2.2e-16, of Zxy-Zyx 3.2e-16, of |Z|_F 4.4e-16 (/|Z|_F)
+
+[R4] rotational invariants on the written files (R2's observe.dat against mesh/vulcan_v2's)
+  This test fails if |det Z| of any written tensor differs between the two files by more than 3e-4 |Z|_F^2, or Zxx+Zyy, Zxy-Zyx or |Z|_F by more than 3e-4 |Z|_F (the '%.4e' rounding of both files allows at most about 2e-4), or no component moved by more than 1e-2 |Z|_F (the rotation would then be invisible here)
+  -> PASS: written observe.dat, 7.42 deg vs mesh/vulcan_v2 (both '%.4e'): max change of |det Z| 4.4e-05 |Z|_F^2 (8.9e-05 of |det Z|, information), of Zxx+Zyy 2.9e-05, of Zxy-Zyx 6.3e-05, of |Z|_F 4.5e-05 (/|Z|_F); largest component change 0.113 |Z|_F
+
+[R5a] --check-only of R2's output with its own config
+  This test fails if it exits non-zero, a check other than C03/C05 (N/A under --check-only) is not PASS, or the directory changes
+  -> PASS: exit 0; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS C15=PASS C16=PASS C17=PASS; C08  C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 4.9e-05; C09 PASS; tree unchanged: True
+
+[R5b] --check-only of R2's (rotated) output with config/vulcan_mesh_v2.yml (no data.rotation)
+  This test fails if C08 does NOT FAIL (it would then accept rotated data as unrotated), prep exits other than 1, or the directory changes
+  -> PASS: exit 1; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=FAIL C09=FAIL C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS C15=PASS C16=PASS C17=N/A; C08  C08  impedance values: 20160 values, alpha 0 deg, max relative difference 5.3e+03; bad: ['A1 100 Hz ZXX -0.0031877 vs -0.0031267', 'A1 100 Hz ZXX 0.00017; C09 FAIL; tree unchanged: True
+
+[R5c] --check-only of mesh/vulcan_v2 (unrotated) with config/vulcan_mesh_v2_rot.yml
+  This test fails if C08 does NOT FAIL, prep exits other than 1, or mesh/vulcan_v2 changes
+  -> PASS: exit 1; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=FAIL C09=FAIL C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS C15=PASS C16=PASS C17=PASS; C08  C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 3.8e+03; bad: ['A1 100 Hz ZXX -0.0031267 vs -0.0031877', 'A1 100 Hz ZXX -1.8; C09 FAIL; tree unchanged: True
+
+[R6] data.rotation angle_deg 'auto': per-site alpha from alpha_per_site.csv
+  This test fails if prep exits non-zero, any check is not PASS, or station_map.csv's rot_deg differs from the CSV's alpha_deg by more than 1e-9 for any of the 120 sites
+  -> PASS: exit 0, 17 PASS ([PASS] C08  impedance values: 20160 values, alpha 7.36233..7.4883 deg, max relat); station_map rot_deg = alpha_per_site.csv for 120 sites, max diff 0.0e+00; auto vs 7.42: max |dZ| 6.54e-04 |Z|_F over 2520 data lines
+
+[R7a] refusal: frame_in magnetic without angle_deg
+  This test fails if prep exits other than 1, writes an output or staging directory, or does not say 'refusing to guess'
+  -> PASS: exit 1; message 'refusing to guess' present: True; output written: False; PREP FAILED: config: data.rotation.frame_in is magnetic but angle_deg is not given: refusing to guess the rotation. Give the azimuth of the magnetic x axis clockwise from grid north (a number, e.g. 7.42 for Vulcan: valid
+
+[R7b] refusal: frame_in grid with angle_deg 7.42
+  This test fails if prep exits other than 1, writes output, or does not say 'angle_deg must be 0'
+  -> PASS: exit 1; message 'angle_deg must be 0' present: True; output written: False; PREP FAILED: config: data.rotation: frame_in grid is already the mesh frame; angle_deg must be 0, got 7.42
+
+[R7c] refusal: a misspelt key (angle_degs)
+  This test fails if prep exits other than 1, writes output, or does not say 'unknown key'
+  -> PASS: exit 1; message 'unknown key' present: True; output written: False; PREP FAILED: config: data.rotation has unknown key(s) ['angle_degs']; allowed: ['angle_column', 'angle_deg', 'angle_file', 'frame_in', 'provenance', 'rotate_to']
+
+[R7d] refusal: angle_deg 'auto' without angle_file
+  This test fails if prep exits other than 1, writes output, or does not say 'needs angle_file'
+  -> PASS: exit 1; message 'needs angle_file' present: True; output written: False; PREP FAILED: config: data.rotation.angle_deg 'auto' needs angle_file (CSV with site_id and the angle column)
+
+[R7e] refusal: angle_deg 'auto' with a CSV that lacks one site (J6_BxRepaced)
+  This test fails if prep exits other than 1, writes output, or does not say 'has no angle for 1 site(s)'
+  -> PASS: exit 1; message 'has no angle for 1 site(s)' present: True; output written: False; PREP FAILED: data.rotation.angle_file <scratch>\f1\R7e\alpha_no_J6.csv has no angl
+
+[R8] mesh.reuse_from pointing at a mesh built from other inputs (mesh/vulcan_v3)
+  This test fails if prep exits other than 1, C17 is not FAIL, or the output directory is created
+  -> PASS: exit 1; [FAIL] C17  mesh reuse: mesh/vulcan_v3: 8 of 10 files/* identical (differ: ['obs_site.dat', 'observing_site.dat']); input_md5.txt 7 of 9 md5 match; products.md5 names mesh.dat and resistivity_block_it; output written: False
+
+[R9a] refusal: data.rotation under 'schema: prep_vulcan/1'
+  This test fails if prep exits other than 1, writes output, or does not say "need 'schema: prep_vulcan/2'"
+  -> PASS: exit 1; message "need 'schema: prep_vulcan/2'" present: True; output written: False; PREP FAILED: config: data.rotation and mesh.reuse_from need 'schema: prep_vulcan/2' (older versions of this script accept prep_vulcan/1 and would silently ignore them)
+
+[R9b] an older prep_vulcan.py (--old-prep, which ignores data.rotation) refuses config/vulcan_mesh_v2_rot.yml
+  This test fails if the old script exits 0 or writes an output directory (it would then write UNrotated data from a config that asks for rotation)
+  -> PASS: prep_vulcan_base_52c25de1.py (sha256 52c25de114503165): exit 1; output written: False; PREP FAILED: config D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\config\vulcan_mesh_v2_rot.yml: expected 'schema: prep_vulcan/1'
+
+[R9c] the hazard R9b guards against: the older script given the rotation config under prep_vulcan/1
+  This test fails if the old script refuses it or writes rotated data (then the schema bump would be unnecessary); this is the failing case of R9b's criterion
+  -> PASS: old script, the v2_rot config with schema prep_vulcan/1: exit 0; observe.dat identical to the UNrotated mesh/vulcan_v2: True; [PASS] C08  impedance values: 20160 values, max relative difference 5.0e-05
+
+[R4 per-component change (7.42 deg, written files)] (observation, not a test)
+  per component xx/xy/yx/yy over 2520 data lines: median |dZ|/|Z| 0.22/0.0277/0.0243/0.211, max 109/0.382/0.379/10; max |dZ|/|Z|_F 0.113/0.0951/0.0951/0.113; SE median |dSE|/SE 0.0017/0.0017/0.0017/0.0017, max 0.12/0.4/0.5/0.25
+
+[R6 per-site against single angle] (observation, not a test)
+  auto vs 7.42: max |dZ| 6.54e-04 |Z|_F over 2520 data lines
+
+[M] mutant MZ: the rotation at angle 0 is not exact (alpha + 1e-3 deg); built, sha256 8c551228fb2b3362
+
+[M MZ/R1] R1 must FAIL on mutant MZ
+  This test fails if the mutant cannot be built, or R1 still PASSes on it
+  -> PASS: R1 on MZ: FAIL: exit 1: 5 vs 7.6312e-05', 'A10 0.01001 Hz ZXY SE 7.6313e-05 vs 7.6312e-05', 'A10 0.01001 Hz ZYX SE 7.6313e-05 vs 7.6312e-05']). Inspect <scratch>\f1\mut\MZ_R1\run.staging
+
+[M] mutant MR1: wrong sign: R(+alpha) instead of R(-alpha); built, sha256 53aef541d5e8176c
+
+[M MR1/R2] R2 must FAIL on mutant MR1 with C08+C15 FAIL
+  This test fails if the mutant cannot be built, or R2 still PASSes on it, or any of C08/C15 is not FAIL in its prep output
+  -> PASS: R2 on MR1: FAIL (C08=FAIL C09=FAIL C15=FAIL): exit 1; not PASS: ['C08=FAIL', 'C09=FAIL', 'C15=FAIL']; [FAIL] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 6.7e+03; bad: ['A1 100 Hz ZXX -0.0029135 vs -0.0031877', 'A1 100 Hz ZXX -0.00016311 vs 0.00017135', 'A1 100 Hz ZXY 0 | [FAIL] C09  error floors: 10080 SE pairs, alpha 7.42 deg, max relative difference 9.7e-02; floor active in 100%/97%/96%/100% of Zxx/Zxy/Zyx/Z
+
+[M] mutant MR2: the rotation applied twice; built, sha256 5ebdc0a1892a56d4
+
+[M MR2/R2] R2 must FAIL on mutant MR2 with C08 FAIL
+  This test fails if the mutant cannot be built, or R2 still PASSes on it, or any of C08 is not FAIL in its prep output
+  -> PASS: R2 on MR2: FAIL (C08=FAIL C09=FAIL): exit 1; not PASS: ['C08=FAIL', 'C09=FAIL']; [FAIL] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 4.3e+03; bad: ['A1 100 Hz ZXX -0.0030925 vs -0.0031877', 'A1 100 Hz ZXX 0.00039236 vs 0.00017135', 'A1 100 Hz ZXY 0. | [FAIL] C09  error floors: 10080 SE pairs, alpha 7.42 deg, max relative difference 2.4e-01; floor active in 100%/97%/96%/100% of Zxx/Zxy/Zyx/Zyy; bad: ['A
+
+[M] mutant MR3: VAR not rotated (rotate_Z returns the input variances); built, sha256 8239b97af04a7cb4
+
+[M MR3/R2] R2 must FAIL on mutant MR3 with C09+C15 FAIL
+  This test fails if the mutant cannot be built, or R2 still PASSes on it, or any of C09/C15 is not FAIL in its prep output
+  -> PASS: R2 on MR3: FAIL (C09=FAIL C15=FAIL): exit 1; not PASS: ['C09=FAIL', 'C15=FAIL']; [FAIL] C09  error floors: 10080 SE pairs, alpha 7.42 deg, max relative difference 3.3e-01; floor active in 100%/97%/96%/100% of Zxx/Zxy/Zyx/Zyy; bad: ['A4 0.0012553 Hz ZXY SE 2.6138e-05 vs 2.622e-05', | [FAIL] C15  rotation sanity: T1 max|rotate_Z(Z_2D) - Z_grid| 0.0e+00 at 7.42 deg (the opposite sign gives 0.28); T2 strike recovered within 0.000 deg; T3
+
+[M] mutant MR3b: VAR not rotated (build writes the unrotated variances back); built, sha256 715003afca1f4b7c
+
+[M MR3b/R2] R2 must FAIL on mutant MR3b with C09 FAIL
+  This test fails if the mutant cannot be built, or R2 still PASSes on it, or any of C09 is not FAIL in its prep output
+  -> PASS: R2 on MR3b: FAIL (C09=FAIL): exit 1; not PASS: ['C09=FAIL']; [FAIL] C09  error floors: 10080 SE pairs, alpha 7.42 deg, max relative difference 3.3e-01; floor active in 100%/97%/96%/100% of Zxx/Zxy/Zyx/Zyy; bad: ['A4 0.0012553 Hz ZXY SE 2.6138e-05 vs 2.622e-05',
+
+[M] mutant MR4: R Z R instead of R Z R^T (not a similarity transform); built, sha256 178a87348b8c8aff
+
+[M MR4/R2] R2 must FAIL on mutant MR4 with C08+C15+C16 FAIL
+  This test fails if the mutant cannot be built, or R2 still PASSes on it, or any of C08/C15/C16 is not FAIL in its prep output
+  -> PASS: R2 on MR4: FAIL (C08=FAIL C09=FAIL C15=FAIL C16=FAIL): exit 1; not PASS: ['C08=FAIL', 'C09=FAIL', 'C15=FAIL', 'C16=FAIL']; [FAIL] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 8.0e+04; bad: ['A1 100 Hz ZXX 0.0082304 vs -0.0031877', 'A1 100 Hz ZXX -0.0083783 vs 0.00017135', 'A1 100 Hz ZXY 0.0 | [FAIL] C09  error floors: 10080 SE pairs, alpha 7.42 deg, max relative difference 2.0e-01; floor active in 100%/97%/96%/100% of Z
+
+[M MR4/R3] R3 must FAIL on mutant MR4
+  This test fails if the mutant cannot be built, or R3 still PASSes on it
+  -> PASS: R3 on MR4: FAIL: 7257 tensors of 120 EDIs (every unmasked band), rotate_Z at 7.42 deg: max relative change of |det Z| 6.2e-16, of det Z 2.3e-16 (/|Z|^2), of Zxx+Zyy 3.7e-01, of Zxy-Zyx 2.5e-01, of |Z|_F 4.4e-16 (/|Z|_F)
+
+[M] mutant MR5: the refusal of frame_in magnetic without an angle removed; built, sha256 4fa7063f4b415769
+
+[M MR5/R7a] R7a must FAIL on mutant MR5
+  This test fails if the mutant cannot be built, or R7a still PASSes on it
+  -> PASS: R7a on MR5: FAIL: exit 0; message 'refusing to guess' present: False; output written: True;
+
+[M] mutant MR6: the rotation not applied in build; built, sha256 e7a0c0efbc7b322b
+
+[M MR6/R2] R2 must FAIL on mutant MR6 with C08 FAIL
+  This test fails if the mutant cannot be built, or R2 still PASSes on it, or any of C08 is not FAIL in its prep output
+  -> PASS: R2 on MR6: FAIL (C08=FAIL C09=FAIL): exit 1; not PASS: ['C08=FAIL', 'C09=FAIL']; [FAIL] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 3.8e+03; bad: ['A1 100 Hz ZXX -0.0031267 vs -0.0031877', 'A1 100 Hz ZXX -1.8019e-05 vs 0.00017135', 'A1 100 Hz ZXY 0 | [FAIL] C09  error floors: 10080 SE pairs, alpha 7.42 deg, max relative difference 3.3e-01; floor active in 100%/97%/96%/100% of Zxx/Zxy/Zyx/Zyy; bad: ['A
+
+[M] mutant MR9: station_map.csv rot_deg written as 0; built, sha256 806fa9266c2e84d5
+
+[M MR9/R2] R2 must FAIL on mutant MR9 with C08 FAIL
+  This test fails if the mutant cannot be built, or R2 still PASSes on it, or any of C08 is not FAIL in its prep output
+  -> PASS: R2 on MR9: FAIL (C08=FAIL): exit 1; not PASS: ['C08=FAIL']; [FAIL] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 4.9e-05; bad: ['station 1: station_map.csv rot_deg 0, applied 7.42 deg', 'station 2: station_map.csv rot_deg 0, appl
+
+[M] mutant MR10: the manifest header dropped; built, sha256 90758a5af5ab55c6
+
+[M MR10/R2] R2 must FAIL on mutant MR10
+  This test fails if the mutant cannot be built, or R2 still PASSes on it
+  -> PASS: R2 on MR10: FAIL: exit 0, 17 PASS; [PASS] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 4.9e-0 | [PASS] C17  mesh reuse: mesh/vulcan_v2: 10 of 10 files/* identical; input_md5.txt 9 of 9 md5 match; products.md5 names m; station_map = v2's plus rot_deg ['7.42']: True; manifest header [], 17 files, mismatches []; control.dat and files/* as v2: True; observe.dat differs from v2's: True
+
+[M] mutant MR11: C17 always passes; built, sha256 0ce48433f6443177
+
+[M MR11/R8] R8 must FAIL on mutant MR11
+  This test fails if the mutant cannot be built, or R8 still PASSes on it
+  -> PASS: R8 on MR11: FAIL: exit 0; [PASS] C17  mesh reuse: mesh/vulcan_v3: 8 of 10 files/* identical (differ: ['obs_site.dat', 'observing_site.dat']); input_md5.txt 7 of 9 md5 match; products.md5 names mesh.dat and resistivity_block_it; output written: True
+
+[M] mutant MR14: 'auto' ignores the CSV (7.42 for every site); built, sha256 0940b5d33ebd957e
+
+[M MR14/R6] R6 must FAIL on mutant MR14
+  This test fails if the mutant cannot be built, or R6 still PASSes on it
+  -> PASS: R6 on MR14: FAIL: exit 0, 17 PASS ([PASS] C08  impedance values: 20160 values, alpha 7.42 deg, max relative differe); station_map rot_deg = alpha_per_site.csv for 120 sites, max diff 6.8e-02; auto vs 7.42: max |dZ| 0.00e+00 |Z|_F over 2520 data lines
+
+[M] mutant MR15: C08/C09 compare against the UNrotated EDI tensor; built, sha256 943ae66bcb925842
+
+[M MR15/R5c] (observation, not a test)
+  R5c on MR15 alone: PASS: exit 1; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=FAIL C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS C15=PASS C16=PASS C17=PASS; C08  C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 5.0e-05; bad: ['station 1: station_map.csv rot_deg None, a (a second guard still holds, so this mutant alone cannot show R5c failing)
+
+[M MR15/R5a] R5a must FAIL on mutant MR15
+  This test fails if the mutant cannot be built, or R5a still PASSes on it
+  -> PASS: R5a on MR15: FAIL: exit 1; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=FAIL C09=FAIL C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS C15=PASS C16=PASS C17=PASS; C08  C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 5.3e+03; bad: ['A1 100 Hz ZXX -0.0031877 vs -0.0031267', 'A1 100 Hz ZXX 0.00; C09 FAIL; tree unchanged: True
+
+[M] mutant MR15+MR16: C08/C09 compare against the unrotated tensor and C08 ignores station_map.csv rot_deg; built, sha256 49f9a57f31b128a1
+
+[M MR15+MR16/R5c] R5c must FAIL on mutant MR15+MR16
+  This test fails if the mutant cannot be built, or R5c still PASSes on it
+  -> PASS: R5c on MR15+MR16: FAIL: exit 0; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS C15=PASS C16=PASS C17=PASS; C08  C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 5.0e-05; C09 PASS; tree unchanged: True
+
+[M] mutant MR6+MR15: rotation neither applied nor checked (the feature silently off); built, sha256 87f43a7335aeca14
+
+[M MR6+MR15/R2] R2 must FAIL on mutant MR6+MR15
+  This test fails if the mutant cannot be built, or R2 still PASSes on it
+  -> PASS: R2 on MR6+MR15: FAIL: exit 0, 17 PASS; [PASS] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 5.0e-0 | [PASS] C17  mesh reuse: mesh/vulcan_v2: 10 of 10 files/* identical; input_md5.txt 9 of 9 md5 match; products.md5 names m; station_map = v2's plus rot_deg ['7.42']: True; manifest header ["# data.rotation: magnetic -> grid, alpha 7.42 deg (explicit), all 120 stations; Z' = R(-alpha) Z R(-al
+
+[M MR6+MR15/R4] R4 must FAIL on mutant MR6+MR15
+  This test fails if the mutant cannot be built, or R4 still PASSes on it
+  -> PASS: R4 on MR6+MR15: FAIL: written observe.dat, 7.42 deg vs mesh/vulcan_v2 (both '%.4e'): max change of |det Z| 0.0e+00 |Z|_F^2 (0.0e+00 of |det Z|, information), of Zxx+Zyy 0.0e+00, of Zxy-Zyx 0.0e+00, of |Z|_F 0.0e+00 (/|Z|_F); largest component change 0.000 |Z|_F
+
+[M] mutant MR17: the 'auto' angle file is checked only inside build (after the staging directory exists); built, sha256 18fae003e3c6527c
+
+[M MR17/R7e] R7e must FAIL on mutant MR17
+  This test fails if the mutant cannot be built, or R7e still PASSes on it
+  -> PASS: R7e on MR17: FAIL: exit 1; message 'has no angle for 1 site(s)' present: True; output written: False; PREP FAILED: data.rotation.angle_file <scratch>\f1\mut\MR17_R7e\alpha_no_J6.csv ha
+
+[M] mutant MR18: frame_in grid with a non-zero angle accepted; built, sha256 e637b536fb5382b7
+
+[M MR18/R7b] R7b must FAIL on mutant MR18
+  This test fails if the mutant cannot be built, or R7b still PASSes on it
+  -> PASS: R7b on MR18: FAIL: exit 0; message 'angle_deg must be 0' present: False; output written: True;
+
+[M] mutant MR19: unknown data.rotation keys accepted; built, sha256 9bb043532041c70d
+
+[M MR19/R7c] R7c must FAIL on mutant MR19
+  This test fails if the mutant cannot be built, or R7c still PASSes on it
+  -> PASS: R7c on MR19: FAIL: exit 0; message 'unknown key' present: False; output written: True;
+
+[M] mutant MR20: 'auto' without angle_file not refused up front; built, sha256 2c1f0c80df949408
+
+[M MR20/R7d] R7d must FAIL on mutant MR20
+  This test fails if the mutant cannot be built, or R7d still PASSes on it
+  -> PASS: R7d on MR20: FAIL: exit 1; message 'needs angle_file' present: False; output written: False; PREP FAILED: config: data.rotation.angle_file D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\None does not exist
+
+[M] mutant MR21: data.rotation accepted under schema prep_vulcan/1; built, sha256 185412ecc88fed95
+
+[M MR21/R9a] R9a must FAIL on mutant MR21
+  This test fails if the mutant cannot be built, or R9a still PASSes on it
+  -> PASS: R9a on MR21: FAIL: exit 0; message "need 'schema: prep_vulcan/2'" present: False; output written: True;
+
+==== summary ====
+  PASS  R1               regression: data.rotation with angle 0 (frame_in grid) reproduces mesh/vulcan_v2 byte for
+  PASS  R2               full prep of config/vulcan_mesh_v2_rot.yml (7.42 deg): checks, records and unchanged mesh
+  PASS  R3               rotational invariants at full precision (all 120 EDIs, every unmasked band)
+  PASS  R4               rotational invariants on the written files (R2's observe.dat against mesh/vulcan_v2's)
+  PASS  R5a              --check-only of R2's output with its own config
+  PASS  R5b              --check-only of R2's (rotated) output with config/vulcan_mesh_v2.yml (no data.rotation)
+  PASS  R5c              --check-only of mesh/vulcan_v2 (unrotated) with config/vulcan_mesh_v2_rot.yml
+  PASS  R6               data.rotation angle_deg 'auto': per-site alpha from alpha_per_site.csv
+  PASS  R7a              refusal: frame_in magnetic without angle_deg
+  PASS  R7b              refusal: frame_in grid with angle_deg 7.42
+  PASS  R7c              refusal: a misspelt key (angle_degs)
+  PASS  R7d              refusal: angle_deg 'auto' without angle_file
+  PASS  R7e              refusal: angle_deg 'auto' with a CSV that lacks one site (J6_BxRepaced)
+  PASS  R8               mesh.reuse_from pointing at a mesh built from other inputs (mesh/vulcan_v3)
+  PASS  R9a              refusal: data.rotation under 'schema: prep_vulcan/1'
+  PASS  R9b              an older prep_vulcan.py (--old-prep, which ignores data.rotation) refuses config/vulcan_me
+  PASS  R9c              the hazard R9b guards against: the older script given the rotation config under prep_vulca
+  -     R4 per-component change (7.42 deg, written files) observation
+  -     R6 per-site against single angle observation
+  PASS  M MZ/R1          R1 must FAIL on MZ
+  PASS  M MR1/R2         R2 must FAIL on MR1
+  PASS  M MR2/R2         R2 must FAIL on MR2
+  PASS  M MR3/R2         R2 must FAIL on MR3
+  PASS  M MR3b/R2        R2 must FAIL on MR3b
+  PASS  M MR4/R2         R2 must FAIL on MR4
+  PASS  M MR4/R3         R3 must FAIL on MR4
+  PASS  M MR5/R7a        R7a must FAIL on MR5
+  PASS  M MR6/R2         R2 must FAIL on MR6
+  PASS  M MR9/R2         R2 must FAIL on MR9
+  PASS  M MR10/R2        R2 must FAIL on MR10
+  PASS  M MR11/R8        R8 must FAIL on MR11
+  PASS  M MR14/R6        R6 must FAIL on MR14
+  -     M MR15/R5c       observation
+  PASS  M MR15/R5a       R5a must FAIL on MR15
+  PASS  M MR15+MR16/R5c  R5c must FAIL on MR15+MR16
+  PASS  M MR6+MR15/R2    R2 must FAIL on MR6+MR15
+  PASS  M MR6+MR15/R4    R4 must FAIL on MR6+MR15
+  PASS  M MR17/R7e       R7e must FAIL on MR17
+  PASS  M MR18/R7b       R7b must FAIL on MR18
+  PASS  M MR19/R7c       R7c must FAIL on MR19
+  PASS  M MR20/R7d       R7d must FAIL on MR20
+  PASS  M MR21/R9a       R9a must FAIL on MR21
+39 tests: 39 PASS, 0 FAIL; 3 observations
+
+==============================================================================================================
+Part 1b
+==============================================================================================================
+rot_prep_checks.py: prep under test /mnt/d/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4/scripts/prep_vulcan.py (sha256 1a4e7ca536d7d2b8); python 3.12.14; numpy 2.5.3
+repository /mnt/d/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4; config/vulcan_mesh_v2_rot.yml sha256 1f23c58a23094178; alpha_per_site.csv sha256 2d5412a088c2e5e1
+
+[R1] regression: data.rotation with angle 0 (frame_in grid) reproduces mesh/vulcan_v2 byte for byte
+  This test fails if prep exits non-zero, or observe.dat, inversion/control.dat or any files/* differs from mesh/vulcan_v2 by sha256, or station_map.csv differs from v2's in anything but an added rot_deg column of zeros
+  -> PASS: exit 0; differ from mesh/vulcan_v2: none; observe.dat sha256 f4678d0522a6a8d0 (v2 f4678d0522a6a8d0); station_map.csv = v2's plus a rot_deg column ['0']: True
+
+[R2] full prep of config/vulcan_mesh_v2_rot.yml (7.42 deg): checks, records and unchanged mesh inputs
+  This test fails if prep exits non-zero, any of C01-C17 is not PASS, station_map.csv is not v2's plus a rot_deg column of 7.42, prep_manifest.sha256 lacks the one '# data.rotation: magnetic -> grid, alpha 7.42 deg (explicit)' header or does not list every other file with its sha256, inversion/control.dat or a files/* differs from mesh/vulcan_v2, or observe.dat does NOT differ from v2's
+  -> PASS: exit 0, 17 PASS; [PASS] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 4.9e-0 | [PASS] C17  mesh reuse: mesh/vulcan_v2: 10 of 10 files/* identical; input_md5.txt 9 of 9 md5 match; products.md5 names m; station_map = v2's plus rot_deg ['7.42']: True; manifest header ["# data.rotation: magnetic -> grid, alpha 7.42 deg (explicit), all 120 stations; Z' = R(-alpha) Z R(-alpha)^T"], 17 files, mismatches []; control.dat and files/* as v2: True; observe.dat differs from v2's: True
+
+[R3] rotational invariants at full precision (all 120 EDIs, every unmasked band)
+  This test fails if for any tensor, rotate_Z at 7.42 deg changes |det Z| by more than 1e-10 relative, det Z by more than 1e-10 |Z|_F^2, Zxx+Zyy or Zxy-Zyx by more than 1e-10 |Z|_F, or |Z|_F by more than 1e-10 relative
+  -> PASS: 7257 tensors of 120 EDIs (every unmasked band), rotate_Z at 7.42 deg: max relative change of |det Z| 6.5e-16, of det Z 2.3e-16 (/|Z|^2), of Zxx+Zyy 2.2e-16, of Zxy-Zyx 3.2e-16, of |Z|_F 4.4e-16 (/|Z|_F)
+
+[R4] rotational invariants on the written files (R2's observe.dat against mesh/vulcan_v2's)
+  This test fails if |det Z| of any written tensor differs between the two files by more than 3e-4 |Z|_F^2, or Zxx+Zyy, Zxy-Zyx or |Z|_F by more than 3e-4 |Z|_F (the '%.4e' rounding of both files allows at most about 2e-4), or no component moved by more than 1e-2 |Z|_F (the rotation would then be invisible here)
+  -> PASS: written observe.dat, 7.42 deg vs mesh/vulcan_v2 (both '%.4e'): max change of |det Z| 4.4e-05 |Z|_F^2 (8.9e-05 of |det Z|, information), of Zxx+Zyy 2.9e-05, of Zxy-Zyx 6.3e-05, of |Z|_F 4.5e-05 (/|Z|_F); largest component change 0.113 |Z|_F
+
+[R5a] --check-only of R2's output with its own config
+  This test fails if it exits non-zero, a check other than C03/C05 (N/A under --check-only) is not PASS, or the directory changes
+  -> PASS: exit 0; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS C15=PASS C16=PASS C17=PASS; C08  C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 4.9e-05; C09 PASS; tree unchanged: True
+
+[R5b] --check-only of R2's (rotated) output with config/vulcan_mesh_v2.yml (no data.rotation)
+  This test fails if C08 does NOT FAIL (it would then accept rotated data as unrotated), prep exits other than 1, or the directory changes
+  -> PASS: exit 1; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=FAIL C09=FAIL C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS C15=PASS C16=PASS C17=N/A; C08  C08  impedance values: 20160 values, alpha 0 deg, max relative difference 5.3e+03; bad: ['A1 100 Hz ZXX -0.0031877 vs -0.0031267', 'A1 100 Hz ZXX 0.00017; C09 FAIL; tree unchanged: True
+
+[R5c] --check-only of mesh/vulcan_v2 (unrotated) with config/vulcan_mesh_v2_rot.yml
+  This test fails if C08 does NOT FAIL, prep exits other than 1, or mesh/vulcan_v2 changes
+  -> PASS: exit 1; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=FAIL C09=FAIL C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS C15=PASS C16=PASS C17=PASS; C08  C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 3.8e+03; bad: ['A1 100 Hz ZXX -0.0031267 vs -0.0031877', 'A1 100 Hz ZXX -1.8; C09 FAIL; tree unchanged: True
+
+[R6] data.rotation angle_deg 'auto': per-site alpha from alpha_per_site.csv
+  This test fails if prep exits non-zero, any check is not PASS, or station_map.csv's rot_deg differs from the CSV's alpha_deg by more than 1e-9 for any of the 120 sites
+  -> PASS: exit 0, 17 PASS ([PASS] C08  impedance values: 20160 values, alpha 7.36233..7.4883 deg, max relat); station_map rot_deg = alpha_per_site.csv for 120 sites, max diff 0.0e+00; auto vs 7.42: max |dZ| 6.54e-04 |Z|_F over 2520 data lines
+
+[R7a] refusal: frame_in magnetic without angle_deg
+  This test fails if prep exits other than 1, writes an output or staging directory, or does not say 'refusing to guess'
+  -> PASS: exit 1; message 'refusing to guess' present: True; output written: False; PREP FAILED: config: data.rotation.frame_in is magnetic but angle_deg is not given: refusing to guess the rotation. Give the azimuth of the magnetic x axis clockwise from grid north (a number, e.g. 7.42 for Vulcan: valid
+
+[R7b] refusal: frame_in grid with angle_deg 7.42
+  This test fails if prep exits other than 1, writes output, or does not say 'angle_deg must be 0'
+  -> PASS: exit 1; message 'angle_deg must be 0' present: True; output written: False; PREP FAILED: config: data.rotation: frame_in grid is already the mesh frame; angle_deg must be 0, got 7.42
+
+[R7c] refusal: a misspelt key (angle_degs)
+  This test fails if prep exits other than 1, writes output, or does not say 'unknown key'
+  -> PASS: exit 1; message 'unknown key' present: True; output written: False; PREP FAILED: config: data.rotation has unknown key(s) ['angle_degs']; allowed: ['angle_column', 'angle_deg', 'angle_file', 'frame_in', 'provenance', 'rotate_to']
+
+[R7d] refusal: angle_deg 'auto' without angle_file
+  This test fails if prep exits other than 1, writes output, or does not say 'needs angle_file'
+  -> PASS: exit 1; message 'needs angle_file' present: True; output written: False; PREP FAILED: config: data.rotation.angle_deg 'auto' needs angle_file (CSV with site_id and the angle column)
+
+[R7e] refusal: angle_deg 'auto' with a CSV that lacks one site (J6_BxRepaced)
+  This test fails if prep exits other than 1, writes output, or does not say 'has no angle for 1 site(s)'
+  -> PASS: exit 1; message 'has no angle for 1 site(s)' present: True; output written: False; PREP FAILED: data.rotation.angle_file <scratch>/w1/R7e/alpha_no_J6.csv has no
+
+[R8] mesh.reuse_from pointing at a mesh built from other inputs (mesh/vulcan_v3)
+  This test fails if prep exits other than 1, C17 is not FAIL, or the output directory is created
+  -> PASS: exit 1; [FAIL] C17  mesh reuse: mesh/vulcan_v3: 8 of 10 files/* identical (differ: ['obs_site.dat', 'observing_site.dat']); input_md5.txt 7 of 9 md5 match; products.md5 names mesh.dat and resistivity_block_it; output written: False
+
+[R9a] refusal: data.rotation under 'schema: prep_vulcan/1'
+  This test fails if prep exits other than 1, writes output, or does not say "need 'schema: prep_vulcan/2'"
+  -> PASS: exit 1; message "need 'schema: prep_vulcan/2'" present: True; output written: False; PREP FAILED: config: data.rotation and mesh.reuse_from need 'schema: prep_vulcan/2' (older versions of this script accept prep_vulcan/1 and would silently ignore them)
+
+[R9b] an older prep_vulcan.py (--old-prep, which ignores data.rotation) refuses config/vulcan_mesh_v2_rot.yml
+  This test fails if the old script exits 0 or writes an output directory (it would then write UNrotated data from a config that asks for rotation)
+  -> PASS: prep_vulcan_base_52c25de1.py (sha256 52c25de114503165): exit 1; output written: False; PREP FAILED: config /mnt/d/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4/config/vulcan_mesh_v2_rot.yml: expected 'schema: prep_vulcan/1'
+
+[R9c] the hazard R9b guards against: the older script given the rotation config under prep_vulcan/1
+  This test fails if the old script refuses it or writes rotated data (then the schema bump would be unnecessary); this is the failing case of R9b's criterion
+  -> PASS: old script, the v2_rot config with schema prep_vulcan/1: exit 0; observe.dat identical to the UNrotated mesh/vulcan_v2: True; [PASS] C08  impedance values: 20160 values, max relative difference 5.0e-05
+
+[R4 per-component change (7.42 deg, written files)] (observation, not a test)
+  per component xx/xy/yx/yy over 2520 data lines: median |dZ|/|Z| 0.22/0.0277/0.0243/0.211, max 109/0.382/0.379/10; max |dZ|/|Z|_F 0.113/0.0951/0.0951/0.113; SE median |dSE|/SE 0.0017/0.0017/0.0017/0.0017, max 0.12/0.4/0.5/0.25
+
+[R6 per-site against single angle] (observation, not a test)
+  auto vs 7.42: max |dZ| 6.54e-04 |Z|_F over 2520 data lines
+
+[M] mutant MZ: the rotation at angle 0 is not exact (alpha + 1e-3 deg); built, sha256 8c551228fb2b3362
+
+[M MZ/R1] R1 must FAIL on mutant MZ
+  This test fails if the mutant cannot be built, or R1 still PASSes on it
+  -> PASS: R1 on MZ: FAIL: exit 1:  7.6312e-05', 'A10 0.01001 Hz ZXY SE 7.6313e-05 vs 7.6312e-05', 'A10 0.01001 Hz ZYX SE 7.6313e-05 vs 7.6312e-05']). Inspect <scratch>/w1/mut/MZ_R1/run.staging
+
+[M] mutant MR1: wrong sign: R(+alpha) instead of R(-alpha); built, sha256 53aef541d5e8176c
+
+[M MR1/R2] R2 must FAIL on mutant MR1 with C08+C15 FAIL
+  This test fails if the mutant cannot be built, or R2 still PASSes on it, or any of C08/C15 is not FAIL in its prep output
+  -> PASS: R2 on MR1: FAIL (C08=FAIL C09=FAIL C15=FAIL): exit 1; not PASS: ['C08=FAIL', 'C09=FAIL', 'C15=FAIL']; [FAIL] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 6.7e+03; bad: ['A1 100 Hz ZXX -0.0029135 vs -0.0031877', 'A1 100 Hz ZXX -0.00016311 vs 0.00017135', 'A1 100 Hz ZXY 0 | [FAIL] C09  error floors: 10080 SE pairs, alpha 7.42 deg, max relative difference 9.7e-02; floor active in 100%/97%/96%/100% of Zxx/Zxy/Zyx/Z
+
+[M] mutant MR2: the rotation applied twice; built, sha256 5ebdc0a1892a56d4
+
+[M MR2/R2] R2 must FAIL on mutant MR2 with C08 FAIL
+  This test fails if the mutant cannot be built, or R2 still PASSes on it, or any of C08 is not FAIL in its prep output
+  -> PASS: R2 on MR2: FAIL (C08=FAIL C09=FAIL): exit 1; not PASS: ['C08=FAIL', 'C09=FAIL']; [FAIL] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 4.3e+03; bad: ['A1 100 Hz ZXX -0.0030925 vs -0.0031877', 'A1 100 Hz ZXX 0.00039236 vs 0.00017135', 'A1 100 Hz ZXY 0. | [FAIL] C09  error floors: 10080 SE pairs, alpha 7.42 deg, max relative difference 2.4e-01; floor active in 100%/97%/96%/100% of Zxx/Zxy/Zyx/Zyy; bad: ['A
+
+[M] mutant MR3: VAR not rotated (rotate_Z returns the input variances); built, sha256 8239b97af04a7cb4
+
+[M MR3/R2] R2 must FAIL on mutant MR3 with C09+C15 FAIL
+  This test fails if the mutant cannot be built, or R2 still PASSes on it, or any of C09/C15 is not FAIL in its prep output
+(stopped here by hand; see the header)
+
+==============================================================================================================
+Part 2
+==============================================================================================================
+rot_prep_checks.py: prep under test <scratch>\prep_vulcan_base_52c25de1.py (sha256 52c25de114503165); python 3.13.5; numpy 2.3.4
+repository D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4; config/vulcan_mesh_v2_rot.yml sha256 1f23c58a23094178; alpha_per_site.csv sha256 2d5412a088c2e5e1
+
+[R1] regression: data.rotation with angle 0 (frame_in grid) reproduces mesh/vulcan_v2 byte for byte
+  This test fails if prep exits non-zero, or observe.dat, inversion/control.dat or any files/* differs from mesh/vulcan_v2 by sha256, or station_map.csv differs from v2's in anything but an added rot_deg column of zeros
+  -> FAIL: exit 1: PREP FAILED: config <scratch>\f2\R1\cfg\angle0.yml: expected 'schema: prep_vulcan/1'
+
+[R2] full prep of config/vulcan_mesh_v2_rot.yml (7.42 deg): checks, records and unchanged mesh inputs
+  This test fails if prep exits non-zero, any of C01-C17 is not PASS, station_map.csv is not v2's plus a rot_deg column of 7.42, prep_manifest.sha256 lacks the one '# data.rotation: magnetic -> grid, alpha 7.42 deg (explicit)' header or does not list every other file with its sha256, inversion/control.dat or a files/* differs from mesh/vulcan_v2, or observe.dat does NOT differ from v2's
+  -> FAIL: exit 1; not PASS: ['C01=None', 'C02=None', 'C03=None', 'C04=None', 'C05=None', 'C06=None', 'C07=None', 'C08=None', 'C09=None', 'C10=None', 'C11=None', 'C12=None', 'C13=None', 'C14=None', 'C15=None', 'C16=None', 'C17=None']; (no C01 line) | (no C02 line) | (no C03 line)
+
+[R3] rotational invariants at full precision (all 120 EDIs, every unmasked band)
+  This test fails if for any tensor, rotate_Z at 7.42 deg changes |det Z| by more than 1e-10 relative, det Z by more than 1e-10 |Z|_F^2, Zxx+Zyy or Zxy-Zyx by more than 1e-10 |Z|_F, or |Z|_F by more than 1e-10 relative
+  -> FAIL: harness exception: AttributeError("module 'prep_under_test_226' has no attribute 'rotate_Z'")
+
+[R4] rotational invariants on the written files (R2's observe.dat against mesh/vulcan_v2's)
+  This test fails if |det Z| of any written tensor differs between the two files by more than 3e-4 |Z|_F^2, or Zxx+Zyy, Zxy-Zyx or |Z|_F by more than 3e-4 |Z|_F (the '%.4e' rounding of both files allows at most about 2e-4), or no component moved by more than 1e-2 |Z|_F (the rotation would then be invisible here)
+  -> FAIL: harness exception: FileNotFoundError(2, 'No such file or directory')
+
+[R5a] --check-only of R2's output with its own config
+  This test fails if it exits non-zero, a check other than C03/C05 (N/A under --check-only) is not PASS, or the directory changes
+  -> FAIL: exit 1; C01=None C02=None C03=None C04=None C05=None C06=None C07=None C08=None C09=None C10=None C11=None C12=None C13=None C14=None C15=None C16=None C17=None; C08 8 line); C09 None; tree unchanged: True
+
+[R5b] --check-only of R2's (rotated) output with config/vulcan_mesh_v2.yml (no data.rotation)
+  This test fails if C08 does NOT FAIL (it would then accept rotated data as unrotated), prep exits other than 1, or the directory changes
+  -> FAIL: exit 1; C01=PASS C02=PASS C03=N/A C04=None C05=None C06=None C07=None C08=None C09=None C10=None C11=None C12=None C13=None C14=None C15=None C16=None C17=None; C08 8 line); C09 None; tree unchanged: True
+
+[R5c] --check-only of mesh/vulcan_v2 (unrotated) with config/vulcan_mesh_v2_rot.yml
+  This test fails if C08 does NOT FAIL, prep exits other than 1, or mesh/vulcan_v2 changes
+  -> FAIL: exit 1; C01=None C02=None C03=None C04=None C05=None C06=None C07=None C08=None C09=None C10=None C11=None C12=None C13=None C14=None C15=None C16=None C17=None; C08 8 line); C09 None; tree unchanged: True
+
+[R6] data.rotation angle_deg 'auto': per-site alpha from alpha_per_site.csv
+  This test fails if prep exits non-zero, any check is not PASS, or station_map.csv's rot_deg differs from the CSV's alpha_deg by more than 1e-9 for any of the 120 sites
+  -> FAIL: exit 1; not PASS: ['C01=None', 'C02=None', 'C03=None', 'C04=None', 'C05=None', 'C06=None', 'C07=None', 'C08=None', 'C09=None', 'C10=None', 'C11=None', 'C12=None', 'C13=None', 'C14=None', 'C15=None', 'C16=None', 'C17=None']; PREP FAILED: config <scratch>\f2\R6\cfg\auto.yml: expected 'schema: prep_vulcan/1'
+
+[R7a] refusal: frame_in magnetic without angle_deg
+  This test fails if prep exits other than 1, writes an output or staging directory, or does not say 'refusing to guess'
+  -> FAIL: exit 1; message 'refusing to guess' present: False; output written: False; PREP FAILED: config <scratch>\f2\R7a\cfg\bad.yml: expected 'schema: prep_vulcan/1'
+
+[R7b] refusal: frame_in grid with angle_deg 7.42
+  This test fails if prep exits other than 1, writes output, or does not say 'angle_deg must be 0'
+  -> FAIL: exit 1; message 'angle_deg must be 0' present: False; output written: False; PREP FAILED: config <scratch>\f2\R7b\cfg\bad.yml: expected 'schema: prep_vulcan/1'
+
+[R7c] refusal: a misspelt key (angle_degs)
+  This test fails if prep exits other than 1, writes output, or does not say 'unknown key'
+  -> FAIL: exit 1; message 'unknown key' present: False; output written: False; PREP FAILED: config <scratch>\f2\R7c\cfg\bad.yml: expected 'schema: prep_vulcan/1'
+
+[R7d] refusal: angle_deg 'auto' without angle_file
+  This test fails if prep exits other than 1, writes output, or does not say 'needs angle_file'
+  -> FAIL: exit 1; message 'needs angle_file' present: False; output written: False; PREP FAILED: config <scratch>\f2\R7d\cfg\bad.yml: expected 'schema: prep_vulcan/1'
+
+[R7e] refusal: angle_deg 'auto' with a CSV that lacks one site (J6_BxRepaced)
+  This test fails if prep exits other than 1, writes output, or does not say 'has no angle for 1 site(s)'
+  -> FAIL: exit 1; message 'has no angle for 1 site(s)' present: False; output written: False; PREP FAILED: config <scratch>\f2\R7e\cfg\bad.yml: expected 'schema: prep_vulcan/1'
+
+[R8] mesh.reuse_from pointing at a mesh built from other inputs (mesh/vulcan_v3)
+  This test fails if prep exits other than 1, C17 is not FAIL, or the output directory is created
+  -> FAIL: exit 1; (no C17 line); output written: False
+
+[R9a] refusal: data.rotation under 'schema: prep_vulcan/1'
+  This test fails if prep exits other than 1, writes output, or does not say "need 'schema: prep_vulcan/2'"
+  -> FAIL: exit 0; message "need 'schema: prep_vulcan/2'" present: False; output written: True;
+
+[R4 per-component change (7.42 deg, written files)] (observation, not a test)
+  (R4 did not run)
+
+[R6 per-site against single angle] (observation, not a test)
+  (R6 did not run)
+
+==== summary ====
+  FAIL  R1               regression: data.rotation with angle 0 (frame_in grid) reproduces mesh/vulcan_v2 byte for
+  FAIL  R2               full prep of config/vulcan_mesh_v2_rot.yml (7.42 deg): checks, records and unchanged mesh
+  FAIL  R3               rotational invariants at full precision (all 120 EDIs, every unmasked band)
+  FAIL  R4               rotational invariants on the written files (R2's observe.dat against mesh/vulcan_v2's)
+  FAIL  R5a              --check-only of R2's output with its own config
+  FAIL  R5b              --check-only of R2's (rotated) output with config/vulcan_mesh_v2.yml (no data.rotation)
+  FAIL  R5c              --check-only of mesh/vulcan_v2 (unrotated) with config/vulcan_mesh_v2_rot.yml
+  FAIL  R6               data.rotation angle_deg 'auto': per-site alpha from alpha_per_site.csv
+  FAIL  R7a              refusal: frame_in magnetic without angle_deg
+  FAIL  R7b              refusal: frame_in grid with angle_deg 7.42
+  FAIL  R7c              refusal: a misspelt key (angle_degs)
+  FAIL  R7d              refusal: angle_deg 'auto' without angle_file
+  FAIL  R7e              refusal: angle_deg 'auto' with a CSV that lacks one site (J6_BxRepaced)
+  FAIL  R8               mesh.reuse_from pointing at a mesh built from other inputs (mesh/vulcan_v3)
+  FAIL  R9a              refusal: data.rotation under 'schema: prep_vulcan/1'
+  -     R4 per-component change (7.42 deg, written files) observation
+  -     R6 per-site against single angle observation
+15 tests: 0 PASS, 15 FAIL; 2 observations
+
+==============================================================================================================
+Part 3
+==============================================================================================================
+| group | test | result | observed |
+| A | A1 clean full run of the fixture | PASS | exit 0; C01=PASS C02=PASS C03=PASS C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; OK: 17 checks: 16 PASS, 0 FAIL, 1 N/A; wrote <scratch>... |
+| A | A2 clean --check-only | PASS | exit 0; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; 17 checks: 14 PASS, 0 FAIL, 3 N/A |
+| A | A3 full run with an explicit sites.origin [697.0, 6699.5] km | PASS | exit 0; 17 check lines; C01=PASS C02=PASS C03=N/A C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; [N/A] C03  origin: N/A: sites.origin is explicit (E 697.00000 N 6699.50000 km), so no femticPy centring to compare; C04 and C11 test the written coord |
+| B | B1 flip the sign of Im(Zxy), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08']; [FAIL] C08  impedance values: 1008 values, alpha 0 deg, max relative difference 2.0e+00; bad: ['A1 100 Hz ZXY 0.033211 vs -0.033211'] |
+| B | B2 scale the Re and Im SE of Zxy by 1.01, station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C09']; [FAIL] C09  error floors: 504 SE pairs, alpha 0 deg, max relative difference 1.0e-02; floor active in 100%/95%/97%/100% of Zxx/Zxy/Zyx/Zyy; bad: ['A1 100 Hz ZXY SE 0.0027734 vs 0.0027459', 'A1 100 Hz ZXY  |
+| B | B3 move station 1 (and its dummy VTF H-station) 2 m north | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C04']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (observe.dat MT point (-3.81600, -6.58700) is within 1 m of 0 sites); 6 dummy VTF H-stations  |
+| B | B4 frequency x (1 + 2e-6), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 2.00e-06 over 126 of 126 data lines; bad: ['A1 100 Hz'] |
+| B | B5 swap the site_id fields of station_map.csv rows 1 and 2 | PASS | inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 1; FAIL ['C04', 'C08', 'C09']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, sa |
+| B | B6 frequency + 1e-5 Hz at the lowest band (8e-3 relative), station 1 | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 7.97e-03 over 126 of 126 data lines; bad: ['A1 0.0012653 Hz'] |
+| C | C1 swap whole rows 1 and 2 of station_map.csv | FAIL | inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H |
+| C | C2 frequency + 1e-5 Hz at 100 Hz (1e-7 relative), station 1 | FAIL | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 1.00e-07 over 126 of 126 data lines |
+| C | C3 frequency x (1 + 5e-7), station 1, 100 Hz | FAIL | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 5.00e-07 over 126 of 126 data lines |
+| C | C4 move station 1 (and its VTF H-station) 0.2 m north | FAIL | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station |
+| D | D1 one CRLF in inversion/control.dat | PASS | inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C01']; [FAIL] C01  LF line endings: CR in ['inversion\\control.dat'] |
+| D | D2 DATAID of A1.edi changed to A1x (an input fault: a fixture copy of the EDIs) | PASS | EDI changed: True; exit 1; FAIL ['C02', 'C07']; [FAIL] C02  site ids: 6 table ids, 6 DATAIDs, 6 files; identical sets: False |
+| D | D3 drop the last data line of station 1 (and its count) | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C07']; [FAIL] C07  data line count: 125 data lines = sum over 6 sites of selected bands present (126); bad stations: [('A1', 20, 21)] |
+| D | D4 conjugate every impedance (exp(+i omega t) left in) | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08', 'C10']; [FAIL] C10  time convention: median phase Zxy 36.6 deg, Zyx 216.9 deg |
+| D | D5 move site 1 of files/obs_site.dat 2 m | PASS | files/obs_site.dat changed: True (changed: ['files/obs_site.dat']); exit 1; FAIL ['C11']; [FAIL] C11  mesh-site coordinates: obs_site.dat obs_site.dat point (-3.81600, -6.58700) is within 1 m of 0 sites; observing_site.dat 6 sites, max 0.64 m; resistivity_attr.dat 6 sites, max 0.64 m |
+| D | D6 makeMtr.param core edge 0.2 -> 0.21 km | PASS | files/makeMtr.param changed: True (changed: ['files/makeMtr.param']); exit 1; FAIL ['C12']; [FAIL] C12  mesh tables: differ: ['makeMtr ellipsoids'] |
+| D | D7 one topography.dat height 0 -> 0.001 km (flat mode) | PASS | files/topography.dat changed: True (changed: ['files/topography.dat']); exit 1; FAIL ['C13']; [FAIL] C13  geometry: flat topography.dat has non-zero heights |
+| D | D8 inversion/control.dat TRADE_OFF_PARAM 3 -> 1 | PASS | inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C14']; [FAIL] C14  inversion control.dat: TRADE_OFF_PARAM [1.0] != [3.0] |
+| N | N1 every MT station loses its last data line (and its count), so every station fails C07 | PASS | observe.dat changed: True; exit 1; C06=N/A C07=FAIL C08=N/A C09=N/A; [N/A] C06  frequencies: nothing compared: 6 of 6 station(s) failed C07 / [N/A] C08  impedance values: nothing compared: 6 of 6 station(s) failed C07 |
+| E | full run, C03: femticPy centres the sites on a point 2 m north of the bbox centre (consistently, so C04 and C11 cannot see it) | PASS | exit 1; FAIL ['C03']; output dir created: False; [FAIL] C03  origin: femticPy origin E 697.34870 N 6699.56310 km; bbox centre E 697.34870 N 6699.56110 km |
+| E | full run, C05: the femticPy path drops its lowest selected band | PASS | exit 1; FAIL ['C05', 'C07', 'C10']; output dir created: False; [FAIL] C05  frequency selection: 21 bands selected from 53 candidates; femticPy path chose the same list: False |
+| F | F1 --force on an unchanged prep directory replaces it | PASS | exit 0; 17 files listed, 0 mismatches []; OK: 17 checks: 16 PASS, 0 FAIL, 1 N/A; wrote <scratch>\f3\runs |
+| F | F2 --force refuses a directory holding mesh products and half-space runs | PASS | exit 1; directory unchanged: True; refusal names the 4 foreign entries: True; PREP FAILED: nothing deleted: <scratch>\f3\runs\F2_foreign holds 4 file(s) and 0 e |
+| F | F3 --force refuses when a prep product was edited since | PASS | exit 1; directory unchanged: True; 'CHANGED inversion/observe.dat' listed: True |
+| F | F4 --force --force-delete-foreign deletes the foreign files | PASS | exit 0; foreign files left []; 17 files listed, 0 mismatches [];  |
+| F | F5a a link inside the run directory, --force | PASS | junction; exit 1; refused: True; link kept: True; target untouched: True; run dir intact: True; PREP FAILED: refusing to delete <scratch>... |
+| F | F5b a link inside the run directory, --force --force-delete-foreign | PASS | junction; exit 1; refused: True; link kept: True; target untouched: True; run dir intact: True; PREP FAILED: refusing to delete <scratch>... |
+| F | F6a --out = the fixture root (holds the config and the EDIs), --force | PASS | exit 1; refused: True; fixture (config, EDIs) unchanged: True; PREP FAILED: refusing to delete <scratch>\f3\fixture_F6a: it i |
+| F | F6b --out = the fixture root (holds the config and the EDIs), --force --force-delete-foreign | PASS | exit 1; refused: True; fixture (config, EDIs) unchanged: True; PREP FAILED: refusing to delete <scratch>\f3\fixture_F6b: it i |
+| F | F7 an existing RUN.staging without prep's marker is not deleted | PASS | exit 1; notes.txt kept: True; PREP FAILED: nothing deleted: <scratch>\f3\guard\F7\run.stagin |
+| F | F8 a stale RUN.staging with prep's marker is replaced | PASS | exit 0; stale staging removed: True;  |
+| F | F9 no --force on an existing directory | PASS | exit 1; unchanged: True; PREP FAILED: <scratch>\f3\runs\F9_noforce exists. Write to a n |
+| F | F10 --force on a copy of the committed mesh/vulcan_v2 (no manifest, halfspace/, mesh_logs/) | PASS | exit 1; unchanged: True; lists halfspace/, mesh_logs/ and 'no prep_manifest.sha256': True; 145 files in the copy |
+| F | F11 --force-delete-foreign without --force | PASS | exit 1; output written: False; PREP FAILED: --force-delete-foreign only widens --force; give both |
+| F | F12 the re-inventory: a mesh.dat copied into the run directory during a --force run stops it | PASS | exit 1; aborted, mesh.dat and the originals kept; PREP FAILED: nothing deleted: <scratch>\f3\runs\F12_reinventor |
+| F | F13 a git repository nested in the run directory | PASS | exit 1; message: True; unchanged: True; PREP FAILED: refusing to delete <scratch>... |
+| J | J1 --out reaches the fixture root through a linked parent (alias/fixture), config by its real path, --force --force-delete-foreign | PASS | junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\f3\J1_alias\fixture: <scratch>... |
+| J | J2 the config is given through a linked parent (alias/fixture/config/fixture.yml), --out is the real fixture root, --force --force-delete-foreign | PASS | junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\f3\J2_real\fixture: it is or contains th |
+| J | J3 --out reaches an ordinary run directory with foreign files through a linked parent, --force --force-delete-foreign | PASS | junction; exit 1; refused: True; real run dir unchanged: True; PREP FAILED: refusing to delete <scratch>\f3\J3_alias\run: <scratch>... |
+| K | K1 a run stopped by the late CR scan, then the same command again | PASS | staging kept its marker after the abort: True; rerun exit 0; 'not created by this version': False; 'left by an earlier run': True; staging gone: True; 17 files listed, 0 mismatches [];  |
+| K | K2 a --force run stopped by the re-inventory; the added mesh.dat is moved out, then the same command again | PASS | staging kept its marker after the abort: True; rerun exit 0; 'not created by this version': False; 'left by an earlier run': True; staging gone: True; 17 files listed, 0 mismatches [];  |
+| L | L1 delete_plan on a link (symlink or junction) as the directory itself | PASS | junction; top <scratch>\f3\guard\L1_link: RESULT refused: refusing to delete <scratch>... |
+| L | L2 delete_plan on a directory inside a .git directory | PASS | top <scratch>\f3\guard\L2_repo\.git\objects: RESULT refused: refusing to delete <scratch>... |
+| L | L3 delete_plan on the filesystem root of the scratch directory | PASS | top C:\: RESULT refused: refusing to delete C:\: it is a filesystem root |
+| L | L4 delete_plan on a directory that holds the home directory (HOME and USERPROFILE pointed into the scratch tree) | PASS | top <scratch>\f3\guard\L4_parent: RESULT refused: refusing to delete <scratch>... |
+| L | L5 delete_plan on the directory that holds the script under test | PASS | top D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts: RESULT refused: refusing to delete D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts: it is or contains this script (D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts\prep_vulcan.py) |
+| G | G1 DISTORTION 1 (with its two TRADE_OFF_PARAM values) is rejected by load_config | PASS | exit 1; message: True; output written: False; PREP FAILED: config: inversion.DISTORTION 1 is not supported: with DISTORTION != 0 FEMTIC reads distortion_iter<N>.dat at start, distortion_iter0.dat for ITERATION '0 N', and exits if it is missing (f |
+| H | H1 renaming J6_BxRepaced -> J6_BxReplaced (EDI file, DATAID/LOC/REFLOC/SECTID, site table) | PASS | products that differ: ['inversion/station_map.csv']; station_map rows that differ: [3] -> ['3,1003,J6_BxReplaced,J6_BxReplaced.edi,4.89690,-1.26010,696.0886,6704.4580,0.08600,21'] |
+| H | H2 the rename keeps J6's FEMTIC station number among all 120 EDIs (femticPy numbers stations in np.sort order of the EDI file names; site rows are sorted by id) | PASS | 120 EDIs; station number 97 before, 97 after (J5 < J6 < J7) |
+| I | I0 keys of config/vulcan_mesh_v2.yml that load_config never reads | info | none |
+| I | data.error_floor_Z -> [0.2, 0.06, 0.06, 0.2] changes the products (positive control of the comparison) | PASS | products that differ from the clean run: ['inversion/observe.dat'] |
+| I | inversion.NUM_THREADS -> 4 changes the products (positive control of the comparison) | PASS | products that differ from the clean run: ['inversion/control.dat'] |
+| I | data.error_floor_VTF -> 0.5 leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.utm_zone -> 54 leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.hemisphere -> 'N' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.datum -> 'GDA94' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | mesh.topography.dem_file -> 'no_such_dem.txt' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| M | M1 (links inside the directory no longer refused): F5a must FAIL | PASS | F5a on M1: FAIL: junction; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False;  |
+| M | M1 (links inside the directory no longer refused): F5b must FAIL | PASS | F5b on M1: FAIL: junction; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False;  |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): F6a must FAIL | PASS | F6a on M2: FAIL: exit 1; refused: False; fixture (config, EDIs) unchanged: True; PREP FAILED: nothing deleted: <scratch>\f3\mut\M2_F6a\fixture_ |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): F6b must FAIL | PASS | F6b on M2: FAIL: exit 0; refused: False; fixture (config, EDIs) unchanged: False;  |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): L4 must FAIL | PASS | L4 on M2: FAIL: top <scratch>\f3\mut\M2_L4\guard\L4_parent: RESULT reached the walk of <scratch>... |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): L5 must FAIL | PASS | L5 on M2: FAIL: top <scratch>\f3\mutants: RESULT reached the walk of <scratch>... |
+| M | M3 (foreign files refused even with --force-delete-foreign): F4 must FAIL | PASS | F4 on M3: FAIL: exit 1; foreign files left ['inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'halfspace/acc_3/b1/femtic_0.log', 'mesh_logs/products.md5']; 17 files listed, 4 mismatches ['halfspace/acc_3/b1/femtic_0.log', 'inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'm |
+| M | M4 (--force-delete-foreign accepted without --force): F11 must FAIL | PASS | F11 on M4: FAIL: exit 0; output written: True;  |
+| M | M5 alone: F9 on it | info | PASS: exit 1; unchanged: True; PREP FAILED: nothing deleted: <scratch>\f3\mut\M5_F9\runs\F9_n (a second guard still holds: defence in depth, so this mutant alone  |
+| M | M7 (the re-inventory just before the delete made blind): F12 must FAIL | PASS | F12 on M7: FAIL: exit 0; exit 0 without 'changed during the run'; the added mesh.dat is gone; original files changed;  |
+| M | M5+M7 (both refusals of a run without --force removed): F9 must FAIL | PASS | F9 on M5+M7: FAIL: exit 0; unchanged: False;  |
+| M | M6 (the staging marker ignored): F8 must FAIL | PASS | F8 on M6: FAIL: exit 1; stale staging removed: False; PREP FAILED: nothing deleted: <scratch>... |
+| M | M6 (the staging marker ignored): K1 must FAIL | PASS | K1 on M6: FAIL: staging kept its marker after the abort: True; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; no prep_manifest.sha256; PREP FAILED: nothing deleted: <scratch>... |
+| M | M6 (the staging marker ignored): K2 must FAIL | PASS | K2 on M6: FAIL: staging kept its marker after the abort: True; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; 17 files listed, 0 mismatches []; PREP FAILED: nothing deleted: <scratch>... |
+| M | M8 (the staging marker dropped before the CR scan and the re-inventory (the round-1 order)): K1 must FAIL | PASS | K1 on M8: FAIL: staging kept its marker after the abort: False; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; no prep_manifest.sha256; PREP FAILED: nothing deleted: <scratch>... |
+| M | M8 (the staging marker dropped before the CR scan and the re-inventory (the round-1 order)): K2 must FAIL | PASS | K2 on M8: FAIL: staging kept its marker after the abort: False; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; 17 files listed, 0 mismatches []; PREP FAILED: nothing deleted: <scratch>... |
+| M | M9 (inside() compares abspath instead of realpath): J2 must FAIL | PASS | J2 on M9: FAIL: junction; exit 0; refused: False; real tree unchanged: False;  |
+| M | M9 alone: J1 on it | info | PASS: junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\f3\mut\M9_J1\J1_alias\fixture: C:\Users\ (a second gua |
+| M | M10 (only the directory itself is tested for a link, not its parents): J3 must FAIL | PASS | J3 on M10: FAIL: junction; exit 0; refused: False; real run dir unchanged: False;  |
+| M | M10 alone: J1 on it | info | PASS: junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\f3\mut\M10_J1\J1_alias\fixture: it is or (a second gua |
+| M | M11 (M9 + M10, i.e. the round-1 guard logic): J1 must FAIL | PASS | J1 on M11: FAIL: junction; exit 0; refused: False; real tree unchanged: False;  |
+| M | M11 (M9 + M10, i.e. the round-1 guard logic): J2 must FAIL | PASS | J2 on M11: FAIL: junction; exit 0; refused: False; real tree unchanged: False;  |
+| M | M11 (M9 + M10, i.e. the round-1 guard logic): J3 must FAIL | PASS | J3 on M11: FAIL: junction; exit 0; refused: False; real run dir unchanged: False;  |
+| M | M12 (the '.git on the path' refusal removed): L2 must FAIL | PASS | L2 on M12: FAIL: top <scratch>\f3\mut\M12_L2\guard\L2_repo\.git\objects: RESULT reached the walk of <scratch>... |
+| M | M13 (the filesystem-root refusal removed (the protected-path check still refuses the root, with another message)): L3 must FAIL | PASS | L3 on M13: FAIL: top C:\: RESULT refused: refusing to delete C:\: it is or contains the repository root (paths.root) (<scratch>\f3\fixture) |
+| M | M13+M2 (the filesystem-root refusal and the protected-path check removed): L3 must FAIL | PASS | L3 on M13+M2: FAIL: top C:\: RESULT reached the walk of C:\ without refusing |
+| M | M14 (a nested .git no longer refused): F13 must FAIL | PASS | F13 on M14: FAIL: exit 0; message: False; unchanged: False;  |
+| M | M15 (C06, C08 and C09 PASS on zero comparisons (the round-1 behaviour)): N1 must FAIL | PASS | N1 on M15: FAIL: observe.dat changed: True; exit 1; C06=PASS C07=FAIL C08=PASS C09=PASS; [PASS] C06  frequencies: nothing compared: 6 of 6 station(s) failed C07 / [PASS] C08  impedance values: nothing compared: 6 of 6 station(s) failed C07 |
+| M | M16 (no link test on the path at all): L1 must FAIL | PASS | L1 on M16: FAIL: junction; top <scratch>\f3\mut\M16_L1\guard\L1_link: RESULT reached the walk of <scratch>... |
+85 tests: 81 PASS, 4 FAIL
+
+==============================================================================================================
+Part 3b
+==============================================================================================================
+| group | test | result | observed |
+| A | A1 clean full run of the fixture | PASS | exit 0; C01=PASS C02=PASS C03=PASS C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; OK: 17 checks: 16 PASS, 0 FAIL, 1 N/A; wrote <scratch>... |
+| A | A2 clean --check-only | PASS | exit 0; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; 17 checks: 14 PASS, 0 FAIL, 3 N/A |
+| A | A3 full run with an explicit sites.origin [697.0, 6699.5] km | PASS | exit 0; 17 check lines; C01=PASS C02=PASS C03=N/A C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; [N/A] C03  origin: N/A: sites.origin is explicit (E 697.00000 N 6699.50000 km), so no femticPy centring to compare; C04 and C11 test the written coord |
+| B | B1 flip the sign of Im(Zxy), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08']; [FAIL] C08  impedance values: 1008 values, alpha 0 deg, max relative difference 2.0e+00; bad: ['A1 100 Hz ZXY 0.033211 vs -0.033211'] |
+| B | B2 scale the Re and Im SE of Zxy by 1.01, station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C09']; [FAIL] C09  error floors: 504 SE pairs, alpha 0 deg, max relative difference 1.0e-02; floor active in 100%/95%/97%/100% of Zxx/Zxy/Zyx/Zyy; bad: ['A1 100 Hz ZXY SE 0.0027734 vs 0.0027459', 'A1 100 Hz ZXY  |
+| B | B3 move station 1 (and its dummy VTF H-station) 2 m north | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C04']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (observe.dat MT point (-3.81600, -6.58700) is within 1 m of 0 sites); 6 dummy VTF H-stations  |
+| B | B4 frequency x (1 + 2e-6), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 2.00e-06 over 126 of 126 data lines; bad: ['A1 100 Hz'] |
+| B | B5 swap the site_id fields of station_map.csv rows 1 and 2 | PASS | inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 1; FAIL ['C04', 'C08', 'C09']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, sa |
+| B | B6 frequency + 1e-5 Hz at the lowest band (8e-3 relative), station 1 | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 7.97e-03 over 126 of 126 data lines; bad: ['A1 0.0012653 Hz'] |
+| C | C1 swap whole rows 1 and 2 of station_map.csv | PASS | inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H |
+| C | C2 frequency + 1e-5 Hz at 100 Hz (1e-7 relative), station 1 | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 1.00e-07 over 126 of 126 data lines |
+| C | C3 frequency x (1 + 5e-7), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 5.00e-07 over 126 of 126 data lines |
+| C | C4 move station 1 (and its VTF H-station) 0.2 m north | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station |
+| D | D1 one CRLF in inversion/control.dat | PASS | inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C01']; [FAIL] C01  LF line endings: CR in ['inversion\\control.dat'] |
+| D | D2 DATAID of A1.edi changed to A1x (an input fault: a fixture copy of the EDIs) | PASS | EDI changed: True; exit 1; FAIL ['C02', 'C07']; [FAIL] C02  site ids: 6 table ids, 6 DATAIDs, 6 files; identical sets: False |
+| D | D3 drop the last data line of station 1 (and its count) | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C07']; [FAIL] C07  data line count: 125 data lines = sum over 6 sites of selected bands present (126); bad stations: [('A1', 20, 21)] |
+| D | D4 conjugate every impedance (exp(+i omega t) left in) | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08', 'C10']; [FAIL] C10  time convention: median phase Zxy 36.6 deg, Zyx 216.9 deg |
+| D | D5 move site 1 of files/obs_site.dat 2 m | PASS | files/obs_site.dat changed: True (changed: ['files/obs_site.dat']); exit 1; FAIL ['C11']; [FAIL] C11  mesh-site coordinates: obs_site.dat obs_site.dat point (-3.81600, -6.58700) is within 1 m of 0 sites; observing_site.dat 6 sites, max 0.64 m; resistivity_attr.dat 6 sites, max 0.64 m |
+| D | D6 makeMtr.param core edge 0.2 -> 0.21 km | PASS | files/makeMtr.param changed: True (changed: ['files/makeMtr.param']); exit 1; FAIL ['C12']; [FAIL] C12  mesh tables: differ: ['makeMtr ellipsoids'] |
+| D | D7 one topography.dat height 0 -> 0.001 km (flat mode) | PASS | files/topography.dat changed: True (changed: ['files/topography.dat']); exit 1; FAIL ['C13']; [FAIL] C13  geometry: flat topography.dat has non-zero heights |
+| D | D8 inversion/control.dat TRADE_OFF_PARAM 3 -> 1 | PASS | inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C14']; [FAIL] C14  inversion control.dat: TRADE_OFF_PARAM [1.0] != [3.0] |
+| N | N1 every MT station loses its last data line (and its count), so every station fails C07 | PASS | observe.dat changed: True; exit 1; C06=N/A C07=FAIL C08=N/A C09=N/A; [N/A] C06  frequencies: nothing compared: 6 of 6 station(s) failed C07 / [N/A] C08  impedance values: nothing compared: 6 of 6 station(s) failed C07 |
+| E | full run, C03: femticPy centres the sites on a point 2 m north of the bbox centre (consistently, so C04 and C11 cannot see it) | PASS | exit 1; FAIL ['C03']; output dir created: False; [FAIL] C03  origin: femticPy origin E 697.34870 N 6699.56310 km; bbox centre E 697.34870 N 6699.56110 km |
+| E | full run, C05: the femticPy path drops its lowest selected band | PASS | exit 1; FAIL ['C05', 'C07', 'C10']; output dir created: False; [FAIL] C05  frequency selection: 21 bands selected from 53 candidates; femticPy path chose the same list: False |
+| F | F1 --force on an unchanged prep directory replaces it | PASS | exit 0; 17 files listed, 0 mismatches []; OK: 17 checks: 16 PASS, 0 FAIL, 1 N/A; wrote <scratch>\f4\runs |
+| F | F2 --force refuses a directory holding mesh products and half-space runs | PASS | exit 1; directory unchanged: True; refusal names the 4 foreign entries: True; PREP FAILED: nothing deleted: <scratch>\f4\runs\F2_foreign holds 4 file(s) and 0 e |
+| F | F3 --force refuses when a prep product was edited since | PASS | exit 1; directory unchanged: True; 'CHANGED inversion/observe.dat' listed: True |
+| F | F4 --force --force-delete-foreign deletes the foreign files | PASS | exit 0; foreign files left []; 17 files listed, 0 mismatches [];  |
+| F | F5a a link inside the run directory, --force | PASS | junction; exit 1; refused: True; link kept: True; target untouched: True; run dir intact: True; PREP FAILED: refusing to delete <scratch>... |
+| F | F5b a link inside the run directory, --force --force-delete-foreign | PASS | junction; exit 1; refused: True; link kept: True; target untouched: True; run dir intact: True; PREP FAILED: refusing to delete <scratch>... |
+| F | F6a --out = the fixture root (holds the config and the EDIs), --force | PASS | exit 1; refused: True; fixture (config, EDIs) unchanged: True; PREP FAILED: refusing to delete <scratch>\f4\fixture_F6a: it i |
+| F | F6b --out = the fixture root (holds the config and the EDIs), --force --force-delete-foreign | PASS | exit 1; refused: True; fixture (config, EDIs) unchanged: True; PREP FAILED: refusing to delete <scratch>\f4\fixture_F6b: it i |
+| F | F7 an existing RUN.staging without prep's marker is not deleted | PASS | exit 1; notes.txt kept: True; PREP FAILED: nothing deleted: <scratch>\f4\guard\F7\run.stagin |
+| F | F8 a stale RUN.staging with prep's marker is replaced | PASS | exit 0; stale staging removed: True;  |
+| F | F9 no --force on an existing directory | PASS | exit 1; unchanged: True; PREP FAILED: <scratch>\f4\runs\F9_noforce exists. Write to a n |
+| F | F10 --force on a copy of the committed mesh/vulcan_v2 (no manifest, halfspace/, mesh_logs/) | PASS | exit 1; unchanged: True; lists halfspace/, mesh_logs/ and 'no prep_manifest.sha256': True; 145 files in the copy |
+| F | F11 --force-delete-foreign without --force | PASS | exit 1; output written: False; PREP FAILED: --force-delete-foreign only widens --force; give both |
+| F | F12 the re-inventory: a mesh.dat copied into the run directory during a --force run stops it | PASS | exit 1; aborted, mesh.dat and the originals kept; PREP FAILED: nothing deleted: <scratch>\f4\runs\F12_reinventor |
+| F | F13 a git repository nested in the run directory | PASS | exit 1; message: True; unchanged: True; PREP FAILED: refusing to delete <scratch>... |
+| J | J1 --out reaches the fixture root through a linked parent (alias/fixture), config by its real path, --force --force-delete-foreign | PASS | junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\f4\J1_alias\fixture: <scratch>... |
+| J | J2 the config is given through a linked parent (alias/fixture/config/fixture.yml), --out is the real fixture root, --force --force-delete-foreign | PASS | junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\f4\J2_real\fixture: it is or contains th |
+| J | J3 --out reaches an ordinary run directory with foreign files through a linked parent, --force --force-delete-foreign | PASS | junction; exit 1; refused: True; real run dir unchanged: True; PREP FAILED: refusing to delete <scratch>\f4\J3_alias\run: <scratch>... |
+| K | K1 a run stopped by the late CR scan, then the same command again | PASS | staging kept its marker after the abort: True; rerun exit 0; 'not created by this version': False; 'left by an earlier run': True; staging gone: True; 17 files listed, 0 mismatches [];  |
+| K | K2 a --force run stopped by the re-inventory; the added mesh.dat is moved out, then the same command again | PASS | staging kept its marker after the abort: True; rerun exit 0; 'not created by this version': False; 'left by an earlier run': True; staging gone: True; 17 files listed, 0 mismatches [];  |
+| L | L1 delete_plan on a link (symlink or junction) as the directory itself | PASS | junction; top <scratch>\f4\guard\L1_link: RESULT refused: refusing to delete <scratch>... |
+| L | L2 delete_plan on a directory inside a .git directory | PASS | top <scratch>\f4\guard\L2_repo\.git\objects: RESULT refused: refusing to delete <scratch>... |
+| L | L3 delete_plan on the filesystem root of the scratch directory | PASS | top C:\: RESULT refused: refusing to delete C:\: it is a filesystem root |
+| L | L4 delete_plan on a directory that holds the home directory (HOME and USERPROFILE pointed into the scratch tree) | PASS | top <scratch>\f4\guard\L4_parent: RESULT refused: refusing to delete <scratch>... |
+| L | L5 delete_plan on the directory that holds the script under test | PASS | top D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts: RESULT refused: refusing to delete D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts: it is or contains this script (D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts\prep_vulcan.py) |
+| G | G1 DISTORTION 1 (with its two TRADE_OFF_PARAM values) is rejected by load_config | PASS | exit 1; message: True; output written: False; PREP FAILED: config: inversion.DISTORTION 1 is not supported: with DISTORTION != 0 FEMTIC reads distortion_iter<N>.dat at start, distortion_iter0.dat for ITERATION '0 N', and exits if it is missing (f |
+| H | H1 renaming J6_BxRepaced -> J6_BxReplaced (EDI file, DATAID/LOC/REFLOC/SECTID, site table) | PASS | products that differ: ['inversion/station_map.csv']; station_map rows that differ: [3] -> ['3,1003,J6_BxReplaced,J6_BxReplaced.edi,4.89690,-1.26010,696.0886,6704.4580,0.08600,21'] |
+| H | H2 the rename keeps J6's FEMTIC station number among all 120 EDIs (femticPy numbers stations in np.sort order of the EDI file names; site rows are sorted by id) | PASS | 120 EDIs; station number 97 before, 97 after (J5 < J6 < J7) |
+| I | I0 keys of config/vulcan_mesh_v2.yml that load_config never reads | info | none |
+| I | data.error_floor_Z -> [0.2, 0.06, 0.06, 0.2] changes the products (positive control of the comparison) | PASS | products that differ from the clean run: ['inversion/observe.dat'] |
+| I | inversion.NUM_THREADS -> 4 changes the products (positive control of the comparison) | PASS | products that differ from the clean run: ['inversion/control.dat'] |
+| I | data.error_floor_VTF -> 0.5 leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.utm_zone -> 54 leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.hemisphere -> 'N' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.datum -> 'GDA94' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | mesh.topography.dem_file -> 'no_such_dem.txt' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| M | M1 (links inside the directory no longer refused): F5a must FAIL | PASS | F5a on M1: FAIL: junction; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False;  |
+| M | M1 (links inside the directory no longer refused): F5b must FAIL | PASS | F5b on M1: FAIL: junction; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False;  |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): F6a must FAIL | PASS | F6a on M2: FAIL: exit 1; refused: False; fixture (config, EDIs) unchanged: True; PREP FAILED: nothing deleted: <scratch>\f4\mut\M2_F6a\fixture_ |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): F6b must FAIL | PASS | F6b on M2: FAIL: exit 0; refused: False; fixture (config, EDIs) unchanged: False;  |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): L4 must FAIL | PASS | L4 on M2: FAIL: top <scratch>\f4\mut\M2_L4\guard\L4_parent: RESULT reached the walk of <scratch>... |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): L5 must FAIL | PASS | L5 on M2: FAIL: top <scratch>\f4\mutants: RESULT reached the walk of <scratch>... |
+| M | M3 (foreign files refused even with --force-delete-foreign): F4 must FAIL | PASS | F4 on M3: FAIL: exit 1; foreign files left ['inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'halfspace/acc_3/b1/femtic_0.log', 'mesh_logs/products.md5']; 17 files listed, 4 mismatches ['halfspace/acc_3/b1/femtic_0.log', 'inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'm |
+| M | M4 (--force-delete-foreign accepted without --force): F11 must FAIL | PASS | F11 on M4: FAIL: exit 0; output written: True;  |
+| M | M5 alone: F9 on it | info | PASS: exit 1; unchanged: True; PREP FAILED: nothing deleted: <scratch>\f4\mut\M5_F9\runs\F9_n (a second guard still holds: defence in depth, so this mutant alone  |
+| M | M7 (the re-inventory just before the delete made blind): F12 must FAIL | PASS | F12 on M7: FAIL: exit 0; exit 0 without 'changed during the run'; the added mesh.dat is gone; original files changed;  |
+| M | M5+M7 (both refusals of a run without --force removed): F9 must FAIL | PASS | F9 on M5+M7: FAIL: exit 0; unchanged: False;  |
+| M | M6 (the staging marker ignored): F8 must FAIL | PASS | F8 on M6: FAIL: exit 1; stale staging removed: False; PREP FAILED: nothing deleted: <scratch>... |
+| M | M6 (the staging marker ignored): K1 must FAIL | PASS | K1 on M6: FAIL: staging kept its marker after the abort: True; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; no prep_manifest.sha256; PREP FAILED: nothing deleted: <scratch>... |
+| M | M6 (the staging marker ignored): K2 must FAIL | PASS | K2 on M6: FAIL: staging kept its marker after the abort: True; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; 17 files listed, 0 mismatches []; PREP FAILED: nothing deleted: <scratch>... |
+| M | M8 (the staging marker dropped before the CR scan and the re-inventory (the round-1 order)): K1 must FAIL | PASS | K1 on M8: FAIL: staging kept its marker after the abort: False; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; no prep_manifest.sha256; PREP FAILED: nothing deleted: <scratch>... |
+| M | M8 (the staging marker dropped before the CR scan and the re-inventory (the round-1 order)): K2 must FAIL | PASS | K2 on M8: FAIL: staging kept its marker after the abort: False; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; 17 files listed, 0 mismatches []; PREP FAILED: nothing deleted: <scratch>... |
+| M | M9 (inside() compares abspath instead of realpath): J2 must FAIL | PASS | J2 on M9: FAIL: junction; exit 0; refused: False; real tree unchanged: False;  |
+| M | M9 alone: J1 on it | info | PASS: junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\f4\mut\M9_J1\J1_alias\fixture: C:\Users\ (a second gua |
+| M | M10 (only the directory itself is tested for a link, not its parents): J3 must FAIL | PASS | J3 on M10: FAIL: junction; exit 0; refused: False; real run dir unchanged: False;  |
+| M | M10 alone: J1 on it | info | PASS: junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\f4\mut\M10_J1\J1_alias\fixture: it is or (a second gua |
+| M | M11 (M9 + M10, i.e. the round-1 guard logic): J1 must FAIL | PASS | J1 on M11: FAIL: junction; exit 0; refused: False; real tree unchanged: False;  |
+| M | M11 (M9 + M10, i.e. the round-1 guard logic): J2 must FAIL | PASS | J2 on M11: FAIL: junction; exit 0; refused: False; real tree unchanged: False;  |
+| M | M11 (M9 + M10, i.e. the round-1 guard logic): J3 must FAIL | PASS | J3 on M11: FAIL: junction; exit 0; refused: False; real run dir unchanged: False;  |
+| M | M12 (the '.git on the path' refusal removed): L2 must FAIL | PASS | L2 on M12: FAIL: top <scratch>\f4\mut\M12_L2\guard\L2_repo\.git\objects: RESULT reached the walk of <scratch>... |
+| M | M13 (the filesystem-root refusal removed (the protected-path check still refuses the root, with another message)): L3 must FAIL | PASS | L3 on M13: FAIL: top C:\: RESULT refused: refusing to delete C:\: it is or contains the repository root (paths.root) (<scratch>\f4\fixture) |
+| M | M13+M2 (the filesystem-root refusal and the protected-path check removed): L3 must FAIL | PASS | L3 on M13+M2: FAIL: top C:\: RESULT reached the walk of C:\ without refusing |
+| M | M14 (a nested .git no longer refused): F13 must FAIL | PASS | F13 on M14: FAIL: exit 0; message: False; unchanged: False;  |
+| M | M15 (C06, C08 and C09 PASS on zero comparisons (the round-1 behaviour)): N1 must FAIL | PASS | N1 on M15: FAIL: observe.dat changed: True; exit 1; C06=PASS C07=FAIL C08=PASS C09=PASS; [PASS] C06  frequencies: nothing compared: 6 of 6 station(s) failed C07 / [PASS] C08  impedance values: nothing compared: 6 of 6 station(s) failed C07 |
+| M | M16 (no link test on the path at all): L1 must FAIL | PASS | L1 on M16: FAIL: junction; top <scratch>\f4\mut\M16_L1\guard\L1_link: RESULT reached the walk of <scratch>... |
+85 tests: 85 PASS, 0 FAIL
+
+==============================================================================================================
+Part 4
+==============================================================================================================
+n sites 120 {'grid': 100, 'Vul24': 10, 'Vul25': 10} lat -29.9030..-29.7730 lon 136.9750..137.1110
+
+Declination (deg E) at the corners: IGRF-14 ppigrf | own synthesis | IGRF-13 ppigrf
+  grid  2022.83 centre   6.4156 |   6.4156 |   6.4008
+  grid  2022.83 SW       6.4032 |   6.4032 |   6.3883
+  grid  2022.83 SE       6.4517 |   6.4517 |   6.4371
+  grid  2022.83 NW       6.3796 |   6.3796 |   6.3647
+  grid  2022.83 NE       6.4279 |   6.4279 |   6.4133
+  Vul24 2024.29 centre   6.4035 |   6.4034 |   6.3803
+  Vul24 2024.29 SW       6.3913 |   6.3913 |   6.3680
+  Vul24 2024.29 SE       6.4400 |   6.4400 |   6.4172
+  Vul24 2024.29 NW       6.3670 |   6.3670 |   6.3436
+  Vul24 2024.29 NE       6.4155 |   6.4154 |   6.3925
+Warning: You provided date(s) not covered by coefficient file
+(1900-01-01 to 2025-01-01)
+  Vul25 2025.21 centre   6.3968 |   6.3968 |   6.3703
+Warning: You provided date(s) not covered by coefficient file
+(1900-01-01 to 2025-01-01)
+  Vul25 2025.21 SW       6.3849 |   6.3849 |   6.3581
+Warning: You provided date(s) not covered by coefficient file
+(1900-01-01 to 2025-01-01)
+  Vul25 2025.21 SE       6.4337 |   6.4337 |   6.4075
+Warning: You provided date(s) not covered by coefficient file
+(1900-01-01 to 2025-01-01)
+  Vul25 2025.21 NW       6.3601 |   6.3601 |   6.3333
+Warning: You provided date(s) not covered by coefficient file
+(1900-01-01 to 2025-01-01)
+  Vul25 2025.21 NE       6.4086 |   6.4086 |   6.3824
+  max |ppigrf - own synthesis| = 1.0e-05 deg
+
+convergence at the centre -1.0168 deg; grid bearing of true north 1.0167 deg (finite difference)
+alpha grid  epoch 2022.83 (100 sites): D 6.380..6.428, gamma -1.030..-0.982, alpha 7.362..7.458 mean 7.410
+alpha Vul24 epoch 2024.29 ( 10 sites): D 6.415..6.438, gamma -1.051..-1.039, alpha 7.454..7.488 mean 7.473
+alpha Vul25 epoch 2025.21 ( 10 sites): D 6.396..6.426, gamma -1.042..-1.009, alpha 7.405..7.468 mean 7.435
+alpha all 120: 7.362..7.488 mean 7.417; max |alpha - 7.42| = 0.068 deg
+wrote D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\validation\rotation_2026-09-28\alpha_per_site.csv
+
+
+==============================================================================================================
+Part 5
+==============================================================================================================
+== mesh/vulcan_v2_rot: products against the Windows run (<scratch>/runs/rot742_win, same config) and against mesh/vulcan_v2
+  inversion/observe.dat  d501abcf5a7dde5f  windows:SAME  v2:DIFF (f4678d0522a6a8d0)
+  inversion/control.dat  8fba4e299c817ab3  windows:SAME  v2:SAME
+  inversion/station_map.csv  12701a8c38881ebc  windows:SAME  v2:DIFF (4964e2f5be9204ab)
+  files/analysis_domain.dat  a0715636321d6bbe  windows:SAME  v2:SAME
+  files/bathymetry.dat  a45f54c15363b376  windows:SAME  v2:SAME
+  files/coast_line.dat  3e7123b08f2e9705  windows:SAME  v2:SAME
+  files/control.dat  bee0d4fadb779646  windows:SAME  v2:SAME
+  files/makeMtr.param  7c2550b50f107de8  windows:SAME  v2:SAME
+  files/obs_site.dat  ac427d963865dd1c  windows:SAME  v2:SAME
+  files/observing_site.dat  81a89f039faaa4d4  windows:SAME  v2:SAME
+  files/region_seeds.dat  0d27060db3eccb66  windows:SAME  v2:SAME
+  files/resistivity_attr.dat  4f6f53ae018fcf1f  windows:SAME  v2:SAME
+  files/topography.dat  6fce1153edcd4b28  windows:SAME  v2:SAME
+== sha256sum -c --strict prep_manifest.sha256 (mesh/vulcan_v2_rot)
+README.md: OK
+config_used.yml: OK
+files/analysis_domain.dat: OK
+files/bathymetry.dat: OK
+files/coast_line.dat: OK
+files/control.dat: OK
+files/makeMtr.param: OK
+files/obs_site.dat: OK
+files/observing_site.dat: OK
+files/region_seeds.dat: OK
+files/resistivity_attr.dat: OK
+files/topography.dat: OK
+inversion/README.md: OK
+inversion/control.dat: OK
+inversion/observe.dat: OK
+inversion/station_map.csv: OK
+prep.log: OK
+  exit 0
+== manifest header
+# data.rotation: magnetic -> grid, alpha 7.42 deg (explicit), all 120 stations; Z' = R(-alpha) Z R(-alpha)^T
+== CR bytes in mesh/vulcan_v2_rot (Python count): 0 of 18 files; staging dirs under mesh/: 0
+== station_map.csv: header and first row
+femtic_station_id,h_station_id,site_id,edi_file,x_north_km,y_east_km,easting_km,northing_km,elev_km,n_freq,rot_deg
+1,1001,A1,A1.edi,-1.69695,-6.62240,690.7616,6695.7435,0.10000,21,7.42
+== --check-only (Windows base Python)
+  [PASS] C01  LF line endings: no CR in any file
+  [PASS] C02  site ids: 120 table ids, 120 DATAIDs, 120 files; identical sets: True
+  [N/A] C03  origin: N/A under --check-only: femticPy's origin exists only in a full run; the bbox centre E 697.38400 N 6697.44045 km used here is what C04 and C11 test the written coordinates against
+  [PASS] C04  stations: 120 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.67 m); 120 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+  [N/A] C05  frequency selection: N/A under --check-only: femticPy's frequency table exists only in a full run; the independent selection (21 bands selected from 53 candidates) is what C06 and C07 test observe.dat against
+  [PASS] C06  frequencies: max relative difference 0.00e+00 over 2520 of 2520 data lines
+  [PASS] C07  data line count: 2520 data lines = sum over 120 sites of selected bands present (2520)
+  [PASS] C08  impedance values: 20160 values, alpha 7.42 deg, max relative difference 4.9e-05
+  [PASS] C09  error floors: 10080 SE pairs, alpha 7.42 deg, max relative difference 4.9e-05; floor active in 100%/97%/96%/100% of Zxx/Zxy/Zyx/Zyy
+  [PASS] C10  time convention: median phase Zxy -36.9 deg, Zyx 142.1 deg
+  [PASS] C11  mesh-site coordinates: obs_site.dat 120 sites, max 0.67 m; observing_site.dat 120 sites, max 0.67 m; resistivity_attr.dat 120 sites, max 0.67 m
+  [PASS] C12  mesh tables: all tables equal the config
+  [PASS] C13  geometry: sites x -7.255..7.255, y -6.622..6.622 km inside the domain; coast, topography and seeds consistent
+  [PASS] C14  inversion control.dat: all keywords equal the config
+  [PASS] C15  rotation sanity: T1 max|rotate_Z(Z_2D) - Z_grid| 0.0e+00 at 7.42 deg (the opposite sign gives 0.28); T2 strike recovered within 0.000 deg; T3 variances: 1.4e-16 from the explicit formulas, 0.5 % from a 200k-sample Monte Carlo (rotation changes them by up to 103 %)
+  [PASS] C16  isotropic invariance: max relative change 7.0e-17 in Z, 1.5e-16 in the variances, at -60/7.42/30/90 deg
+  [PASS] C17  mesh reuse: mesh/vulcan_v2: 10 of 10 files/* identical; input_md5.txt 9 of 9 md5 match; products.md5 names mesh.dat and resistivity_block_iter0.dat: True
+17 checks: 15 PASS, 0 FAIL, 2 N/A
+== legacy config, --check-only mesh/vulcan_v2 (Windows base Python)
+data.rotation not set: impedances written in the EDI frame, unrotated
+  [PASS] C08  impedance values: 20160 values, alpha 0 deg, max relative difference 5.0e-05
+  [PASS] C09  error floors: 10080 SE pairs, alpha 0 deg, max relative difference 4.9e-05; floor active in 100%/97%/96%/100% of Zxx/Zxy/Zyx/Zyy
+  [PASS] C15  rotation sanity: T1 max|rotate_Z(Z_2D) - Z_grid| 0.0e+00 at 0/7.42 deg (the opposite sign gives 0.28); T2 strike recovered within 0.000 deg; T3 variances: 1.4e-16 from the explicit formulas, 0.5 % from a 200k-sample Monte Carlo (rotation changes them by up to 103 %)
+  [PASS] C16  isotropic invariance: max relative change 7.0e-17 in Z, 1.5e-16 in the variances, at -60/0/7.42/30/90 deg
+  [N/A] C17  mesh reuse: N/A: mesh.reuse_from is not set, so these inputs still have to be meshed
+17 checks: 14 PASS, 0 FAIL, 3 N/A

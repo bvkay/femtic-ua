@@ -1,0 +1,8 @@
+p2-cpu-14:rank1.femtic: Failed to modify UD QP to INIT on mlx5_0: Operation not permitted
+p2-cpu-14:rank0.femtic: Failed to modify UD QP to INIT on mlx5_0: Operation not permitted
+p2-cpu-14:rank1.femtic: Failed to modify UD QP to INIT on mlx5_0: Operation not permitted
+p2-cpu-14:rank0.femtic: Failed to modify UD QP to INIT on mlx5_0: Operation not permitted
+p2-cpu-14:rank1.femtic: Failed to modify UD QP to INIT on mlx5_0: Operation not permitted
+p2-cpu-14:rank0.femtic: Failed to modify UD QP to INIT on mlx5_0: Operation not permitted
+p2-cpu-14:rank1.femtic: Failed to modify UD QP to INIT on mlx5_0: Operation not permitted
+p2-cpu-14:rank0.femtic: Failed to modify UD QP to INIT on mlx5_0: Operation not permitted

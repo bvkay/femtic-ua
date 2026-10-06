@@ -2,6 +2,8 @@
 
 Date: 2026-09-25. Status: **complete**. Three rounds were run (the maximum). The failure criterion was not changed at any point.
 
+Corrections added on 2026-09-28 are marked "corrected 2026-09-28" or "Correction (2026-09-28)". They concern the v2 to v3 time ratio, the far-field claim of deviation d, the count of untested bands and the v3 long-period outlier; deviation d also gets a note on the Phoenix route. No verdict changes.
+
 ## Result in brief
 
 - **Round 3 (mesh v3, `config/vulcan_mesh_v3.yml`) PASSES.** It meets every limit at all 120 sites, at all 8 test bands (200 Hz to 0.0063 Hz), for both uniform 3 ohm-m and uniform 100 ohm-m. **The highest frequency that passes on v3 is 200 Hz**, which is the highest band tested.
@@ -16,8 +18,8 @@ Date: 2026-09-25. Status: **complete**. Three rounds were run (the maximum). The
   - about 2 times the CPU time per frequency (about 0.35 to 0.7 CPU-hours);
   - 4 times the mesh build time (4.3 to 17 min);
   - 23 % more parameter cells (55,992 to 68,654).
-- **Most of the accuracy is bought at the v1 to v2 step.** That step cuts the high-frequency error 3.6-3.7 times at about the same CPU time per frequency (+15 %); it mostly costs memory. The v2 to v3 step doubles the time for a further 1.25 times improvement in typical error.
-- **Recommendation.** v3 is the configuration that passes the criterion as written. The current `observe.dat` stops at 100 Hz, though, and at that band v2 measured 3.07 % in rho_a, 0.96 degrees in phase and 1.54 % in the diagonal ratio. For an inversion that stays at or below 100 Hz, v2 gives the same accuracy for about half the forward time. Adopting v2 needs one more run: v2 at 100 ohm-m, which I dropped to save resources (section 7).
+- **Most of the accuracy is bought at the v1 to v2 step.** That step cuts the high-frequency error 3.6-3.7 times at about the same CPU time per frequency (+15 %); it mostly costs memory. The v2 to v3 step costs 1.4-1.9 times the CPU time (1.4 over all four like-for-like batches, 1.9 without the two outlier batches; corrected 2026-09-28 from 'doubles the time'; section 8) for a further 1.25 times improvement in typical error. <!-- src: section 8 correction table (user + system time and maximum RSS in mesh/vulcan_v2/halfspace/acc_3/b1/time_v.log to b4 and mesh/vulcan_v3/halfspace/acc_3/b1/time_v.log to b4) -->
+- **Recommendation.** v3 is the configuration that passes the criterion as written. The current `observe.dat` stops at 100 Hz, though, and at that band v2 measured 3.07 % in rho_a, 0.96 degrees in phase and 1.54 % in the diagonal ratio. For an inversion that stays at or below 100 Hz, v2 passes every band it was tested on, with 28-48 % less CPU time (v3 takes 1.4-1.9 times as long) and 16 % less memory per process (corrected 2026-09-28: this sentence first said 'the same accuracy for about half the forward time'; section 8). Adopting v2 needs one more run: v2 at 100 ohm-m, which I dropped to save resources (section 7). <!-- src: section 8 correction table (user + system time and maximum RSS in mesh/vulcan_v2/halfspace/acc_3/b1/time_v.log to b4 and mesh/vulcan_v3/halfspace/acc_3/b1/time_v.log to b4) -->
 
 ## 1. Failure criterion (written before the first run)
 
@@ -95,10 +97,12 @@ The test itself can fail, and was shown to. The same evaluator (`acc_eval.py`) w
 - **c. Layout choices.** v1 at 100 ohm-m ran as 1 x 8 (19.8 GB) instead of the policy's 2 x 4 (38.7 GB). This keeps memory lower and puts v1's timings on the same layout as v2 and v3.
 - **d. v2 at 100 ohm-m was not run, by choice.** The reasons:
   - It cannot change round 2's verdict (FAIL at 3 ohm-m, 200 Hz).
-  - v2's far-field mesh is identical to v1's and v3's; only the zone within 100 m of the sites differs.
-  - The skin-depth equivalence was confirmed on v3 (section 5.4), so 100 ohm-m adds new information only at its lowest two bands, where v1 and v3 bracket v2 and both pass.
+  - v2's far-field mesh is identical to v1's and v3's; only the zone within 100 m of the sites differs. **Corrected 2026-09-28: not identical.** Each build re-meshes the far field: earth tetrahedra deeper than 100 km number 10,383 / 10,326 / 10,405 in v1 / v2 / v3, and 12,555 / 12,558 / 12,524 at 20-100 km. So v1 and v3 do not bracket v2 by construction, and v2 in 100 ohm-m is unmeasured. <!-- src: mesh/vulcan_v1/mesh_logs/mesh_stats.txt:43-44, mesh/vulcan_v2/mesh_logs/mesh_stats.txt:43-44, mesh/vulcan_v3/mesh_logs/mesh_stats.txt:43-44 (shells, earth column) -->
+  - The skin-depth equivalence was confirmed on v3 (section 5.4), so 100 ohm-m adds new information only at its lowest two bands. v1 and v3 both pass there, but they do not bracket v2 (corrected 2026-09-28: this line first said they did). Each build meshes the deep shells anew, and v2 lies outside the v1-v3 range in both: earth tetrahedra deeper than 100 km number 10,383 / 10,326 / 10,405, and at 20-100 km 12,555 / 12,558 / 12,524, in v1 / v2 / v3. v3's long-period excess (2.91 % at 0.0063 Hz in 100 ohm-m) comes from one site, Vul24-19 (section 5.5), so v2 can have an outlier of its own. v2 in 100 ohm-m is unmeasured. <!-- src: mesh/vulcan_v1/mesh_logs/mesh_stats.txt:43-44, mesh/vulcan_v2/mesh_logs/mesh_stats.txt:43-44, mesh/vulcan_v3/mesh_logs/mesh_stats.txt:43-44 (shells, earth column); section 5.5 correction (2026-09-28) -->
 
   Dropping it saved about 30-40 min at 28 GB on a machine in use. It is needed only if v2 is adopted. To run it: delete /home/tara/femtic_wsl/mesh_runs/SKIP_acc_v2_100, then run acc_batches.sh 2 100 1 8 '1 2 3 4'.
+
+  2026-09-28: compute has moved to Phoenix. There the same test is `sbatch --export=ALL,START_RHO=100 --ntasks-per-node=3 --cpus-per-task=24 --time=02:00:00 $PLAN/06_forward_only.slurm`, with `PLAN=/hpcfs/users/$USER/FEMTIC_2026/hpc/phoenix_plan` and run from the Phoenix directory that holds the v2 mesh.dat, resistivity_block_iter0.dat, control.dat and observe.dat. The script lives in hpc/phoenix_plan/, not in that directory. It covers all 21 observe.dat bands (hpc/phoenix_plan/README_phoenix.md section 3 steps 7-8 and section 6; hpc/phoenix_plan/RUNBOOK_first_inversion.md gives the full command sequence). <!-- src: PLAN hpc/phoenix_plan/README_phoenix.md:158; the START_RHO gate hpc/phoenix_plan/README_phoenix.md:214; v2 layout 3 x 24 and 2 h hpc/phoenix_plan/README_phoenix.md:206 (as of 2026-09-28 21:10); 3 x 24 also hpc/phoenix_plan/RUNBOOK_first_inversion.md:248 -->
 - **e. Wall times are noisy.** The PC was in use and the runs were niced, so wall time varied by up to 1.7 times for the same work. For example, v3 at 100 ohm-m batch 1 spent 330 s in a set-up step that takes about 50 s elsewhere, with 3 times the system time.
   - 100 ohm-m batches ran 0.8-1.7 times as long as the matching 3 ohm-m batches.
   - CPU-seconds and PARDISO memory are the robust cost measures.
@@ -242,6 +246,8 @@ So the 100 ohm-m runs are the 3 ohm-m test continued to skin depths of 11-63 km.
 - **The observation.** On v3, site 105 (Vul24-19) is an outlier at the lowest band: 0.83 % at 0.0063 Hz in 3 ohm-m and 2.91 % at 0.0063 Hz in 100 ohm-m.
 - **The control.** v1, with the same deep mesh, gives 0.23 % and 0.49 % there. Its mean (+0.42 %) is identical to v3's, but its spread is 8 times smaller (std 0.02 against 0.17 %).
 - **The reading.** This is loss of precision in the direct solve when 1.4-2.6 m elements meet a nearly static field (edge-element low-frequency ill-conditioning), not discretisation of the deep field.
+- **Correction (2026-09-28): at 0.0063 and 0.0020 Hz one site, not the mesh as a whole; at 797 s not a single site.** In 100 ohm-m, site 105 (Vul24-19) is at 2.91 % at 0.0063033 Hz, against 0.77 % for the next worst site (92), and at 4.37 % at 0.0019947 Hz, against 0.91 % (site 75). At 0.0012553 Hz (797 s) it is at 1.30 %, with site 64 close behind at 1.26 %, so at the longest period the excess is not a single-site outlier. The ill-conditioning reading above is an untested hypothesis, about site 105's elements at the first two bands.
+  <!-- src: worst_sites_by_rho (site, rho_a error xy %, yx %, ...) in mesh/vulcan_v3/halfspace/acc_100/acc_eval_v3_100.json and mesh/vulcan_v3/halfspace/acc_100/acc_eval_v3_100_bs_lowf.json; site 105 = Vul24-19 in mesh/vulcan_v3/inversion/station_map.csv:106 -->
 
 ## 6. Supplementary checks (real observe.dat bands outside the 8 test bands; same policy and evaluator)
 
@@ -250,7 +256,7 @@ So the 100 ohm-m runs are the 3 ohm-m test continued to skin depths of 11-63 km.
 | v2 | 3 ohm-m | 100 | 87 m | 3.07 % | 0.96 deg | 1.54 % | pass | 7.7 min, 28.23 GB |
 | v2 | 3 ohm-m | 31.514 | 155 m | 2.68 % | 0.52 deg | 0.92 % | pass | same run |
 | v3 | 100 ohm-m | 0.0019947 | 113 km | **4.37 %** (site 105; next worst 0.91 %) | 0.71 deg | 0.95 % | pass, 0.63 % margin | 7.7 min, 33.67 GB |
-| v3 | 100 ohm-m | 0.0012553 (797 s, the longest period in observe.dat) | 142 km | 1.30 % | 0.89 deg | 0.58 % | pass | same run |
+| v3 | 100 ohm-m | 0.0012553 (797 s, the longest period in observe.dat) | 142 km | 1.30 % (site 105; site 64 1.26 %) <!-- src: worst_sites_by_rho at 0.0012553 in mesh/vulcan_v3/halfspace/acc_100/acc_eval_v3_100_bs_lowf.json --> | 0.89 deg | 0.58 % | pass | same run |
 
 - **v2 covers the real top band.** v2 passes 100 Hz, the highest band in the current observe.dat, in the 3 ohm-m worst case.
 - **v3 at the real long-period end.** v3 passes there, but site 105's noise is not monotonic in frequency (2.91, 4.37 and 1.30 %). It is a noise floor that could exceed 5 % on another band or a rebuilt v3.
@@ -260,7 +266,7 @@ So the 100 ohm-m runs are the 3 ohm-m test continued to skin depths of 11-63 km.
 1. **For the criterion as written, use config/vulcan_mesh_v3.yml (mesh/vulcan_v3/).** It is the only configuration that passes. The highest frequency that passes on it is 200 Hz; every tested band passes, plus the supplementary 0.0020 and 0.00126 Hz. Use it if 125-200 Hz bands will be inverted.
 2. **For the inversion as configured now (21 bands, 100 Hz to 797 s), v2 is the better buy, provided one check passes.**
    - It passes every tested band up to 100 Hz in the 3 ohm-m worst case.
-   - It costs about half the forward time, 16 % less memory per process, and 5 % fewer cells.
+   - It costs 28-48 % less CPU time than v3 (v3 takes 1.4-1.9 times as long), 16 % less memory per process, and 5 % fewer cells (corrected 2026-09-28: this line first said 'about half the forward time'; section 8). <!-- src: section 8 correction table (user + system time and maximum RSS in mesh/vulcan_v2/halfspace/acc_3/b1/time_v.log to b4 and mesh/vulcan_v3/halfspace/acc_3/b1/time_v.log to b4) -->
    - Being less refined, it should be better conditioned at long periods.
    - Before committing, run v2 at 100 ohm-m (about 30-40 min). v1 and v3 bracket it and both pass, but that is an inference.
 3. **Do not use v1 above about 6 Hz** where the near-surface is 3-5 ohm-m. v1 is accurate everywhere at 100 ohm-m.
@@ -274,11 +280,30 @@ So the 100 ohm-m runs are the 3 ohm-m test continued to skin depths of 11-63 km.
 
 Where the cost goes:
 - **v1 to v2** mostly costs memory: +45 %, for +59 % elements and about the same time.
-- **v2 to v3** mostly costs time: 1.9 times, for +25 % elements and +19 % memory, and a 1.25 times smaller typical error.
+- **v2 to v3** costs 1.4 times the CPU time over the four like-for-like batches (1.9 times without the two outlier batches; see the correction below), for +25 % elements and +19 % memory, and a 1.25 times smaller typical error. <!-- src: section 8 correction table (user + system time and maximum RSS in mesh/vulcan_v2/halfspace/acc_3/b1/time_v.log to b4 and mesh/vulcan_v3/halfspace/acc_3/b1/time_v.log to b4) -->
+
+**Correction (2026-09-28): the v2 to v3 time ratio.** This report first said that the v2 to v3 step 'doubles the time', and that v2 takes 'about half the forward time'. The like-for-like runs are 3 ohm-m, 1 rank x 8 threads, and the same 8 bands in the same 4 batches:
+
+<!-- src: CPU s = user + system time in mesh/vulcan_v2/halfspace/acc_3/b{1,2,3,4}/time_v.log and mesh/vulcan_v3/halfspace/acc_3/b{1,2,3,4}/time_v.log; bands from each batch's observe.dat (mesh/vulcan_v2/halfspace/acc_3/b1/observe.dat:3-5 etc.); wall = Elapsed of the same logs; peak RSS = Maximum resident set size of the same logs plus mesh/vulcan_v2/halfspace/acc_3/bs_highf/time_v.log and mesh/vulcan_v3/halfspace/acc_100/b{1,2,3,4}/time_v.log and mesh/vulcan_v3/halfspace/acc_100/bs_lowf/time_v.log -->
+
+| batch (bands, Hz) | v2 CPU s | v3 CPU s | v3 / v2 |
+|---|---:|---:|---:|
+| b1 (200, 62.896) | 2,424 | 4,996 | 2.06 |
+| b2 (19.985, 6.2974) | 2,676 | 4,825 | 1.80 |
+| b3 (1.9961, 0.63033) | 2,546 | 3,321 | 1.30 |
+| b4 (0.063033, 0.0063033) | 5,442 | 4,954 | 0.91 |
+| all four | 13,088 | 18,096 | **1.38** |
+
+- Wall time gives the same total ratio: 1,706 s against 2,385 s, 1.40.
+- v2 b4 took about twice as long as its sibling batches, and v3 b3 about two-thirds of its siblings. Without those two batches the ratio is 1.93, which reproduces the earlier 'about twice'. Nothing in the logs says which batches are representative, so the ratio is 1.4 to 1.9. This report now quotes that range, with the total, 1.4, as its low end.
+- Peak memory is not noisy: 28.31 GB for v2 and 33.66 GB for v3 (maximum RSS; GB = 10^6 kB), so v2 needs 16 % less.
+- Per frequency over all four batches: 0.45 CPU-hours on v2 and 0.63 on v3, at 3 ohm-m. The 0.36 and 0.7 above are typical batches, not averages.
+
+<!-- src: the same time_v.log files as the table above; without outliers = mean of v3 b1, b2, b4 over mean of v2 b1-b3; per frequency = total CPU s / 8 bands / 3600 -->
 
 On this PC under the policy (1 process x 8 threads, niced):
 - one frequency takes about 3 min on v1 or v2 and 5-6 min on v3;
-- a 21-band forward for one inversion iteration takes about 1 h on v2 and 2 h on v3, before any sensitivity work.
+- a 21-band forward for one inversion iteration takes 1.0-1.2 h on v2 and 1.7-1.9 h on v3, before any sensitivity work (corrected 2026-09-28 from 'about 1 h on v2 and 2 h on v3', which implied 2 times: 21 bands times the wall time per band, 213 and 298 s on average over the four 3 ohm-m batches, or 167 and 323 s over the three typical ones; section 8's ratio of 1.4-1.9). <!-- src: Elapsed in mesh/vulcan_v2/halfspace/acc_3/b{1,2,3,4}/time_v.log and mesh/vulcan_v3/halfspace/acc_3/b{1,2,3,4}/time_v.log, 2 bands per batch; typical = v2 b1-b3 and v3 b1, b2, b4, as in the correction table above -->
 
 Memory is the binding limit. Under 40 GB, only one v2 or v3 process fits at a time, and two v1 processes only just fit (38.7 GB). A real v2 or v3 inversion belongs on the HPC. Budget about 28 GB (v2) or 34 GB (v3) per process, including a PARDISO factorisation of 23.5 or 27.5 GB, plus the sensitivity work, which was not measured.
 
@@ -287,7 +312,8 @@ Accuracy is bought site by site. About 3 times smaller site elements cost 0.9 M 
 ## 9. Caveats and open items
 
 - **Scope of the test.** A uniform half-space measures discretisation error only.
-- **Test bands and meshes.** The 8 test bands miss 13 of the 21 observe.dat bands; the skin-depth scaling makes them predictable, and the decisive ones were measured (section 6).
+- **Test bands and meshes.** Seven of the 8 test bands are observe.dat bands (200 Hz is not), and section 6 ran four more. **10 of the 21 observe.dat bands were not run on any mesh:** 10.013, 3.1521, 1.001, 0.31537, 0.19951, 0.1001, 0.031537, 0.019951, 0.01001 and 0.0031521 Hz (corrected 2026-09-28; this line first said 13). The skin-depth scaling makes them predictable, and the decisive ones were measured (section 6).
+  <!-- src: the 21 frequencies of mesh/vulcan_v2/inversion/observe.dat minus every per_freq band of mesh/vulcan_v{1,2,3}/halfspace/acc_*/acc_eval_*.json -->
 - **Round-2 table.** It has no 100 ohm-m column (deviation d).
 - **Parameter cells.** The count rose from 55,992 (v1) to 65,341 (v2) and 68,654 (v3); cells holding 5 or fewer elements went from 3,347 to 18,393 and 6,702.
   - This does not affect forward accuracy.
@@ -334,4 +360,5 @@ recorded here so the gate can be trusted as a process, not only as numbers:
   0.0012553 Hz (1.30 %). The 4.37 % value is a 0.6 % margin to FAIL at a real data band.
 - **v3 is worse than v1 at long periods** in 100 ohm-m ground (0.49 % -> 2.91 % at 0.0063 Hz) and
   the errors scatter non-monotonically with frequency, consistent with ill-conditioning from 2.75 m
-  elements inside a 1000 km domain. The 1000 s band and deep resistivity above 100 ohm-m were not tested.
+  elements inside a 1000 km domain (2026-09-28: at 0.0063 and 0.0020 Hz the excess is one site, 105 = Vul24-19; at 797 s site 64 is close behind, 1.26 % against 1.30 %, so there it is not a single-site outlier; section 5.5) <!-- src: mesh/vulcan_v3/inversion/station_map.csv:106; worst_sites_by_rho at 0.0012553 Hz in mesh/vulcan_v3/halfspace/acc_100/acc_eval_v3_100_bs_lowf.json -->. The 1000 s
+  band and deep resistivity above 100 ohm-m were not tested.

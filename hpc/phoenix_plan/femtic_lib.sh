@@ -5,7 +5,16 @@
 # 01_build_femtic.sh installs it to $BIN and $BIN/femtic_env.sh sources it, so the restart logic
 # that the smoke test exercises is the SAME code the 3-day chain runs.
 # After editing this file on Phoenix, re-install it:   install -m 644 femtic_lib.sh "$BIN"/
-# (03/04/05/06 refuse to run with a copy older than FEMTIC_LIB_VERSION 2.)
+# (01 SMOKE_ONLY=1, 03, 04, 05 and 06 all refuse to run with a copy older than FEMTIC_LIB_VERSION 4; version 3
+# loses N_iv behind FEMTIC's DIV_NUM_RHS_FWD warning, see Versions below.)
+# Versions: 2 = the copy installed on Phoenix on 2026-09-25 (commit fa58604, 18,193 B).
+#           3 = 2026-09-28: femtic_pardiso_kb reads FEMTIC's %g numbers (1.23456e+06, 1.5e+08; version 2
+#               turned them into 12345606 and 1508 KB); sensitivity-step memory model with both dense
+#               N_eq x N_iv arrays (femtic_sens_mem_mb, femtic_mem_model) and the layout rule that 04/06
+#               enforce (femtic_layout_check); femtic_block_uniform for the half-space gate in 06.
+#           4 = 2026-09-28, later: femtic_niv_measured keeps counting across the two "Warning : Division number
+#               of right-hand sides ..." lines FEMTIC writes when DIV_NUM_RHS_FWD > N_iv (Forward3D.cpp:183-186);
+#               version 3 lost the count there and 04 printed "?".
 #
 # control.dat format (verified in femtic/src/AnalysisControl.cpp::inputControlData):
 #   a keyword line (matched by prefix, "line.substr(0,N)") followed by its value(s),
@@ -15,7 +24,7 @@
 #   HOLD_FWD_MEM is a bare keyword with NO value line (use femtic_ctl_has, not femtic_ctl_get).
 # =============================================================================
 # shellcheck disable=SC2034  # read by the scripts that source this file
-FEMTIC_LIB_VERSION=2
+FEMTIC_LIB_VERSION=4
 
 # femtic_ctl_get FILE KEY  -> prints the (first) value line after KEY, empty if absent
 femtic_ctl_get() {
@@ -189,11 +198,37 @@ femtic_time_left_s() {
   echo $(( 10#$d*86400 + 10#$h*3600 + 10#$m*60 + 10#$s ))
 }
 
-# femtic_pardiso_max_gb [DIR] -> largest "in-core forward solver" memory over all ranks' logs (GB)
+# femtic_pardiso_kb LOG... -> the largest "Total memory consumed by in-core forward solver for internal float
+#   point arrays : <value> [KByte]" over the given logs, as a whole number of KB; prints nothing if no log has
+#   the line. FEMTIC writes the double with the default ostream format (PARDISOSolver.cpp:218), i.e. %g with 6
+#   significant digits: "216125" below 1e6 KB, then "1.23456e+06", "2.74856e+07", "2.5e+07", "1.5e+08". The
+#   value is read as one token and converted by awk (strtod). Version 2 deleted every non-digit instead, which
+#   turned 1.23456e+06 into 12345606 (10x high) and 1.5e+08 or 2.5e+07 into 1508 or 2507 (1e5 x low); it was
+#   right only for a 6-digit mantissa at e+07. A token that is not a number is reported on stderr.
+femtic_pardiso_kb() {
+  local f files=()
+  for f in "$@"; do [ -f "$f" ] && files+=("$f"); done
+  [ "${#files[@]}" -gt 0 ] || return 0
+  awk '/Total memory consumed by in-core forward solver/ {
+         s = $0; sub(/^[^:]*:[[:space:]]*/, "", s); split(s, a, /[[:space:]]+/)
+         if (a[1] ~ /^[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?$/) { v = a[1] + 0; if (!n || v > m) m = v; n++ }
+         else printf "femtic_pardiso_kb: %s line %d: \"%s\" is not a number\n", FILENAME, FNR, a[1] > "/dev/stderr" }
+       END { if (n) printf "%.0f\n", m }' "${files[@]}"
+}
+
+# femtic_pardiso_max_gb [DIR] -> largest in-core PARDISO memory over all ranks' logs DIR/femtic_*.log, in GiB
+#   (KB / 1024^2, one decimal); prints nothing if no log has the line
 femtic_pardiso_max_gb() {
-  cat "${1:-.}"/femtic_*.log 2>/dev/null |
-    awk -F: '/Total memory consumed by in-core forward solver/ {gsub(/[^0-9]/,"",$2); if ($2+0>m) m=$2+0}
-             END {if (m>0) printf "%.1f\n", m/1024/1024}'
+  local kb
+  kb=$(femtic_pardiso_kb "${1:-.}"/femtic_*.log)
+  [ -n "$kb" ] && awk -v k="$kb" 'BEGIN {printf "%.1f\n", k / 1048576}'
+}
+
+# femtic_pardiso_log_gb LOG -> the same for one rank's log, two decimals; "-" if the log has no such line
+femtic_pardiso_log_gb() {
+  local kb
+  kb=$(femtic_pardiso_kb "$1")
+  if [ -n "$kb" ]; then awk -v k="$kb" 'BEGIN {printf "%.2f\n", k / 1048576}'; else echo "-"; fi
 }
 
 # femtic_fwd_times LOG -> "freq_hz seconds" for each frequency of the FIRST forward computation in
@@ -214,12 +249,221 @@ femtic_fwd_times() {
 #   -> MEM_LIMIT (MB per rank) = (0.85 x NODE_MB - [RANK0_RESERVE_MB only if HOLD]) / R - NONPARDISO_MB.
 #   Without HOLD_FWD_MEM FEMTIC frees the forward matrices and PARDISO factors before rank 0's dense
 #   model update, so the two phases do not overlap and the rank-0 reserve is not subtracted.
-#   NONPARDISO_MB is each rank's own sensitivity-step arrays (interpolator solutions, field
-#   derivatives, sensitivity block; README section 5), which MEM_LIMIT does not cover.
+#   NONPARDISO_MB is each rank's own sensitivity-step arrays (the interpolator right-hand-side matrix and its
+#   solution, field derivatives, sensitivity block; README section 6), which MEM_LIMIT does not cover.
+#   MEM_LIMIT only steers FWD_SOLVER 1/2 (in-core or out-of-core PARDISO); with FEMTIC's default in-core solver
+#   it changes nothing, so it cannot prevent an out-of-memory kill. femtic_layout_check does that job.
 femtic_mem_limit_auto() {
   local r0=0
   [ "$3" = 1 ] && r0=$4
   echo $(( ($1 * 85 / 100 - r0) / $2 - $5 ))
+}
+
+# femtic_sens_mem_mb NEQ NIV M NDF -> MiB (rounded up) of the arrays one rank holds in the sensitivity step
+#   besides PARDISO, per frequency (README section 6). Read in femtic/src at 26c8606:
+#     2 x N_eq x N_iv x 16 B  the right-hand-side matrix of the interpolator vectors (ComplexSparseMatrix.cpp:535-536,
+#                             allocated by Forward3D::initializeRhsVectors(N_iv)) AND its solution
+#                             (Inversion.cpp:108). Both are live during the solve (Inversion.cpp:111); the RHS
+#                             matrix shrinks to one column only after it (Forward3D.cpp:213). The PARDISO factors
+#                             stay resident until after the last frequency.
+#     2 x N_iv x M x 16 B     the field derivatives of both polarisations (Inversion.cpp:131)
+#     Nd_f x M x 8 B          the frequency's sensitivity block (Inversion.cpp:169)
+#   The three terms are added as if live at once. The strict peak (during the second polarisation's solve) is
+#   the first term plus ONE derivative array, so this is about 1 GB high on Vulcan v3. Whether MKL's multi-RHS
+#   solve adds workspace on top is not known: T4 (04 with ITERATION 0 1) measures the real peak.
+#   N_eq = "Number of equation after degeneration"; N_iv = 4 per MT station (Ex, Ey, Hx, Hy; femtic_mem_model);
+#   M = free parameters; Nd_f = real data per frequency (8 per MT station).
+femtic_sens_mem_mb() {
+  local a
+  [ "$#" -eq 4 ] || { echo "femtic_sens_mem_mb: usage NEQ NIV M NDF" >&2; return 1; }
+  for a in "$@"; do
+    case "$a" in ''|*[!0-9]*) echo "femtic_sens_mem_mb: '$a' is not a whole number (NEQ NIV M NDF)" >&2; return 1 ;; esac
+  done
+  echo $(( (2 * 10#$1 * 10#$2 * 16 + 2 * 10#$2 * 10#$3 * 16 + 10#$4 * 10#$3 * 8 + 1048575) / 1048576 ))
+}
+
+# femtic_mesh_counts MESH -> "NODES ELEMENTS" of a FEMTIC tetra mesh.dat (line 1 TETRA, line 2 the node count,
+#   one line per node, then the element count). Prints nothing for any other layout.
+femtic_mesh_counts() {
+  awk 'NR == 1 { if ($1 != "TETRA") exit; next }
+       NR == 2 { v = $1 + 0; if (v < 1) exit; next }
+       NR == v + 3 { if ($1 ~ /^[0-9]+$/) print v, $1 + 0; exit }' "$1" 2>/dev/null
+}
+
+# femtic_obs_counts OBSERVE -> "N_MT ND": impedance (MT) stations of a FEMTIC observe.dat and its number of real
+#   impedance data (8 per station-frequency line of the MT block). Other blocks (e.g. the VTF block of dummy
+#   stations that prep writes for OWNER_ELEMENT -1) are listed on stderr. Returns 1 without an MT block.
+femtic_obs_counts() {
+  awk '{sub(/\r$/, "")}
+       $1 ~ /^[A-Z][A-Z_0-9]*$/ && $1 != "END" && NF >= 2 && $2 ~ /^[0-9]+$/ {
+         blk = $1; if (blk == "MT") nmt = $2 + 0; else other = other " " blk " " $2; st = "sta"; next }
+       $1 == "END" { blk = ""; next }
+       blk == "MT" && st == "sta"  { st = "nf"; next }
+       blk == "MT" && st == "nf"   { left = $1 + 0; nd += 8 * left; st = (left > 0 ? "data" : "sta"); next }
+       blk == "MT" && st == "data" { if (--left == 0) st = "sta"; next }
+       END { if (nmt == "") exit 1
+             print nmt, nd + 0
+             if (other != "") print "observe.dat blocks besides MT (stations):" other > "/dev/stderr" }' "$1"
+}
+
+# femtic_log_neq LOG... -> the largest "Number of equation after degeneration" in the given logs (N_eq)
+femtic_log_neq() {
+  local f files=()
+  for f in "$@"; do [ -f "$f" ] && files+=("$f"); done
+  [ "${#files[@]}" -gt 0 ] || return 0
+  sed -nE 's/.*Number of equation after degeneration = ([0-9]+).*/\1/p' "${files[@]}" | sort -n | tail -1
+}
+
+# femtic_niv_measured LOG... -> N_iv as FEMTIC used it: the right-hand sides of one interpolator-vector solve,
+#   i.e. the "# Solve phase is performed simultaneously for N right-hand sides" lines that follow "# Solve phase of
+#   matrix solver for right-hand sides consisting of interpolator vectors." (Inversion.cpp:110), summed over the
+#   DIV_NUM_RHS_FWD calls (Forward3D.cpp:195), largest over all solves. The block ends at the next line that starts
+#   with "#" ("# Calculate derivatives of EM field."). Lines without "#" inside it are skipped: when DIV_NUM_RHS_FWD
+#   exceeds N_iv, Forward3D.cpp:183-186 writes, between the two,
+#     "Warning : Division number of right-hand sides ( D ) is greater than the total number of right-hand sides ( N )."
+#     "          Thus, the division number is set the total number of right-hand sides."
+#   and then N lines "... simultaneously for 1 right-hand sides". Prints nothing when no sensitivity step ran
+#   (ITERATION 0 0 has none).
+femtic_niv_measured() {
+  local f files=()
+  for f in "$@"; do [ -f "$f" ] && files+=("$f"); done
+  [ "${#files[@]}" -gt 0 ] || return 0
+  awk 'FNR == 1 { on = 0 }
+       /^# Solve phase of matrix solver for right-hand sides consisting of interpolator vectors/ { on = 1; s = 0; next }
+       on && /^# Solve phase is performed simultaneously for [0-9]+ right-hand sides/ { s += $8; if (s > m) m = s; next }
+       on && /^#/ { on = 0 }
+       END { if (m) print m }' "${files[@]}"
+}
+
+# femtic_fwd_mb_auto DIR [NEQ] -> "MiB SOURCE": one rank's memory in the forward phase (PARDISO factors, system
+#   matrix, mesh), the first term of the layout rule. In order of preference:
+#     DIR/logs/fwd_rank_mb   written by 06 after a forward-only run on Phoenix: max(peak summed node RSS / ranks per
+#                            node, 1.25 x the largest PARDISO line of that run)
+#     1.25 x the largest PARDISO line in DIR's femtic logs (femtic_*.log, fwd0_*/, logs/run_*/). On WSL the
+#                            forward-only peak RSS was 1.17 / 1.21 / 1.22 x the PARDISO line for v1 / v2 / v3
+#     NEQ x FEMTIC_FWD_MIB_PER_MEQ (default 11000 MiB per 10^6 equations) when NEQ is given. The WSL forward-only
+#                            peak RSS per 10^6 N_eq was 10,832 / 9,718 / 9,211 MiB for v1 / v2 / v3 (19,328 /
+#                            27,645 / 32,869 MiB at N_eq 1,784,220 / 2,844,872 / 3,568,555)
+#     FEMTIC_FWD_MB_FALLBACK (default 33000): v3's WSL forward-only peak RSS, 32,869 MiB (v2: 27,645 MiB)
+femtic_fwd_mb_auto() {
+  local d=${1:-.} neq=${2:-} v kb
+  if [ -s "$d/logs/fwd_rank_mb" ]; then
+    v=$(awk 'NR == 1 && $1 ~ /^[0-9]+$/ {print $1 " measured_by_06_" $2}' "$d/logs/fwd_rank_mb")
+    [ -n "$v" ] && { echo "$v"; return 0; }
+  fi
+  kb=$(femtic_pardiso_kb "$d"/femtic_*.log "$d"/fwd0_*/femtic_*.log "$d"/logs/run_*/femtic_*.log)
+  if [ -n "$kb" ]; then
+    awk -v k="$kb" 'BEGIN {x = k * 1.25 / 1024; n = int(x); if (n < x) n++; printf "%d 1.25_x_PARDISO_%.0f_MiB_in_logs\n", n, k / 1024}'
+    return 0
+  fi
+  case "$neq" in
+    ''|*[!0-9]*) ;;
+    *) awk -v n="$neq" -v r="${FEMTIC_FWD_MIB_PER_MEQ:-11000}" 'BEGIN {x = n * r / 1e6; m = int(x); if (m < x) m++; printf "%d no_log_yet:_%d_MiB_per_1e6_equations_x_N_eq\n", m, r}'
+       return 0 ;;
+  esac
+  echo "${FEMTIC_FWD_MB_FALLBACK:-33000} fallback_no_log_yet"
+}
+
+# femtic_mem_model DIR -> sets the variables of the layout rule (README section 6) and prints two summary lines:
+#   FM_NMT FM_ND   MT stations and real data of DIR/observe.dat (femtic_obs_counts)
+#   FM_NEQ   N_eq: knob NEQ if a number; else the largest logged value in DIR's femtic logs (femtic_*.log,
+#            fwd0_*/, logs/run_*/); else nodes + elements of DIR/mesh.dat. For a tetrahedral mesh of a ball the
+#            edge count is nodes + elements + (boundary faces / 2) - 1; on Vulcan v1-v3 nodes + elements is
+#            2,557 above the logged N_eq (0.07-0.14 %).
+#   FM_NIV   N_iv: knob NIV if a number; else 4 x FM_NMT. With OWNER_ELEMENT -1 prep adds a VTF block of 120 dummy
+#            stations (no data) that carry Hx, Hy for the MT stations. By ObservedData.cpp:1029-1082 a station
+#            without data at a frequency adds no right-hand side and the MT station's own Hx, Hy are not
+#            requested, so N_iv stays 4 x 120 = 480 (not 480 + 3 x 120 = 840). That is a reading of the source,
+#            not a measurement: T4 measures it (femtic_niv_measured); until then NIV=840 is the pessimistic case.
+#   FM_M     free parameters (block types 0/3) of DIR/resistivity_block_iter0.dat (distortion parameters,
+#            DISTORTION != 0, are not added)
+#   FM_NDF   8 x FM_NMT
+#   FM_NONP_MB  knob NONPARDISO_MB if a number, else femtic_sens_mem_mb FM_NEQ FM_NIV FM_M FM_NDF
+#   FM_FWD_MB   knob FWD_MB if a number, else femtic_fwd_mb_auto DIR FM_NEQ
+#   Returns 1 (message on stderr) if a quantity cannot be derived; the knob named in the message fixes it.
+femtic_mem_model() {
+  local d=${1:-.} vt
+  FM_NMT=""; FM_ND=""; FM_NEQ=""; FM_NEQ_SRC=""; FM_NIV=""; FM_NIV_SRC=""; FM_M=""; FM_NDF=""
+  FM_NONP_MB=""; FM_NONP_SRC=""; FM_FWD_MB=""; FM_FWD_SRC=""
+  read -r FM_NMT FM_ND < <(femtic_obs_counts "$d/observe.dat")
+  [ -n "$FM_NMT" ] && FM_NDF=$(( 8 * FM_NMT ))
+  case "${NIV:-auto}" in
+    auto) [ -n "$FM_NMT" ] && { FM_NIV=$(( 4 * FM_NMT )); FM_NIV_SRC="4 x $FM_NMT MT stations of observe.dat"; } ;;
+    *[!0-9]*) echo "femtic_mem_model: NIV='$NIV' is not a whole number" >&2; return 1 ;;
+    *) FM_NIV=$NIV; FM_NIV_SRC="NIV=$NIV (set)" ;;
+  esac
+  case "${NEQ:-auto}" in
+    auto)
+      FM_NEQ=$(femtic_log_neq "$d"/femtic_*.log "$d"/fwd0_*/femtic_*.log "$d"/logs/run_*/femtic_*.log)
+      if [ -n "$FM_NEQ" ]; then
+        FM_NEQ_SRC="largest 'Number of equation after degeneration' in the femtic logs of $d"
+      else
+        vt=$(femtic_mesh_counts "$d/mesh.dat")
+        if [ -n "$vt" ]; then
+          FM_NEQ=$(( ${vt% *} + ${vt#* } ))
+          FM_NEQ_SRC="mesh.dat nodes + elements (${vt% *} + ${vt#* }; no femtic log yet)"
+        fi
+      fi ;;
+    *[!0-9]*) echo "femtic_mem_model: NEQ='$NEQ' is not a whole number" >&2; return 1 ;;
+    *) FM_NEQ=$NEQ; FM_NEQ_SRC="NEQ=$NEQ (set)" ;;
+  esac
+  [ -f "$d/resistivity_block_iter0.dat" ] && FM_M=$(femtic_block_stats "$d/resistivity_block_iter0.dat" | awk '$4 > 0 {print $4}')
+  case "${NONPARDISO_MB:-auto}" in
+    auto)
+      if [ -z "$FM_NEQ" ] || [ -z "$FM_NIV" ] || [ -z "$FM_M" ] || [ -z "$FM_NDF" ]; then
+        echo "femtic_mem_model: cannot derive NONPARDISO_MB from $d (N_eq '$FM_NEQ', N_iv '$FM_NIV', M '$FM_M', Nd_f '$FM_NDF'): set NONPARDISO_MB=<MiB>, or NEQ / NIV" >&2
+        return 1
+      fi
+      FM_NONP_MB=$(femtic_sens_mem_mb "$FM_NEQ" "$FM_NIV" "$FM_M" "$FM_NDF") || return 1
+      FM_NONP_SRC="2 x N_eq x N_iv x 16 B + 2 x N_iv x M x 16 B + Nd_f x M x 8 B" ;;
+    *[!0-9]*) echo "femtic_mem_model: NONPARDISO_MB='$NONPARDISO_MB' is not a whole number of MiB" >&2; return 1 ;;
+    *) FM_NONP_MB=$NONPARDISO_MB; FM_NONP_SRC="NONPARDISO_MB=$NONPARDISO_MB (set)" ;;
+  esac
+  case "${FWD_MB:-auto}" in
+    auto) read -r FM_FWD_MB FM_FWD_SRC < <(femtic_fwd_mb_auto "$d" "$FM_NEQ") ;;
+    *[!0-9]*) echo "femtic_mem_model: FWD_MB='$FWD_MB' is not a whole number of MiB" >&2; return 1 ;;
+    *) FM_FWD_MB=$FWD_MB; FM_FWD_SRC="FWD_MB=$FWD_MB (set)" ;;
+  esac
+  echo "memory model: N_eq ${FM_NEQ:-?} (${FM_NEQ_SRC:-unknown}); N_iv ${FM_NIV:-?} (${FM_NIV_SRC:-unknown}); M ${FM_M:-?}; Nd_f ${FM_NDF:-?}; Nd ${FM_ND:-?}"
+  echo "memory model: per rank, forward phase FWD_MB = $FM_FWD_MB MiB ($FM_FWD_SRC); sensitivity-step arrays NONPARDISO_MB = $FM_NONP_MB MiB ($FM_NONP_SRC)"
+}
+
+# femtic_layout_check RPN FWD_MB NONP_MB NODE_MB [SAFETY_PCT] [EXTRA_MB] -> the layout rule (README section 6):
+#   RPN x (FWD_MB + NONP_MB) + EXTRA_MB <= SAFETY_PCT (default 95) % of NODE_MB, the job's --mem per node.
+#   Every rank factorises the whole mesh and keeps its factors through the sensitivity step, so memory grows
+#   with the ranks per node, and FEMTIC's in-core solver cannot shrink (MEM_LIMIT does not bind it).
+#   Prints one line ending in OK or REFUSED with the largest rank count that fits; returns 1 if refused.
+#   NONP_MB 0 checks the forward phase alone. EXTRA_MB: the rank-0 reserve under HOLD_FWD_MEM, sensitivity files
+#   on a RAM-backed $TMPDIR.
+femtic_layout_check() {
+  local r=$1 fw=$2 np=$3 node=$4 pct=${5:-95} ex=${6:-0} a per need lim fit
+  for a in "$r" "$fw" "$np" "$node" "$pct" "$ex"; do
+    case "$a" in ''|*[!0-9]*) echo "femtic_layout_check: '$a' is not a whole number (RPN FWD_MB NONP_MB NODE_MB [PCT] [EXTRA_MB])" >&2; return 1 ;; esac
+  done
+  per=$(( fw + np )); need=$(( r * per + ex )); lim=$(( node * pct / 100 ))
+  fit=0; [ "$per" -gt 0 ] && [ "$lim" -gt "$ex" ] && fit=$(( (lim - ex) / per ))
+  if [ "$need" -le "$lim" ]; then
+    echo "layout rule: $r ranks/node x ($fw forward + $np sensitivity-step MiB) + $ex extra = $need MiB <= $pct % of $node MiB (--mem) = $lim MiB: OK (up to $fit ranks/node fit)"
+    return 0
+  fi
+  echo "layout rule: $r ranks/node x ($fw forward + $np sensitivity-step MiB) + $ex extra = $need MiB > $pct % of $node MiB (--mem) = $lim MiB: REFUSED (at most $fit ranks/node fit)"
+  return 1
+}
+
+# femtic_block_uniform SRC DST RHO -> writes DST = SRC with every block of resistivity below 1e6 ohm-m set to RHO
+#   (the air block, 1e9 ohm-m and fixed, is kept), for the half-space accuracy gate (06 START_RHO). Element lines
+#   and the other block columns are copied unchanged. Prints "OK <blocks set> <blocks kept>"; prints "BAD
+#   <reason>" and returns 1 on a malformed SRC or RHO.
+femtic_block_uniform() {
+  local src=$1 dst=$2 rho=$3 r
+  case "$rho" in ''|*[!0-9.eE+-]*) echo "BAD RHO '$rho' is not a number"; return 1 ;; esac
+  awk -v rho="$rho" 'BEGIN { exit !(rho + 0 > 0) }' || { echo "BAD RHO '$rho' is not a positive number"; return 1; }
+  r=$(femtic_block_check "$src") || { echo "BAD $src: $r"; return 1; }
+  awk -v rho="$rho" -v out="$dst" '{sub(/\r$/, "")}
+       NR == 1 { ne = $1 + 0; print > out; next }
+       NR <= ne + 1 || /^[[:space:]]*$/ { print > out; next }
+       { if ($2 + 0 < 1e6) { $2 = sprintf("%.6e", rho); nset++ } else nkeep++; print > out }
+       END { close(out); printf "OK %d %d\n", nset, nkeep }' "$src"
 }
 
 # femtic_launch_cmd NRANKS RANKS_PER_NODE THREADS EXE -> sets the array FEMTIC_LAUNCH (and the

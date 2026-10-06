@@ -308,7 +308,7 @@ What stands out:
 - **Full run directory:** it stays on ext4 at `/home/tara/femtic_wsl/mesh_runs/vulcan_v1/`, with output.1 to output.6 and output.poly.
 - **Cautions:**
   - `.gitignore` only ignores `resistivity_block_iter[1-9]*`, so `git add mesh/` would commit the 36.8 MB iter0 file. Add `mesh/**/resistivity_block_iter0.dat` if it should stay out; I did not edit `.gitignore`.
-  - `prep_vulcan.py --force` runs rmtree on this whole directory, including the mesh products, `mesh_logs/` and a saved REPORT.md. Regenerate with a new `--out` instead.
+  - `prep_vulcan.py --force` ran rmtree on this whole directory when this report was written, including the mesh products, `mesh_logs/` and a saved REPORT.md. Since 2026-09-28 it deletes a directory only if every file in it is listed, unchanged, in its prep_manifest.sha256. This directory predates the manifest, so `--force` refuses it and lists what it holds, and only `--force --force-delete-foreign` would delete it. Regenerate with a new `--out` instead.
   - The generated README.md still says "Mesh chain not run".
 
 ## 9. What changed

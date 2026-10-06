@@ -1,0 +1,27 @@
+# pasted by Ben 2026-09-30 from p2-log-2
+# rcstat 16153670
+===========================================================================
+Job Name            : femtic_smoke
+Job ID              : 16153670
+User                : a1690074
+Account             : physci
+Cluster             : hpc1
+Partition           : icelake
+Nodes (List)        : 1 (p2-cpu-14)
+Cores               : 4
+GPUs                : 0
+State               : COMPLETED
+Submit              : 2026-09-28T21:11:34
+Start               : 2026-09-28T21:13:14
+End                 : 2026-09-28T21:14:02
+Walltime reserved   : 00:30:00
+Walltime elapsed (%): 00:00:48  ( 2.7% * reserved)
+CPU-time elapsed    : 0.05 core-hours
+% CPU used (Total)  : 79.06%    (0.04 core-hours)
+% User CPU (Compute): 76.30%    (0.04 core-hours)
+% System CPU (I/O)  :  2.76%    (0.00 core-hours)
+Mem reserved        : 8G/node
+% Mem used (Max)    : 10.12%    (828.71M/node)
+Max Disk Write      : 37.99M    (p2-cpu-14)
+Max Disk Read       : 177.71M   (p2-cpu-14)
+===========================================================================

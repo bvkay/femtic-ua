@@ -1,0 +1,44 @@
+== Fri Sep 25 19:37:15 ACST 2026  TOOLCHAIN=foss  SRC=/hpcfs/users/a1690074/femtic_src  BIN=/hpcfs/users/a1690074/femtic/bin  PORTED=/hpcfs/users/a1690074/FEMTIC_2026/hpc/ported  host=p2-dmv-1  job=16122323 partition=interactive
+-- source policy: fetch allowed=1  git=absent  tarballs=/hpcfs/users/a1690074/femtic_src/tarballs
+hpc/phoenix_plan/01_build_femtic.sh: line 176: /hpcfs/users/a1690074/femtic_src/femtic/COMMIT_SHA.txt: No such file or directory
+-- femtic: git-free tree WITHOUT COMMIT_SHA.txt -> version UNKNOWN. The ported Makefiles match 26c8606ea61717a9386f93fff47203391836829c only;
+   if that is what you copied, record it:  echo 26c8606ea61717a9386f93fff47203391836829c > /hpcfs/users/a1690074/femtic_src/femtic/COMMIT_SHA.txt
+hpc/phoenix_plan/01_build_femtic.sh: line 176: /hpcfs/users/a1690074/femtic_src/makeTetraMesh/COMMIT_SHA.txt: No such file or directory
+-- makeTetraMesh: git-free tree WITHOUT COMMIT_SHA.txt -> version UNKNOWN. The ported Makefiles match 92a9a32e0683458f7908f75743a8e3777753d0a1 only;
+   if that is what you copied, record it:  echo 92a9a32e0683458f7908f75743a8e3777753d0a1 > /hpcfs/users/a1690074/femtic_src/makeTetraMesh/COMMIT_SHA.txt
+hpc/phoenix_plan/01_build_femtic.sh: line 176: /hpcfs/users/a1690074/femtic_src/makeMtr/COMMIT_SHA.txt: No such file or directory
+-- makeMtr: git-free tree WITHOUT COMMIT_SHA.txt -> version UNKNOWN. The ported Makefiles match df8e2071f908dfd9dc30333ec548a42dc2e5a5c1 only;
+   if that is what you copied, record it:  echo df8e2071f908dfd9dc30333ec548a42dc2e5a5c1 > /hpcfs/users/a1690074/femtic_src/makeMtr/COMMIT_SHA.txt
+hpc/phoenix_plan/01_build_femtic.sh: line 176: /hpcfs/users/a1690074/femtic_src/TetGen2Femtic/COMMIT_SHA.txt: No such file or directory
+-- TetGen2Femtic: git-free tree WITHOUT COMMIT_SHA.txt -> version UNKNOWN. The ported Makefiles match ceb8bfb1493092ed7c6a1a52352307be356d31e3 only;
+   if that is what you copied, record it:  echo ceb8bfb1493092ed7c6a1a52352307be356d31e3 > /hpcfs/users/a1690074/femtic_src/TetGen2Femtic/COMMIT_SHA.txt
+hpc/phoenix_plan/01_build_femtic.sh: line 176: /hpcfs/users/a1690074/femtic_src/makeDHexaMesh/COMMIT_SHA.txt: No such file or directory
+-- makeDHexaMesh: git-free tree WITHOUT COMMIT_SHA.txt -> version UNKNOWN. The ported Makefiles match 66afbfcaf8fea8c64ddcf686e52e553895559238 only;
+   if that is what you copied, record it:  echo 66afbfcaf8fea8c64ddcf686e52e553895559238 > /hpcfs/users/a1690074/femtic_src/makeDHexaMesh/COMMIT_SHA.txt
+hpc/phoenix_plan/01_build_femtic.sh: line 176: /hpcfs/users/a1690074/femtic_src/mergeResultOfFEMTIC/COMMIT_SHA.txt: No such file or directory
+-- mergeResultOfFEMTIC: git-free tree WITHOUT COMMIT_SHA.txt -> version UNKNOWN. The ported Makefiles match 4fe54e1e6c0a55f636fc15a6b1d5bd646d739487 only;
+   if that is what you copied, record it:  echo 4fe54e1e6c0a55f636fc15a6b1d5bd646d739487 > /hpcfs/users/a1690074/femtic_src/mergeResultOfFEMTIC/COMMIT_SHA.txt
+hpc/phoenix_plan/01_build_femtic.sh: line 176: /hpcfs/users/a1690074/femtic_src/tetgen/COMMIT_SHA.txt: No such file or directory
+-- tetgen: git-free tree WITHOUT COMMIT_SHA.txt -> version UNKNOWN. The ported Makefiles match e05aca7df74e3f531bc35733ed87d36d437266c5 only;
+   if that is what you copied, record it:  echo e05aca7df74e3f531bc35733ed87d36d437266c5 > /hpcfs/users/a1690074/femtic_src/tetgen/COMMIT_SHA.txt
+WARNING: unknown source version for: femtic makeTetraMesh makeMtr TetGen2Femtic makeDHexaMesh mergeResultOfFEMTIC tetgen (build continues; T1/T2 will show a mismatch that breaks the build)
+
+Currently Loaded Modules:
+  1) GCCcore/12.3.0                    13) libfabric/1.18.0-GCCcore-12.3.0
+  2) zlib/1.2.13-GCCcore-12.3.0        14) PMIx/4.2.4-GCCcore-12.3.0
+  3) binutils/2.40-GCCcore-12.3.0      15) UCC/1.2.0-GCCcore-12.3.0
+  4) GCC/12.3.0                        16) OpenMPI/4.1.5-GCC-12.3.0
+  5) numactl/2.0.16-GCCcore-12.3.0     17) OpenBLAS/0.3.23-GCC-12.3.0
+  6) XZ/5.4.2-GCCcore-12.3.0           18) FlexiBLAS/3.3.1-GCC-12.3.0
+  7) libxml2/2.11.4-GCCcore-12.3.0     19) FFTW/3.3.10-GCC-12.3.0
+  8) libpciaccess/0.17-GCCcore-12.3.0  20) gompi/2023a
+  9) hwloc/2.9.1-GCCcore-12.3.0        21) FFTW.MPI/3.3.10-gompi-2023a
+ 10) OpenSSL/1.1                       22) ScaLAPACK/2.2.0-gompi-2023a-fb
+ 11) libevent/2.1.12-GCCcore-12.3.0    23) foss/2023a
+ 12) UCX/1.14.1-GCCcore-12.3.0         24) imkl/2023.1.0
+
+ 
+
+MKLROOT=/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0
+ERROR: no libmkl_core.so under MKLROOT=/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0
+log: /hpcfs/users/a1690074/femtic_src/build_foss_20260925_193715.log

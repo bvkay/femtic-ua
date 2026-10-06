@@ -1,0 +1,1475 @@
+run.log -- validation/prep_checks_2026-09-28, round 2 (2026-09-28 evening). Assembled from the raw outputs by a script; nothing edited by hand
+except that the scratch-directory prefix is shortened to <scratch>.
+Part 1   inject_and_check.py on scripts/prep_vulcan.py (sha256 52c25de114503165), Windows base Anaconda Python, links = junctions. Wall 1m3.694s.
+Part 1b  the same harness and script in the WSL conda env femticpy (validation/mesh_2026-09-25/femticpy_environment.yml), links = symlinks.
+Part 2   the same harness on the HEAD copy (55bbf44, sha256 41a34c0fc8e2ef58) with --skip-mutants: what the old script did. Its exit-2
+         failures (argparse does not know --force-delete-foreign) and the L tracebacks (no delete_plan) are not fail cases; section M of
+         Part 1 is.
+Part 3   the real v2 config: --check-only mesh/vulcan_v2 and a full prep into a scratch --out, compared by sha256 with mesh/vulcan_v2 (Windows).
+Part 4   Part 3 again in the WSL femticpy env.
+
+#################### Part 1 ####################
+prep under test: D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts\prep_vulcan.py (sha256 52c25de114503165)
+repository: D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4; python 3.13.5 (C:\Users\joint\anaconda3\python.exe) on win32
+fixture sites: A1, J5, J6_BxRepaced, J7, Vul24-19, Vul25_004
+
+[A] A1 clean full run of the fixture
+  This test fails if prep exits non-zero or any of C01-C14 is not PASS (in a full run C03 and C05 compare against femticPy, so all 14 apply)
+  -> PASS: exit 0; C01=PASS C02=PASS C03=PASS C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; OK: 14 checks: 14 PASS, 0 FAIL, 0 N/A; wrote <scratch>\r2\final_w
+
+[A] A2 clean --check-only
+  This test fails if prep exits non-zero, C03 or C05 is anything but N/A (under --check-only they have no femticPy result to compare, so PASS would be vacuous), or any other check is not PASS
+  -> PASS: exit 0; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; 14 checks: 12 PASS, 0 FAIL, 2 N/A
+
+[A] A3 full run with an explicit sites.origin [697.0, 6699.5] km
+  This test fails if prep exits non-zero, C03 is not reported (it used to be skipped silently, giving 13 checks) or is anything but N/A, or any other check is not PASS
+  -> PASS: exit 0; 14 check lines; C01=PASS C02=PASS C03=N/A C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; [N/A] C03  origin: N/A: sites.origin is explicit (E 697.00000 N 6699.50000 km), so no femticPy centring to compare; C04 and C11 test the written coordinates against it
+
+[B] B1 flip the sign of Im(Zxy), station 1, 100 Hz
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C08 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08']; [FAIL] C08  impedance values: 1008 values, max relative difference 2.0e+00; bad: ['A1 100 Hz ZXY 0.033211 vs -0.033211']
+
+[B] B2 scale the Re and Im SE of Zxy by 1.01, station 1, 100 Hz
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C09 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C09']; [FAIL] C09  error floors: 504 SE pairs, max relative difference 1.0e-02; floor active in 100%/95%/97%/100% of Zxx/Zxy/Zyx/Zyy; bad: ['A1 100 Hz ZXY SE 0.0027734 vs 0.0027459', 'A1 100 Hz ZXY SE 0.0027734 vs 0.0027459']
+
+[B] B3 move station 1 (and its dummy VTF H-station) 2 m north
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C04 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C04']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (observe.dat MT point (-3.81600, -6.58700) is within 1 m of 0 sites); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station id
+
+[B] B4 frequency x (1 + 2e-6), station 1, 100 Hz
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C06 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 2.00e-06 over 126 of 126 data lines; bad: ['A1 100 Hz']
+
+[B] B5 swap the site_id fields of station_map.csv rows 1 and 2
+  This test fails if the injection leaves inversion/station_map.csv unchanged, or prep --check-only does not exit 1 with C04 FAIL
+  -> PASS: inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 1; FAIL ['C04', 'C08', 'C09']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+
+[B] B6 frequency + 1e-5 Hz at the lowest band (8e-3 relative), station 1
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C06 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 7.97e-03 over 126 of 126 data lines; bad: ['A1 0.0012653 Hz']
+
+[C] C1 swap whole rows 1 and 2 of station_map.csv
+  This test fails if the injection leaves inversion/station_map.csv unchanged, or prep --check-only exits non-zero or reports any FAIL (the check's tolerance should absorb this change: C04)
+  -> PASS: inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+
+[C] C2 frequency + 1e-5 Hz at 100 Hz (1e-7 relative), station 1
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only exits non-zero or reports any FAIL (the check's tolerance should absorb this change: C06)
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 1.00e-07 over 126 of 126 data lines
+
+[C] C3 frequency x (1 + 5e-7), station 1, 100 Hz
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only exits non-zero or reports any FAIL (the check's tolerance should absorb this change: C06)
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 5.00e-07 over 126 of 126 data lines
+
+[C] C4 move station 1 (and its VTF H-station) 0.2 m north
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only exits non-zero or reports any FAIL (the check's tolerance should absorb this change: C04)
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+
+[D] D1 one CRLF in inversion/control.dat
+  This test fails if the injection leaves inversion/control.dat unchanged, or prep --check-only does not exit 1 with C01 FAIL
+  -> PASS: inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C01']; [FAIL] C01  LF line endings: CR in ['inversion\\control.dat']
+
+[D] D2 DATAID of A1.edi changed to A1x (an input fault: a fixture copy of the EDIs)
+  This test fails if the EDI is unchanged, or prep --check-only does not exit 1 with C02 FAIL
+  -> PASS: EDI changed: True; exit 1; FAIL ['C02', 'C07']; [FAIL] C02  site ids: 6 table ids, 6 DATAIDs, 6 files; identical sets: False
+
+[D] D3 drop the last data line of station 1 (and its count)
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C07 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C07']; [FAIL] C07  data line count: 125 data lines = sum over 6 sites of selected bands present (126); bad stations: [('A1', 20, 21)]
+
+[D] D4 conjugate every impedance (exp(+i omega t) left in)
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C10 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08', 'C10']; [FAIL] C10  time convention: median phase Zxy 36.6 deg, Zyx 216.9 deg
+
+[D] D5 move site 1 of files/obs_site.dat 2 m
+  This test fails if the injection leaves files/obs_site.dat unchanged, or prep --check-only does not exit 1 with C11 FAIL
+  -> PASS: files/obs_site.dat changed: True (changed: ['files/obs_site.dat']); exit 1; FAIL ['C11']; [FAIL] C11  mesh-site coordinates: obs_site.dat obs_site.dat point (-3.81600, -6.58700) is within 1 m of 0 sites; observing_site.dat 6 sites, max 0.64 m; resistivity_attr.dat 6 sites, max 0.64 m
+
+[D] D6 makeMtr.param core edge 0.2 -> 0.21 km
+  This test fails if the injection leaves files/makeMtr.param unchanged, or prep --check-only does not exit 1 with C12 FAIL
+  -> PASS: files/makeMtr.param changed: True (changed: ['files/makeMtr.param']); exit 1; FAIL ['C12']; [FAIL] C12  mesh tables: differ: ['makeMtr ellipsoids']
+
+[D] D7 one topography.dat height 0 -> 0.001 km (flat mode)
+  This test fails if the injection leaves files/topography.dat unchanged, or prep --check-only does not exit 1 with C13 FAIL
+  -> PASS: files/topography.dat changed: True (changed: ['files/topography.dat']); exit 1; FAIL ['C13']; [FAIL] C13  geometry: flat topography.dat has non-zero heights
+
+[D] D8 inversion/control.dat TRADE_OFF_PARAM 3 -> 1
+  This test fails if the injection leaves inversion/control.dat unchanged, or prep --check-only does not exit 1 with C14 FAIL
+  -> PASS: inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C14']; [FAIL] C14  inversion control.dat: TRADE_OFF_PARAM [1.0] != [3.0]
+
+[N] N1 every MT station loses its last data line (and its count), so every station fails C07
+  This test fails if observe.dat is unchanged, prep --check-only does not exit 1 with C07 FAIL, or any of C06, C08 and C09 is anything but N/A (they compared nothing, so a PASS would be vacuous)
+  -> PASS: observe.dat changed: True; exit 1; C06=N/A C07=FAIL C08=N/A C09=N/A; [N/A] C06  frequencies: nothing compared: 6 of 6 station(s) failed C07 | [N/A] C08  impedance values: nothing compared: 6 of 6 station(s) failed C07
+
+[E] full run, C03: femticPy centres the sites on a point 2 m north of the bbox centre (consistently, so C04 and C11 cannot see it)
+  This test fails if prep exits 0, C03 is not FAIL, or the output directory is created
+  -> PASS: exit 1; FAIL ['C03']; output dir created: False; [FAIL] C03  origin: femticPy origin E 697.34870 N 6699.56310 km; bbox centre E 697.34870 N 6699.56110 km
+
+[E] full run, C05: the femticPy path drops its lowest selected band
+  This test fails if prep exits 0, C05 is not FAIL, or the output directory is created
+  -> PASS: exit 1; FAIL ['C05', 'C07', 'C10']; output dir created: False; [FAIL] C05  frequency selection: 21 bands selected from 53 candidates; femticPy path chose the same list: False
+
+[F] F1 --force on an unchanged prep directory replaces it
+  This test fails if prep exits non-zero, or the replaced directory lacks a prep_manifest.sha256 that lists every file in it with a matching sha256
+  -> PASS: exit 0; 17 files listed, 0 mismatches []; OK: 14 checks: 14 PASS, 0 FAIL, 0 N/A; wrote <scratch>\r2\final_w
+
+[F] F2 --force refuses a directory holding mesh products and half-space runs
+  This test fails if prep exits 0, any file of the directory is deleted or changed, or the listing does not name inversion/mesh.dat, inversion/resistivity_block_iter0.dat, halfspace/ and mesh_logs/
+  -> PASS: exit 1; directory unchanged: True; refusal names the 4 foreign entries: True; PREP FAILED: nothing deleted: <scratch>\r2\final_win\runs\F2_foreign holds 4 file(s) 
+
+[F] F3 --force refuses when a prep product was edited since
+  This test fails if prep exits 0, the directory changes, or the edited observe.dat is not listed as CHANGED
+  -> PASS: exit 1; directory unchanged: True; 'CHANGED inversion/observe.dat' listed: True
+
+[F] F4 --force --force-delete-foreign deletes the foreign files
+  This test fails if prep exits non-zero, a foreign file survives, or the new manifest does not verify
+  -> PASS: exit 0; foreign files left []; 17 files listed, 0 mismatches []; 
+
+[F] F5a a link inside the run directory, --force
+  This test fails if prep exits other than 1 without 'refusing to delete', or the link, its target's files or the run directory's files are touched
+  -> PASS: junction; exit 1; refused: True; link kept: True; target untouched: True; run dir intact: True; PREP FAILED: refusing to delete C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb
+
+[F] F5b a link inside the run directory, --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or the link, its target's files or the run directory's files are touched
+  -> PASS: junction; exit 1; refused: True; link kept: True; target untouched: True; run dir intact: True; PREP FAILED: refusing to delete C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb
+
+[F] F6a --out = the fixture root (holds the config and the EDIs), --force
+  This test fails if prep exits other than 1 without 'refusing to delete', or any fixture file is deleted or changed
+  -> PASS: exit 1; refused: True; fixture (config, EDIs) unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\fixture_F6
+
+[F] F6b --out = the fixture root (holds the config and the EDIs), --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or any fixture file is deleted or changed
+  -> PASS: exit 1; refused: True; fixture (config, EDIs) unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\fixture_F6
+
+[F] F7 an existing RUN.staging without prep's marker is not deleted
+  This test fails if prep exits 0 or deletes the unmarked staging directory's notes.txt
+  -> PASS: exit 1; notes.txt kept: True; PREP FAILED: nothing deleted: <scratch>\r2\final_win\guard\F7\run
+
+[F] F8 a stale RUN.staging with prep's marker is replaced
+  This test fails if prep exits non-zero, the stale staging directory survives, or the run directory is not written
+  -> PASS: exit 0; stale staging removed: True; 
+
+[F] F9 no --force on an existing directory
+  This test fails if prep exits 0 or changes the directory
+  -> PASS: exit 1; unchanged: True; PREP FAILED: <scratch>\r2\final_win\runs\F9_noforce exists. Write
+
+[F] F10 --force on a copy of the committed mesh/vulcan_v2 (no manifest, halfspace/, mesh_logs/)
+  This test fails if prep exits 0, the copy changes, or the listing does not name halfspace/, mesh_logs/ and the missing manifest
+  -> PASS: exit 1; unchanged: True; lists halfspace/, mesh_logs/ and 'no prep_manifest.sha256': True; 145 files in the copy
+
+[F] F11 --force-delete-foreign without --force
+  This test fails if prep exits 0 or writes the output
+  -> PASS: exit 1; output written: False; PREP FAILED: --force-delete-foreign only widens --force; give both
+
+[F] F12 the re-inventory: a mesh.dat copied into the run directory during a --force run stops it
+  This test fails if prep exits 0, or the added mesh.dat or any original file of the directory is deleted or changed
+  -> PASS: exit 1; aborted, mesh.dat and the originals kept; PREP FAILED: nothing deleted: <scratch>\r2\final_win\runs\F12_rei
+
+[F] F13 a git repository nested in the run directory
+  This test fails if prep exits other than 1 without 'contains a git repository', or any file of the directory is deleted or changed
+  -> PASS: exit 1; message: True; unchanged: True; PREP FAILED: refusing to delete C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb
+
+[J] J1 --out reaches the fixture root through a linked parent (alias/fixture), config by its real path, --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or any file below the real directory is deleted, changed or added
+  -> PASS: junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\J1_alias\fixture: C:\Users\joi
+
+[J] J2 the config is given through a linked parent (alias/fixture/config/fixture.yml), --out is the real fixture root, --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or any file below the real directory is deleted, changed or added
+  -> PASS: junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\J2_real\fixture: it is or cont
+
+[J] J3 --out reaches an ordinary run directory with foreign files through a linked parent, --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or any file of the real run directory is deleted, changed or added
+  -> PASS: junction; exit 1; refused: True; real run dir unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\J3_alias\run: C:\Users\joint\A
+
+[K] K1 a run stopped by the late CR scan, then the same command again
+  This test fails if the first run does not exit 1 with 'CR bytes', its RUN.staging lacks prep's marker afterwards, or the rerun exits non-zero, says 'not created by this version', leaves RUN.staging, or writes a run directory whose manifest does not verify
+  -> PASS: staging kept its marker after the abort: True; rerun exit 0; 'not created by this version': False; 'left by an earlier run': True; staging gone: True; 17 files listed, 0 mismatches []; 
+
+[K] K2 a --force run stopped by the re-inventory; the added mesh.dat is moved out, then the same command again
+  This test fails if the first run does not stop at the re-inventory, its RUN.staging lacks prep's marker afterwards, or the rerun exits non-zero, says 'not created by this version', leaves RUN.staging, or writes a run directory whose manifest does not verify
+  -> PASS: staging kept its marker after the abort: True; rerun exit 0; 'not created by this version': False; 'left by an earlier run': True; staging gone: True; 17 files listed, 0 mismatches []; 
+
+[L] L1 delete_plan on a link (symlink or junction) as the directory itself
+  This test fails if delete_plan does not refuse with 'is a link' before walking the directory
+  -> PASS: junction; top <scratch>\r2\final_win\guard\L1_link: RESULT refused: refusing to delete <scratch>\r2\final_win\guard\L1_link: C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMT
+
+[L] L2 delete_plan on a directory inside a .git directory
+  This test fails if delete_plan does not refuse with 'inside a .git directory' before walking it
+  -> PASS: top <scratch>\r2\final_win\guard\L2_repo\.git\objects: RESULT refused: refusing to delete <scratch>\r2\final_win\guard\L2_repo\.git\objects: it lies inside a .git directory
+
+[L] L3 delete_plan on the filesystem root of the scratch directory
+  This test fails if delete_plan does not refuse with 'filesystem root' before walking it
+  -> PASS: top C:\: RESULT refused: refusing to delete C:\: it is a filesystem root
+
+[L] L4 delete_plan on a directory that holds the home directory (HOME and USERPROFILE pointed into the scratch tree)
+  This test fails if delete_plan does not refuse with 'the home directory' before walking it
+  -> PASS: top <scratch>\r2\final_win\guard\L4_parent: RESULT refused: refusing to delete <scratch>\r2\final_win\guard\L4_parent: it is or contains the home directory (C:\Users\joi
+
+[L] L5 delete_plan on the directory that holds the script under test
+  This test fails if delete_plan does not refuse with 'this script' before walking it
+  -> PASS: top D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts: RESULT refused: refusing to delete D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts: it is or contains this script (D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts\prep_vulcan.py)
+
+[G] G1 DISTORTION 1 (with its two TRADE_OFF_PARAM values) is rejected by load_config
+  This test fails if prep exits 0, writes an output directory, or does not say 'DISTORTION 1 is not supported'
+  -> PASS: exit 1; message: True; output written: False; PREP FAILED: config: inversion.DISTORTION 1 is not supported: with DISTORTION != 0 FEMTIC reads distortion_iter<N>.dat at start, distortion_iter0.dat for ITERATION '0 N', and exits if it is missing (f
+
+[H] H1 renaming J6_BxRepaced -> J6_BxReplaced (EDI file, DATAID/LOC/REFLOC/SECTID, site table)
+  This test fails if observe.dat, inversion/control.dat or any files/* differ from the clean run, or station_map.csv differs in any row but J6's
+  -> PASS: products that differ: ['inversion/station_map.csv']; station_map rows that differ: [3] -> ['3,1003,J6_BxReplaced,J6_BxReplaced.edi,4.89690,-1.26010,696.0886,6704.4580,0.08600,21']
+
+[H] H2 the rename keeps J6's FEMTIC station number among all 120 EDIs (femticPy numbers stations in np.sort order of the EDI file names; site rows are sorted by id)
+  This test fails if J6's index in the sorted list of the 120 EDI names changes
+  -> PASS: 120 EDIs; station number 97 before, 97 after (J5 < J6 < J7)
+
+[I] I0 keys of config/vulcan_mesh_v2.yml that load_config never reads (observation, not a test)
+  none
+
+[I] data.error_floor_Z -> [0.2, 0.06, 0.06, 0.2] changes the products (positive control of the comparison)
+  This test fails if no product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: ['inversion/observe.dat']
+
+[I] inversion.NUM_THREADS -> 4 changes the products (positive control of the comparison)
+  This test fails if no product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: ['inversion/control.dat']
+
+[I] data.error_floor_VTF -> 0.5 leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[I] sites.utm_zone -> 54 leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[I] sites.hemisphere -> 'N' leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[I] sites.datum -> 'GDA94' leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[I] mesh.topography.dem_file -> 'no_such_dem.txt' leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[M] mutant M1: links inside the directory no longer refused; built, sha256 a1cb6560c8610753
+
+[M] M1 (links inside the directory no longer refused): F5a must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F5a still PASSes on it (so F5a would not notice this guard missing)
+  -> PASS: F5a on M1: FAIL: junction; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False; 
+
+[M] M1 (links inside the directory no longer refused): F5b must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F5b still PASSes on it (so F5b would not notice this guard missing)
+  -> PASS: F5b on M1: FAIL: junction; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False; 
+
+[M] mutant M2: the protected-path check removed (repository, config, inputs, script, home); built, sha256 82e70f5b64209597
+
+[M] M2 (the protected-path check removed (repository, config, inputs, script, home)): F6a must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F6a still PASSes on it (so F6a would not notice this guard missing)
+  -> PASS: F6a on M2: FAIL: exit 1; refused: False; fixture (config, EDIs) unchanged: True; PREP FAILED: nothing deleted: <scratch>\r2\final_win\mut\M2_F6a\f
+
+[M] M2 (the protected-path check removed (repository, config, inputs, script, home)): F6b must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F6b still PASSes on it (so F6b would not notice this guard missing)
+  -> PASS: F6b on M2: FAIL: exit 0; refused: False; fixture (config, EDIs) unchanged: False; 
+
+[M] M2 (the protected-path check removed (repository, config, inputs, script, home)): L4 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or L4 still PASSes on it (so L4 would not notice this guard missing)
+  -> PASS: L4 on M2: FAIL: top <scratch>\r2\final_win\mut\M2_L4\guard\L4_parent: RESULT reached the walk of <scratch>\r2\final_win\mut\M2_L4\guard\L4_parent without refusing
+
+[M] M2 (the protected-path check removed (repository, config, inputs, script, home)): L5 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or L5 still PASSes on it (so L5 would not notice this guard missing)
+  -> PASS: L5 on M2: FAIL: top <scratch>\r2\final_win\mutants: RESULT reached the walk of <scratch>\r2\final_win\mutants without refusing
+
+[M] mutant M3: foreign files refused even with --force-delete-foreign; built, sha256 58221a931eab5e84
+
+[M] M3 (foreign files refused even with --force-delete-foreign): F4 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F4 still PASSes on it (so F4 would not notice this guard missing)
+  -> PASS: F4 on M3: FAIL: exit 1; foreign files left ['inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'halfspace/acc_3/b1/femtic_0.log', 'mesh_logs/products.md5']; 17 files listed, 4 mismatches ['halfspace/acc_3/b1/femtic_0.log', 'inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'mesh_logs/products.md5']; PREP FAILED: nothing deleted: <scratch>\r2\final_win\mut\M3_F4\ru
+
+[M] mutant M4: --force-delete-foreign accepted without --force; built, sha256 b9d76946edee8015
+
+[M] M4 (--force-delete-foreign accepted without --force): F11 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F11 still PASSes on it (so F11 would not notice this guard missing)
+  -> PASS: F11 on M4: FAIL: exit 0; output written: True; 
+
+[M] mutant M5: the up-front refusal of an existing directory without --force removed; built, sha256 c2d67935d80d5593
+
+[M] M5 alone: F9 on it (observation, not a test)
+  PASS: exit 1; unchanged: True; PREP FAILED: nothing deleted: <scratch>\r2\final_win\mut\M5_F9\ru (a second guard still holds: defence in depth, so this mutant alone cannot show F9 failing)
+
+[M] mutant M7: the re-inventory just before the delete made blind; built, sha256 8a8652226058e487
+
+[M] M7 (the re-inventory just before the delete made blind): F12 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F12 still PASSes on it (so F12 would not notice this guard missing)
+  -> PASS: F12 on M7: FAIL: exit 0; exit 0 without 'changed during the run'; the added mesh.dat is gone; original files changed; 
+
+[M] mutant M5+M7: both refusals of a run without --force removed; built, sha256 3c33e3d4ee47524a
+
+[M] M5+M7 (both refusals of a run without --force removed): F9 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F9 still PASSes on it (so F9 would not notice this guard missing)
+  -> PASS: F9 on M5+M7: FAIL: exit 0; unchanged: False; 
+
+[M] mutant M6: the staging marker ignored; built, sha256 794401450152a99f
+
+[M] M6 (the staging marker ignored): F8 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F8 still PASSes on it (so F8 would not notice this guard missing)
+  -> PASS: F8 on M6: FAIL: exit 1; stale staging removed: False; PREP FAILED: nothing deleted: C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35
+
+[M] M6 (the staging marker ignored): K1 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or K1 still PASSes on it (so K1 would not notice this guard missing)
+  -> PASS: K1 on M6: FAIL: staging kept its marker after the abort: True; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; no prep_manifest.sha256; PREP FAILED: nothing deleted: C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35
+
+[M] M6 (the staging marker ignored): K2 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or K2 still PASSes on it (so K2 would not notice this guard missing)
+  -> PASS: K2 on M6: FAIL: staging kept its marker after the abort: True; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; 17 files listed, 0 mismatches []; PREP FAILED: nothing deleted: C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35
+
+[M] mutant M8: the staging marker dropped before the CR scan and the re-inventory (the round-1 order); built, sha256 06dc16bce2e69d44
+
+[M] M8 (the staging marker dropped before the CR scan and the re-inventory (the round-1 order)): K1 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or K1 still PASSes on it (so K1 would not notice this guard missing)
+  -> PASS: K1 on M8: FAIL: staging kept its marker after the abort: False; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; no prep_manifest.sha256; PREP FAILED: nothing deleted: C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35
+
+[M] M8 (the staging marker dropped before the CR scan and the re-inventory (the round-1 order)): K2 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or K2 still PASSes on it (so K2 would not notice this guard missing)
+  -> PASS: K2 on M8: FAIL: staging kept its marker after the abort: False; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; 17 files listed, 0 mismatches []; PREP FAILED: nothing deleted: C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35
+
+[M] mutant M9: inside() compares abspath instead of realpath; built, sha256 2cff383eb5f8b370
+
+[M] M9 (inside() compares abspath instead of realpath): J2 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or J2 still PASSes on it (so J2 would not notice this guard missing)
+  -> PASS: J2 on M9: FAIL: junction; exit 0; refused: False; real tree unchanged: False; 
+
+[M] M9 alone: J1 on it (observation, not a test)
+  PASS: junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\mut\M9_J1\J1_alias\fixture: C: (a second guard still holds: defence in depth, so this mutant alone cannot show J1 failing)
+
+[M] mutant M10: only the directory itself is tested for a link, not its parents; built, sha256 e8f6a8161212f9f0
+
+[M] M10 (only the directory itself is tested for a link, not its parents): J3 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or J3 still PASSes on it (so J3 would not notice this guard missing)
+  -> PASS: J3 on M10: FAIL: junction; exit 0; refused: False; real run dir unchanged: False; 
+
+[M] M10 alone: J1 on it (observation, not a test)
+  PASS: junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\mut\M10_J1\J1_alias\fixture: i (a second guard still holds: defence in depth, so this mutant alone cannot show J1 failing)
+
+[M] mutant M11: M9 + M10, i.e. the round-1 guard logic; built, sha256 1970819ae85579ff
+
+[M] M11 (M9 + M10, i.e. the round-1 guard logic): J1 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or J1 still PASSes on it (so J1 would not notice this guard missing)
+  -> PASS: J1 on M11: FAIL: junction; exit 0; refused: False; real tree unchanged: False; 
+
+[M] M11 (M9 + M10, i.e. the round-1 guard logic): J2 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or J2 still PASSes on it (so J2 would not notice this guard missing)
+  -> PASS: J2 on M11: FAIL: junction; exit 0; refused: False; real tree unchanged: False; 
+
+[M] M11 (M9 + M10, i.e. the round-1 guard logic): J3 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or J3 still PASSes on it (so J3 would not notice this guard missing)
+  -> PASS: J3 on M11: FAIL: junction; exit 0; refused: False; real run dir unchanged: False; 
+
+[M] mutant M12: the '.git on the path' refusal removed; built, sha256 bdfe0fe24053b62d
+
+[M] M12 (the '.git on the path' refusal removed): L2 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or L2 still PASSes on it (so L2 would not notice this guard missing)
+  -> PASS: L2 on M12: FAIL: top <scratch>\r2\final_win\mut\M12_L2\guard\L2_repo\.git\objects: RESULT reached the walk of <scratch>\r2\final_win\mut\M12_L2\guard\L2_repo\.git\objects without refusing
+
+[M] mutant M13: the filesystem-root refusal removed (the protected-path check still refuses the root, with another message); built, sha256 49f7e7db95d3c18c
+
+[M] M13 (the filesystem-root refusal removed (the protected-path check still refuses the root, with another message)): L3 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or L3 still PASSes on it (so L3 would not notice this guard missing)
+  -> PASS: L3 on M13: FAIL: top C:\: RESULT refused: refusing to delete C:\: it is or contains the repository root (paths.root) (<scratch>\r2\final_win\fixture)
+
+[M] mutant M13+M2: the filesystem-root refusal and the protected-path check removed; built, sha256 d800263f6f39d364
+
+[M] M13+M2 (the filesystem-root refusal and the protected-path check removed): L3 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or L3 still PASSes on it (so L3 would not notice this guard missing)
+  -> PASS: L3 on M13+M2: FAIL: top C:\: RESULT reached the walk of C:\ without refusing
+
+[M] mutant M14: a nested .git no longer refused; built, sha256 b93e40524c8a5f50
+
+[M] M14 (a nested .git no longer refused): F13 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F13 still PASSes on it (so F13 would not notice this guard missing)
+  -> PASS: F13 on M14: FAIL: exit 0; message: False; unchanged: False; 
+
+[M] mutant M15: C06, C08 and C09 PASS on zero comparisons (the round-1 behaviour); built, sha256 0773cd752280a0fe
+
+[M] M15 (C06, C08 and C09 PASS on zero comparisons (the round-1 behaviour)): N1 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or N1 still PASSes on it (so N1 would not notice this guard missing)
+  -> PASS: N1 on M15: FAIL: observe.dat changed: True; exit 1; C06=PASS C07=FAIL C08=PASS C09=PASS; [PASS] C06  frequencies: nothing compared: 6 of 6 station(s) failed C07 | [PASS] C08  impedance values: nothing compared: 6 of 6 station(s) failed C07
+
+[M] mutant M16: no link test on the path at all; built, sha256 7d4473c41828e242
+
+[M] M16 (no link test on the path at all): L1 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or L1 still PASSes on it (so L1 would not notice this guard missing)
+  -> PASS: L1 on M16: FAIL: junction; top <scratch>\r2\final_win\mut\M16_L1\guard\L1_link: RESULT reached the walk of <scratch>\r2\final_win\mut\M16_L1\guard\L1_link without refusing
+
+==== summary ====
+| group | test | result | observed |
+|---|---|---|---|
+| A | A1 clean full run of the fixture | PASS | exit 0; C01=PASS C02=PASS C03=PASS C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; OK: 14 checks: 14 PASS, 0 FAIL, 0 N/A; wrote C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6 |
+| A | A2 clean --check-only | PASS | exit 0; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; 14 checks: 12 PASS, 0 FAIL, 2 N/A |
+| A | A3 full run with an explicit sites.origin [697.0, 6699.5] km | PASS | exit 0; 14 check lines; C01=PASS C02=PASS C03=N/A C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; [N/A] C03  origin: N/A: sites.origin is explicit (E 697.00000 N 6699.50000 km), so no femticPy centring to compare; C04 and C11 test the written coord |
+| B | B1 flip the sign of Im(Zxy), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08']; [FAIL] C08  impedance values: 1008 values, max relative difference 2.0e+00; bad: ['A1 100 Hz ZXY 0.033211 vs -0.033211'] |
+| B | B2 scale the Re and Im SE of Zxy by 1.01, station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C09']; [FAIL] C09  error floors: 504 SE pairs, max relative difference 1.0e-02; floor active in 100%/95%/97%/100% of Zxx/Zxy/Zyx/Zyy; bad: ['A1 100 Hz ZXY SE 0.0027734 vs 0.0027459', 'A1 100 Hz ZXY SE 0.0027734  |
+| B | B3 move station 1 (and its dummy VTF H-station) 2 m north | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C04']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (observe.dat MT point (-3.81600, -6.58700) is within 1 m of 0 sites); 6 dummy VTF H-stations  |
+| B | B4 frequency x (1 + 2e-6), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 2.00e-06 over 126 of 126 data lines; bad: ['A1 100 Hz'] |
+| B | B5 swap the site_id fields of station_map.csv rows 1 and 2 | PASS | inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 1; FAIL ['C04', 'C08', 'C09']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, sa |
+| B | B6 frequency + 1e-5 Hz at the lowest band (8e-3 relative), station 1 | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 7.97e-03 over 126 of 126 data lines; bad: ['A1 0.0012653 Hz'] |
+| C | C1 swap whole rows 1 and 2 of station_map.csv | PASS | inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H |
+| C | C2 frequency + 1e-5 Hz at 100 Hz (1e-7 relative), station 1 | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 1.00e-07 over 126 of 126 data lines |
+| C | C3 frequency x (1 + 5e-7), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 5.00e-07 over 126 of 126 data lines |
+| C | C4 move station 1 (and its VTF H-station) 0.2 m north | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station |
+| D | D1 one CRLF in inversion/control.dat | PASS | inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C01']; [FAIL] C01  LF line endings: CR in ['inversion\\control.dat'] |
+| D | D2 DATAID of A1.edi changed to A1x (an input fault: a fixture copy of the EDIs) | PASS | EDI changed: True; exit 1; FAIL ['C02', 'C07']; [FAIL] C02  site ids: 6 table ids, 6 DATAIDs, 6 files; identical sets: False |
+| D | D3 drop the last data line of station 1 (and its count) | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C07']; [FAIL] C07  data line count: 125 data lines = sum over 6 sites of selected bands present (126); bad stations: [('A1', 20, 21)] |
+| D | D4 conjugate every impedance (exp(+i omega t) left in) | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08', 'C10']; [FAIL] C10  time convention: median phase Zxy 36.6 deg, Zyx 216.9 deg |
+| D | D5 move site 1 of files/obs_site.dat 2 m | PASS | files/obs_site.dat changed: True (changed: ['files/obs_site.dat']); exit 1; FAIL ['C11']; [FAIL] C11  mesh-site coordinates: obs_site.dat obs_site.dat point (-3.81600, -6.58700) is within 1 m of 0 sites; observing_site.dat 6 sites, max 0.64 m; resistivity_attr.dat 6 sites, max 0.64 m |
+| D | D6 makeMtr.param core edge 0.2 -> 0.21 km | PASS | files/makeMtr.param changed: True (changed: ['files/makeMtr.param']); exit 1; FAIL ['C12']; [FAIL] C12  mesh tables: differ: ['makeMtr ellipsoids'] |
+| D | D7 one topography.dat height 0 -> 0.001 km (flat mode) | PASS | files/topography.dat changed: True (changed: ['files/topography.dat']); exit 1; FAIL ['C13']; [FAIL] C13  geometry: flat topography.dat has non-zero heights |
+| D | D8 inversion/control.dat TRADE_OFF_PARAM 3 -> 1 | PASS | inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C14']; [FAIL] C14  inversion control.dat: TRADE_OFF_PARAM [1.0] != [3.0] |
+| N | N1 every MT station loses its last data line (and its count), so every station fails C07 | PASS | observe.dat changed: True; exit 1; C06=N/A C07=FAIL C08=N/A C09=N/A; [N/A] C06  frequencies: nothing compared: 6 of 6 station(s) failed C07 / [N/A] C08  impedance values: nothing compared: 6 of 6 station(s) failed C07 |
+| E | full run, C03: femticPy centres the sites on a point 2 m north of the bbox centre (consistently, so C04 and C11 cannot see it) | PASS | exit 1; FAIL ['C03']; output dir created: False; [FAIL] C03  origin: femticPy origin E 697.34870 N 6699.56310 km; bbox centre E 697.34870 N 6699.56110 km |
+| E | full run, C05: the femticPy path drops its lowest selected band | PASS | exit 1; FAIL ['C05', 'C07', 'C10']; output dir created: False; [FAIL] C05  frequency selection: 21 bands selected from 53 candidates; femticPy path chose the same list: False |
+| F | F1 --force on an unchanged prep directory replaces it | PASS | exit 0; 17 files listed, 0 mismatches []; OK: 14 checks: 14 PASS, 0 FAIL, 0 N/A; wrote <scratch>\r2\final_w |
+| F | F2 --force refuses a directory holding mesh products and half-space runs | PASS | exit 1; directory unchanged: True; refusal names the 4 foreign entries: True; PREP FAILED: nothing deleted: <scratch>\r2\final_win\runs\F2_foreign holds 4 file(s)  |
+| F | F3 --force refuses when a prep product was edited since | PASS | exit 1; directory unchanged: True; 'CHANGED inversion/observe.dat' listed: True |
+| F | F4 --force --force-delete-foreign deletes the foreign files | PASS | exit 0; foreign files left []; 17 files listed, 0 mismatches [];  |
+| F | F5a a link inside the run directory, --force | PASS | junction; exit 1; refused: True; link kept: True; target untouched: True; run dir intact: True; PREP FAILED: refusing to delete C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb |
+| F | F5b a link inside the run directory, --force --force-delete-foreign | PASS | junction; exit 1; refused: True; link kept: True; target untouched: True; run dir intact: True; PREP FAILED: refusing to delete C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb |
+| F | F6a --out = the fixture root (holds the config and the EDIs), --force | PASS | exit 1; refused: True; fixture (config, EDIs) unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\fixture_F6 |
+| F | F6b --out = the fixture root (holds the config and the EDIs), --force --force-delete-foreign | PASS | exit 1; refused: True; fixture (config, EDIs) unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\fixture_F6 |
+| F | F7 an existing RUN.staging without prep's marker is not deleted | PASS | exit 1; notes.txt kept: True; PREP FAILED: nothing deleted: <scratch>\r2\final_win\guard\F7\run |
+| F | F8 a stale RUN.staging with prep's marker is replaced | PASS | exit 0; stale staging removed: True;  |
+| F | F9 no --force on an existing directory | PASS | exit 1; unchanged: True; PREP FAILED: <scratch>\r2\final_win\runs\F9_noforce exists. Write |
+| F | F10 --force on a copy of the committed mesh/vulcan_v2 (no manifest, halfspace/, mesh_logs/) | PASS | exit 1; unchanged: True; lists halfspace/, mesh_logs/ and 'no prep_manifest.sha256': True; 145 files in the copy |
+| F | F11 --force-delete-foreign without --force | PASS | exit 1; output written: False; PREP FAILED: --force-delete-foreign only widens --force; give both |
+| F | F12 the re-inventory: a mesh.dat copied into the run directory during a --force run stops it | PASS | exit 1; aborted, mesh.dat and the originals kept; PREP FAILED: nothing deleted: <scratch>\r2\final_win\runs\F12_rei |
+| F | F13 a git repository nested in the run directory | PASS | exit 1; message: True; unchanged: True; PREP FAILED: refusing to delete C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb |
+| J | J1 --out reaches the fixture root through a linked parent (alias/fixture), config by its real path, --force --force-delete-foreign | PASS | junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\J1_alias\fixture: C:\Users\joi |
+| J | J2 the config is given through a linked parent (alias/fixture/config/fixture.yml), --out is the real fixture root, --force --force-delete-foreign | PASS | junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\J2_real\fixture: it is or cont |
+| J | J3 --out reaches an ordinary run directory with foreign files through a linked parent, --force --force-delete-foreign | PASS | junction; exit 1; refused: True; real run dir unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\J3_alias\run: C:\Users\joint\A |
+| K | K1 a run stopped by the late CR scan, then the same command again | PASS | staging kept its marker after the abort: True; rerun exit 0; 'not created by this version': False; 'left by an earlier run': True; staging gone: True; 17 files listed, 0 mismatches [];  |
+| K | K2 a --force run stopped by the re-inventory; the added mesh.dat is moved out, then the same command again | PASS | staging kept its marker after the abort: True; rerun exit 0; 'not created by this version': False; 'left by an earlier run': True; staging gone: True; 17 files listed, 0 mismatches [];  |
+| L | L1 delete_plan on a link (symlink or junction) as the directory itself | PASS | junction; top <scratch>\r2\final_win\guard\L1_link: RESULT refused: refusing to delete C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees- |
+| L | L2 delete_plan on a directory inside a .git directory | PASS | top <scratch>\r2\final_win\guard\L2_repo\.git\objects: RESULT refused: refusing to delete C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktre |
+| L | L3 delete_plan on the filesystem root of the scratch directory | PASS | top C:\: RESULT refused: refusing to delete C:\: it is a filesystem root |
+| L | L4 delete_plan on a directory that holds the home directory (HOME and USERPROFILE pointed into the scratch tree) | PASS | top <scratch>\r2\final_win\guard\L4_parent: RESULT refused: refusing to delete C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-w |
+| L | L5 delete_plan on the directory that holds the script under test | PASS | top D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts: RESULT refused: refusing to delete D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts: it is or contains this script (D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\scripts\prep_vulcan.py) |
+| G | G1 DISTORTION 1 (with its two TRADE_OFF_PARAM values) is rejected by load_config | PASS | exit 1; message: True; output written: False; PREP FAILED: config: inversion.DISTORTION 1 is not supported: with DISTORTION != 0 FEMTIC reads distortion_iter<N>.dat at start, distortion_iter0.dat for ITERATION '0 N', and exits if it is missing (f |
+| H | H1 renaming J6_BxRepaced -> J6_BxReplaced (EDI file, DATAID/LOC/REFLOC/SECTID, site table) | PASS | products that differ: ['inversion/station_map.csv']; station_map rows that differ: [3] -> ['3,1003,J6_BxReplaced,J6_BxReplaced.edi,4.89690,-1.26010,696.0886,6704.4580,0.08600,21'] |
+| H | H2 the rename keeps J6's FEMTIC station number among all 120 EDIs (femticPy numbers stations in np.sort order of the EDI file names; site rows are sorted by id) | PASS | 120 EDIs; station number 97 before, 97 after (J5 < J6 < J7) |
+| I | I0 keys of config/vulcan_mesh_v2.yml that load_config never reads | info | none |
+| I | data.error_floor_Z -> [0.2, 0.06, 0.06, 0.2] changes the products (positive control of the comparison) | PASS | products that differ from the clean run: ['inversion/observe.dat'] |
+| I | inversion.NUM_THREADS -> 4 changes the products (positive control of the comparison) | PASS | products that differ from the clean run: ['inversion/control.dat'] |
+| I | data.error_floor_VTF -> 0.5 leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.utm_zone -> 54 leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.hemisphere -> 'N' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.datum -> 'GDA94' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | mesh.topography.dem_file -> 'no_such_dem.txt' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| M | M1 (links inside the directory no longer refused): F5a must FAIL | PASS | F5a on M1: FAIL: junction; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False;  |
+| M | M1 (links inside the directory no longer refused): F5b must FAIL | PASS | F5b on M1: FAIL: junction; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False;  |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): F6a must FAIL | PASS | F6a on M2: FAIL: exit 1; refused: False; fixture (config, EDIs) unchanged: True; PREP FAILED: nothing deleted: <scratch>\r2\final_win\mut\M2_F6a\f |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): F6b must FAIL | PASS | F6b on M2: FAIL: exit 0; refused: False; fixture (config, EDIs) unchanged: False;  |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): L4 must FAIL | PASS | L4 on M2: FAIL: top <scratch>\r2\final_win\mut\M2_L4\guard\L4_parent: RESULT reached the walk of C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude- |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): L5 must FAIL | PASS | L5 on M2: FAIL: top <scratch>\r2\final_win\mutants: RESULT reached the walk of C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-w |
+| M | M3 (foreign files refused even with --force-delete-foreign): F4 must FAIL | PASS | F4 on M3: FAIL: exit 1; foreign files left ['inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'halfspace/acc_3/b1/femtic_0.log', 'mesh_logs/products.md5']; 17 files listed, 4 mismatches ['halfspace/acc_3/b1/femtic_0.log', 'inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'm |
+| M | M4 (--force-delete-foreign accepted without --force): F11 must FAIL | PASS | F11 on M4: FAIL: exit 0; output written: True;  |
+| M | M5 alone: F9 on it | info | PASS: exit 1; unchanged: True; PREP FAILED: nothing deleted: <scratch>\r2\final_win\mut\M5_F9\ru (a second guard still holds: defence in depth, so this mutant alone  |
+| M | M7 (the re-inventory just before the delete made blind): F12 must FAIL | PASS | F12 on M7: FAIL: exit 0; exit 0 without 'changed during the run'; the added mesh.dat is gone; original files changed;  |
+| M | M5+M7 (both refusals of a run without --force removed): F9 must FAIL | PASS | F9 on M5+M7: FAIL: exit 0; unchanged: False;  |
+| M | M6 (the staging marker ignored): F8 must FAIL | PASS | F8 on M6: FAIL: exit 1; stale staging removed: False; PREP FAILED: nothing deleted: C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35 |
+| M | M6 (the staging marker ignored): K1 must FAIL | PASS | K1 on M6: FAIL: staging kept its marker after the abort: True; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; no prep_manifest.sha256; PREP FAILED: nothing deleted: C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees |
+| M | M6 (the staging marker ignored): K2 must FAIL | PASS | K2 on M6: FAIL: staging kept its marker after the abort: True; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; 17 files listed, 0 mismatches []; PREP FAILED: nothing deleted: C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude- |
+| M | M8 (the staging marker dropped before the CR scan and the re-inventory (the round-1 order)): K1 must FAIL | PASS | K1 on M8: FAIL: staging kept its marker after the abort: False; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; no prep_manifest.sha256; PREP FAILED: nothing deleted: C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktree |
+| M | M8 (the staging marker dropped before the CR scan and the re-inventory (the round-1 order)): K2 must FAIL | PASS | K2 on M8: FAIL: staging kept its marker after the abort: False; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; 17 files listed, 0 mismatches []; PREP FAILED: nothing deleted: C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude |
+| M | M9 (inside() compares abspath instead of realpath): J2 must FAIL | PASS | J2 on M9: FAIL: junction; exit 0; refused: False; real tree unchanged: False;  |
+| M | M9 alone: J1 on it | info | PASS: junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\mut\M9_J1\J1_alias\fixture: C: (a second gua |
+| M | M10 (only the directory itself is tested for a link, not its parents): J3 must FAIL | PASS | J3 on M10: FAIL: junction; exit 0; refused: False; real run dir unchanged: False;  |
+| M | M10 alone: J1 on it | info | PASS: junction; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>\r2\final_win\mut\M10_J1\J1_alias\fixture: i (a second gua |
+| M | M11 (M9 + M10, i.e. the round-1 guard logic): J1 must FAIL | PASS | J1 on M11: FAIL: junction; exit 0; refused: False; real tree unchanged: False;  |
+| M | M11 (M9 + M10, i.e. the round-1 guard logic): J2 must FAIL | PASS | J2 on M11: FAIL: junction; exit 0; refused: False; real tree unchanged: False;  |
+| M | M11 (M9 + M10, i.e. the round-1 guard logic): J3 must FAIL | PASS | J3 on M11: FAIL: junction; exit 0; refused: False; real run dir unchanged: False;  |
+| M | M12 (the '.git on the path' refusal removed): L2 must FAIL | PASS | L2 on M12: FAIL: top <scratch>\r2\final_win\mut\M12_L2\guard\L2_repo\.git\objects: RESULT reached the walk of C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC- |
+| M | M13 (the filesystem-root refusal removed (the protected-path check still refuses the root, with another message)): L3 must FAIL | PASS | L3 on M13: FAIL: top C:\: RESULT refused: refusing to delete C:\: it is or contains the repository root (paths.root) (<scratch>\r2\final_win\fixture) |
+| M | M13+M2 (the filesystem-root refusal and the protected-path check removed): L3 must FAIL | PASS | L3 on M13+M2: FAIL: top C:\: RESULT reached the walk of C:\ without refusing |
+| M | M14 (a nested .git no longer refused): F13 must FAIL | PASS | F13 on M14: FAIL: exit 0; message: False; unchanged: False;  |
+| M | M15 (C06, C08 and C09 PASS on zero comparisons (the round-1 behaviour)): N1 must FAIL | PASS | N1 on M15: FAIL: observe.dat changed: True; exit 1; C06=PASS C07=FAIL C08=PASS C09=PASS; [PASS] C06  frequencies: nothing compared: 6 of 6 station(s) failed C07 / [PASS] C08  impedance values: nothing compared: 6 of 6 station(s) failed C07 |
+| M | M16 (no link test on the path at all): L1 must FAIL | PASS | L1 on M16: FAIL: junction; top <scratch>\r2\final_win\mut\M16_L1\guard\L1_link: RESULT reached the walk of C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-202 |
+
+85 tests: 85 PASS, 0 FAIL
+exit 0
+
+#################### Part 1b ####################
+prep under test: /mnt/d/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4/scripts/prep_vulcan.py (sha256 52c25de114503165)
+repository: /mnt/d/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4; python 3.12.14 (/home/tara/miniforge3/envs/femticpy/bin/python) on linux
+fixture sites: A1, J5, J6_BxRepaced, J7, Vul24-19, Vul25_004
+
+[A] A1 clean full run of the fixture
+  This test fails if prep exits non-zero or any of C01-C14 is not PASS (in a full run C03 and C05 compare against femticPy, so all 14 apply)
+  -> PASS: exit 0; C01=PASS C02=PASS C03=PASS C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; OK: 14 checks: 14 PASS, 0 FAIL, 0 N/A; wrote <scratch>/r2/fin
+
+[A] A2 clean --check-only
+  This test fails if prep exits non-zero, C03 or C05 is anything but N/A (under --check-only they have no femticPy result to compare, so PASS would be vacuous), or any other check is not PASS
+  -> PASS: exit 0; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; 14 checks: 12 PASS, 0 FAIL, 2 N/A
+
+[A] A3 full run with an explicit sites.origin [697.0, 6699.5] km
+  This test fails if prep exits non-zero, C03 is not reported (it used to be skipped silently, giving 13 checks) or is anything but N/A, or any other check is not PASS
+  -> PASS: exit 0; 14 check lines; C01=PASS C02=PASS C03=N/A C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; [N/A] C03  origin: N/A: sites.origin is explicit (E 697.00000 N 6699.50000 km), so no femticPy centring to compare; C04 and C11 test the written coordinates against it
+
+[B] B1 flip the sign of Im(Zxy), station 1, 100 Hz
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C08 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08']; [FAIL] C08  impedance values: 1008 values, max relative difference 2.0e+00; bad: ['A1 100 Hz ZXY 0.033211 vs -0.033211']
+
+[B] B2 scale the Re and Im SE of Zxy by 1.01, station 1, 100 Hz
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C09 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C09']; [FAIL] C09  error floors: 504 SE pairs, max relative difference 1.0e-02; floor active in 100%/95%/97%/100% of Zxx/Zxy/Zyx/Zyy; bad: ['A1 100 Hz ZXY SE 0.0027734 vs 0.0027459', 'A1 100 Hz ZXY SE 0.0027734 vs 0.0027459']
+
+[B] B3 move station 1 (and its dummy VTF H-station) 2 m north
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C04 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C04']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (observe.dat MT point (-3.81600, -6.58700) is within 1 m of 0 sites); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station id
+
+[B] B4 frequency x (1 + 2e-6), station 1, 100 Hz
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C06 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 2.00e-06 over 126 of 126 data lines; bad: ['A1 100 Hz']
+
+[B] B5 swap the site_id fields of station_map.csv rows 1 and 2
+  This test fails if the injection leaves inversion/station_map.csv unchanged, or prep --check-only does not exit 1 with C04 FAIL
+  -> PASS: inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 1; FAIL ['C04', 'C08', 'C09']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+
+[B] B6 frequency + 1e-5 Hz at the lowest band (8e-3 relative), station 1
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C06 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 7.97e-03 over 126 of 126 data lines; bad: ['A1 0.0012653 Hz']
+
+[C] C1 swap whole rows 1 and 2 of station_map.csv
+  This test fails if the injection leaves inversion/station_map.csv unchanged, or prep --check-only exits non-zero or reports any FAIL (the check's tolerance should absorb this change: C04)
+  -> PASS: inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+
+[C] C2 frequency + 1e-5 Hz at 100 Hz (1e-7 relative), station 1
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only exits non-zero or reports any FAIL (the check's tolerance should absorb this change: C06)
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 1.00e-07 over 126 of 126 data lines
+
+[C] C3 frequency x (1 + 5e-7), station 1, 100 Hz
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only exits non-zero or reports any FAIL (the check's tolerance should absorb this change: C06)
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 5.00e-07 over 126 of 126 data lines
+
+[C] C4 move station 1 (and its VTF H-station) 0.2 m north
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only exits non-zero or reports any FAIL (the check's tolerance should absorb this change: C04)
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+
+[D] D1 one CRLF in inversion/control.dat
+  This test fails if the injection leaves inversion/control.dat unchanged, or prep --check-only does not exit 1 with C01 FAIL
+  -> PASS: inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C01']; [FAIL] C01  LF line endings: CR in ['inversion/control.dat']
+
+[D] D2 DATAID of A1.edi changed to A1x (an input fault: a fixture copy of the EDIs)
+  This test fails if the EDI is unchanged, or prep --check-only does not exit 1 with C02 FAIL
+  -> PASS: EDI changed: True; exit 1; FAIL ['C02', 'C07']; [FAIL] C02  site ids: 6 table ids, 6 DATAIDs, 6 files; identical sets: False
+
+[D] D3 drop the last data line of station 1 (and its count)
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C07 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C07']; [FAIL] C07  data line count: 125 data lines = sum over 6 sites of selected bands present (126); bad stations: [('A1', 20, 21)]
+
+[D] D4 conjugate every impedance (exp(+i omega t) left in)
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C10 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08', 'C10']; [FAIL] C10  time convention: median phase Zxy 36.6 deg, Zyx 216.9 deg
+
+[D] D5 move site 1 of files/obs_site.dat 2 m
+  This test fails if the injection leaves files/obs_site.dat unchanged, or prep --check-only does not exit 1 with C11 FAIL
+  -> PASS: files/obs_site.dat changed: True (changed: ['files/obs_site.dat']); exit 1; FAIL ['C11']; [FAIL] C11  mesh-site coordinates: obs_site.dat obs_site.dat point (-3.81600, -6.58700) is within 1 m of 0 sites; observing_site.dat 6 sites, max 0.64 m; resistivity_attr.dat 6 sites, max 0.64 m
+
+[D] D6 makeMtr.param core edge 0.2 -> 0.21 km
+  This test fails if the injection leaves files/makeMtr.param unchanged, or prep --check-only does not exit 1 with C12 FAIL
+  -> PASS: files/makeMtr.param changed: True (changed: ['files/makeMtr.param']); exit 1; FAIL ['C12']; [FAIL] C12  mesh tables: differ: ['makeMtr ellipsoids']
+
+[D] D7 one topography.dat height 0 -> 0.001 km (flat mode)
+  This test fails if the injection leaves files/topography.dat unchanged, or prep --check-only does not exit 1 with C13 FAIL
+  -> PASS: files/topography.dat changed: True (changed: ['files/topography.dat']); exit 1; FAIL ['C13']; [FAIL] C13  geometry: flat topography.dat has non-zero heights
+
+[D] D8 inversion/control.dat TRADE_OFF_PARAM 3 -> 1
+  This test fails if the injection leaves inversion/control.dat unchanged, or prep --check-only does not exit 1 with C14 FAIL
+  -> PASS: inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C14']; [FAIL] C14  inversion control.dat: TRADE_OFF_PARAM [1.0] != [3.0]
+
+[N] N1 every MT station loses its last data line (and its count), so every station fails C07
+  This test fails if observe.dat is unchanged, prep --check-only does not exit 1 with C07 FAIL, or any of C06, C08 and C09 is anything but N/A (they compared nothing, so a PASS would be vacuous)
+  -> PASS: observe.dat changed: True; exit 1; C06=N/A C07=FAIL C08=N/A C09=N/A; [N/A] C06  frequencies: nothing compared: 6 of 6 station(s) failed C07 | [N/A] C08  impedance values: nothing compared: 6 of 6 station(s) failed C07
+
+[E] full run, C03: femticPy centres the sites on a point 2 m north of the bbox centre (consistently, so C04 and C11 cannot see it)
+  This test fails if prep exits 0, C03 is not FAIL, or the output directory is created
+  -> PASS: exit 1; FAIL ['C03']; output dir created: False; [FAIL] C03  origin: femticPy origin E 697.34870 N 6699.56310 km; bbox centre E 697.34870 N 6699.56110 km
+
+[E] full run, C05: the femticPy path drops its lowest selected band
+  This test fails if prep exits 0, C05 is not FAIL, or the output directory is created
+  -> PASS: exit 1; FAIL ['C05', 'C07', 'C10']; output dir created: False; [FAIL] C05  frequency selection: 21 bands selected from 53 candidates; femticPy path chose the same list: False
+
+[F] F1 --force on an unchanged prep directory replaces it
+  This test fails if prep exits non-zero, or the replaced directory lacks a prep_manifest.sha256 that lists every file in it with a matching sha256
+  -> PASS: exit 0; 17 files listed, 0 mismatches []; OK: 14 checks: 14 PASS, 0 FAIL, 0 N/A; wrote <scratch>/r2/fin
+
+[F] F2 --force refuses a directory holding mesh products and half-space runs
+  This test fails if prep exits 0, any file of the directory is deleted or changed, or the listing does not name inversion/mesh.dat, inversion/resistivity_block_iter0.dat, halfspace/ and mesh_logs/
+  -> PASS: exit 1; directory unchanged: True; refusal names the 4 foreign entries: True; PREP FAILED: nothing deleted: <scratch>/r2/final_wsl/runs/F2_foreign holds 4 file
+
+[F] F3 --force refuses when a prep product was edited since
+  This test fails if prep exits 0, the directory changes, or the edited observe.dat is not listed as CHANGED
+  -> PASS: exit 1; directory unchanged: True; 'CHANGED inversion/observe.dat' listed: True
+
+[F] F4 --force --force-delete-foreign deletes the foreign files
+  This test fails if prep exits non-zero, a foreign file survives, or the new manifest does not verify
+  -> PASS: exit 0; foreign files left []; 17 files listed, 0 mismatches []; 
+
+[F] F5a a link inside the run directory, --force
+  This test fails if prep exits other than 1 without 'refusing to delete', or the link, its target's files or the run directory's files are touched
+  -> PASS: symlink; exit 1; refused: True; link kept: True; target untouched: True; run dir intact: True; PREP FAILED: refusing to delete /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4/12c8b723-4a84-4277-90c6-4cb
+
+[F] F5b a link inside the run directory, --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or the link, its target's files or the run directory's files are touched
+  -> PASS: symlink; exit 1; refused: True; link kept: True; target untouched: True; run dir intact: True; PREP FAILED: refusing to delete /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4/12c8b723-4a84-4277-90c6-4cb
+
+[F] F6a --out = the fixture root (holds the config and the EDIs), --force
+  This test fails if prep exits other than 1 without 'refusing to delete', or any fixture file is deleted or changed
+  -> PASS: exit 1; refused: True; fixture (config, EDIs) unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/fixtur
+
+[F] F6b --out = the fixture root (holds the config and the EDIs), --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or any fixture file is deleted or changed
+  -> PASS: exit 1; refused: True; fixture (config, EDIs) unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/fixtur
+
+[F] F7 an existing RUN.staging without prep's marker is not deleted
+  This test fails if prep exits 0 or deletes the unmarked staging directory's notes.txt
+  -> PASS: exit 1; notes.txt kept: True; PREP FAILED: nothing deleted: <scratch>/r2/final_wsl/guard/F7
+
+[F] F8 a stale RUN.staging with prep's marker is replaced
+  This test fails if prep exits non-zero, the stale staging directory survives, or the run directory is not written
+  -> PASS: exit 0; stale staging removed: True; 
+
+[F] F9 no --force on an existing directory
+  This test fails if prep exits 0 or changes the directory
+  -> PASS: exit 1; unchanged: True; PREP FAILED: <scratch>/r2/final_wsl/runs/F9_noforce exists. W
+
+[F] F10 --force on a copy of the committed mesh/vulcan_v2 (no manifest, halfspace/, mesh_logs/)
+  This test fails if prep exits 0, the copy changes, or the listing does not name halfspace/, mesh_logs/ and the missing manifest
+  -> PASS: exit 1; unchanged: True; lists halfspace/, mesh_logs/ and 'no prep_manifest.sha256': True; 145 files in the copy
+
+[F] F11 --force-delete-foreign without --force
+  This test fails if prep exits 0 or writes the output
+  -> PASS: exit 1; output written: False; PREP FAILED: --force-delete-foreign only widens --force; give both
+
+[F] F12 the re-inventory: a mesh.dat copied into the run directory during a --force run stops it
+  This test fails if prep exits 0, or the added mesh.dat or any original file of the directory is deleted or changed
+  -> PASS: exit 1; aborted, mesh.dat and the originals kept; PREP FAILED: nothing deleted: <scratch>/r2/final_wsl/runs/F12
+
+[F] F13 a git repository nested in the run directory
+  This test fails if prep exits other than 1 without 'contains a git repository', or any file of the directory is deleted or changed
+  -> PASS: exit 1; message: True; unchanged: True; PREP FAILED: refusing to delete /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4/12c8b723-4a84-4277-90c6-4cb
+
+[J] J1 --out reaches the fixture root through a linked parent (alias/fixture), config by its real path, --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or any file below the real directory is deleted, changed or added
+  -> PASS: symlink; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/J1_alias/fixture: /mnt/c/U
+
+[J] J2 the config is given through a linked parent (alias/fixture/config/fixture.yml), --out is the real fixture root, --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or any file below the real directory is deleted, changed or added
+  -> PASS: symlink; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/J2_real/fixture: it is or 
+
+[J] J3 --out reaches an ordinary run directory with foreign files through a linked parent, --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or any file of the real run directory is deleted, changed or added
+  -> PASS: symlink; exit 1; refused: True; real run dir unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/J3_alias/run: /mnt/c/Users
+
+[K] K1 a run stopped by the late CR scan, then the same command again
+  This test fails if the first run does not exit 1 with 'CR bytes', its RUN.staging lacks prep's marker afterwards, or the rerun exits non-zero, says 'not created by this version', leaves RUN.staging, or writes a run directory whose manifest does not verify
+  -> PASS: staging kept its marker after the abort: True; rerun exit 0; 'not created by this version': False; 'left by an earlier run': True; staging gone: True; 17 files listed, 0 mismatches []; 
+
+[K] K2 a --force run stopped by the re-inventory; the added mesh.dat is moved out, then the same command again
+  This test fails if the first run does not stop at the re-inventory, its RUN.staging lacks prep's marker afterwards, or the rerun exits non-zero, says 'not created by this version', leaves RUN.staging, or writes a run directory whose manifest does not verify
+  -> PASS: staging kept its marker after the abort: True; rerun exit 0; 'not created by this version': False; 'left by an earlier run': True; staging gone: True; 17 files listed, 0 mismatches []; 
+
+[L] L1 delete_plan on a link (symlink or junction) as the directory itself
+  This test fails if delete_plan does not refuse with 'is a link' before walking the directory
+  -> PASS: symlink; top <scratch>/r2/final_wsl/guard/L1_link: RESULT refused: refusing to delete <scratch>/r2/final_wsl/guard/L1_link: /mnt/c/Users/joint/AppData/Local/Temp/claude/D--
+
+[L] L2 delete_plan on a directory inside a .git directory
+  This test fails if delete_plan does not refuse with 'inside a .git directory' before walking it
+  -> PASS: top <scratch>/r2/final_wsl/guard/L2_repo/.git/objects: RESULT refused: refusing to delete <scratch>/r2/final_wsl/guard/L2_repo/.git/objects: it lies inside a .git directory
+
+[L] L3 delete_plan on the filesystem root of the scratch directory
+  This test fails if delete_plan does not refuse with 'filesystem root' before walking it
+  -> PASS: top /: RESULT refused: refusing to delete /: it is a filesystem root
+
+[L] L4 delete_plan on a directory that holds the home directory (HOME and USERPROFILE pointed into the scratch tree)
+  This test fails if delete_plan does not refuse with 'the home directory' before walking it
+  -> PASS: top <scratch>/r2/final_wsl/guard/L4_parent: RESULT refused: refusing to delete <scratch>/r2/final_wsl/guard/L4_parent: it is or contains the home directory (/mnt/c/U
+
+[L] L5 delete_plan on the directory that holds the script under test
+  This test fails if delete_plan does not refuse with 'this script' before walking it
+  -> PASS: top /mnt/d/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4/scripts: RESULT refused: refusing to delete /mnt/d/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4/scripts: it is or contains this script (/mnt/d/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4/scripts/prep_vulcan.py)
+
+[G] G1 DISTORTION 1 (with its two TRADE_OFF_PARAM values) is rejected by load_config
+  This test fails if prep exits 0, writes an output directory, or does not say 'DISTORTION 1 is not supported'
+  -> PASS: exit 1; message: True; output written: False; PREP FAILED: config: inversion.DISTORTION 1 is not supported: with DISTORTION != 0 FEMTIC reads distortion_iter<N>.dat at start, distortion_iter0.dat for ITERATION '0 N', and exits if it is missing (f
+
+[H] H1 renaming J6_BxRepaced -> J6_BxReplaced (EDI file, DATAID/LOC/REFLOC/SECTID, site table)
+  This test fails if observe.dat, inversion/control.dat or any files/* differ from the clean run, or station_map.csv differs in any row but J6's
+  -> PASS: products that differ: ['inversion/station_map.csv']; station_map rows that differ: [3] -> ['3,1003,J6_BxReplaced,J6_BxReplaced.edi,4.89690,-1.26010,696.0886,6704.4580,0.08600,21']
+
+[H] H2 the rename keeps J6's FEMTIC station number among all 120 EDIs (femticPy numbers stations in np.sort order of the EDI file names; site rows are sorted by id)
+  This test fails if J6's index in the sorted list of the 120 EDI names changes
+  -> PASS: 120 EDIs; station number 97 before, 97 after (J5 < J6 < J7)
+
+[I] I0 keys of config/vulcan_mesh_v2.yml that load_config never reads (observation, not a test)
+  none
+
+[I] data.error_floor_Z -> [0.2, 0.06, 0.06, 0.2] changes the products (positive control of the comparison)
+  This test fails if no product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: ['inversion/observe.dat']
+
+[I] inversion.NUM_THREADS -> 4 changes the products (positive control of the comparison)
+  This test fails if no product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: ['inversion/control.dat']
+
+[I] data.error_floor_VTF -> 0.5 leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[I] sites.utm_zone -> 54 leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[I] sites.hemisphere -> 'N' leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[I] sites.datum -> 'GDA94' leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[I] mesh.topography.dem_file -> 'no_such_dem.txt' leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[M] mutant M1: links inside the directory no longer refused; built, sha256 a1cb6560c8610753
+
+[M] M1 (links inside the directory no longer refused): F5a must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F5a still PASSes on it (so F5a would not notice this guard missing)
+  -> PASS: F5a on M1: FAIL: symlink; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False; 
+
+[M] M1 (links inside the directory no longer refused): F5b must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F5b still PASSes on it (so F5b would not notice this guard missing)
+  -> PASS: F5b on M1: FAIL: symlink; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False; 
+
+[M] mutant M2: the protected-path check removed (repository, config, inputs, script, home); built, sha256 82e70f5b64209597
+
+[M] M2 (the protected-path check removed (repository, config, inputs, script, home)): F6a must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F6a still PASSes on it (so F6a would not notice this guard missing)
+  -> PASS: F6a on M2: FAIL: exit 1; refused: False; fixture (config, EDIs) unchanged: True; PREP FAILED: nothing deleted: <scratch>/r2/final_wsl/mut/M2_F
+
+[M] M2 (the protected-path check removed (repository, config, inputs, script, home)): F6b must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F6b still PASSes on it (so F6b would not notice this guard missing)
+  -> PASS: F6b on M2: FAIL: exit 0; refused: False; fixture (config, EDIs) unchanged: False; 
+
+[M] M2 (the protected-path check removed (repository, config, inputs, script, home)): L4 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or L4 still PASSes on it (so L4 would not notice this guard missing)
+  -> PASS: L4 on M2: FAIL: top <scratch>/r2/final_wsl/mut/M2_L4/guard/L4_parent: RESULT reached the walk of <scratch>/r2/final_wsl/mut/M2_L4/guard/L4_parent without refusing
+
+[M] M2 (the protected-path check removed (repository, config, inputs, script, home)): L5 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or L5 still PASSes on it (so L5 would not notice this guard missing)
+  -> PASS: L5 on M2: FAIL: top <scratch>/r2/final_wsl/mutants: RESULT reached the walk of <scratch>/r2/final_wsl/mutants without refusing
+
+[M] mutant M3: foreign files refused even with --force-delete-foreign; built, sha256 58221a931eab5e84
+
+[M] M3 (foreign files refused even with --force-delete-foreign): F4 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F4 still PASSes on it (so F4 would not notice this guard missing)
+  -> PASS: F4 on M3: FAIL: exit 1; foreign files left ['inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'halfspace/acc_3/b1/femtic_0.log', 'mesh_logs/products.md5']; 17 files listed, 4 mismatches ['halfspace/acc_3/b1/femtic_0.log', 'inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'mesh_logs/products.md5']; PREP FAILED: nothing deleted: <scratch>/r2/final_wsl/mut/M3_F
+
+[M] mutant M4: --force-delete-foreign accepted without --force; built, sha256 b9d76946edee8015
+
+[M] M4 (--force-delete-foreign accepted without --force): F11 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F11 still PASSes on it (so F11 would not notice this guard missing)
+  -> PASS: F11 on M4: FAIL: exit 0; output written: True; 
+
+[M] mutant M5: the up-front refusal of an existing directory without --force removed; built, sha256 c2d67935d80d5593
+
+[M] M5 alone: F9 on it (observation, not a test)
+  PASS: exit 1; unchanged: True; PREP FAILED: nothing deleted: <scratch>/r2/final_wsl/mut/M5_F (a second guard still holds: defence in depth, so this mutant alone cannot show F9 failing)
+
+[M] mutant M7: the re-inventory just before the delete made blind; built, sha256 8a8652226058e487
+
+[M] M7 (the re-inventory just before the delete made blind): F12 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F12 still PASSes on it (so F12 would not notice this guard missing)
+  -> PASS: F12 on M7: FAIL: exit 0; exit 0 without 'changed during the run'; the added mesh.dat is gone; original files changed; 
+
+[M] mutant M5+M7: both refusals of a run without --force removed; built, sha256 3c33e3d4ee47524a
+
+[M] M5+M7 (both refusals of a run without --force removed): F9 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F9 still PASSes on it (so F9 would not notice this guard missing)
+  -> PASS: F9 on M5+M7: FAIL: exit 0; unchanged: False; 
+
+[M] mutant M6: the staging marker ignored; built, sha256 794401450152a99f
+
+[M] M6 (the staging marker ignored): F8 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F8 still PASSes on it (so F8 would not notice this guard missing)
+  -> PASS: F8 on M6: FAIL: exit 1; stale staging removed: False; PREP FAILED: nothing deleted: /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4/12c8b723-4a84-4277-90c6-4cb5c
+
+[M] M6 (the staging marker ignored): K1 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or K1 still PASSes on it (so K1 would not notice this guard missing)
+  -> PASS: K1 on M6: FAIL: staging kept its marker after the abort: True; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; no prep_manifest.sha256; PREP FAILED: nothing deleted: /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4/12c8b723-4a84-4277-90c6-4cb5c
+
+[M] M6 (the staging marker ignored): K2 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or K2 still PASSes on it (so K2 would not notice this guard missing)
+  -> PASS: K2 on M6: FAIL: staging kept its marker after the abort: True; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; 17 files listed, 0 mismatches []; PREP FAILED: nothing deleted: /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4/12c8b723-4a84-4277-90c6-4cb5c
+
+[M] mutant M8: the staging marker dropped before the CR scan and the re-inventory (the round-1 order); built, sha256 06dc16bce2e69d44
+
+[M] M8 (the staging marker dropped before the CR scan and the re-inventory (the round-1 order)): K1 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or K1 still PASSes on it (so K1 would not notice this guard missing)
+  -> PASS: K1 on M8: FAIL: staging kept its marker after the abort: False; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; no prep_manifest.sha256; PREP FAILED: nothing deleted: /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4/12c8b723-4a84-4277-90c6-4cb5c
+
+[M] M8 (the staging marker dropped before the CR scan and the re-inventory (the round-1 order)): K2 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or K2 still PASSes on it (so K2 would not notice this guard missing)
+  -> PASS: K2 on M8: FAIL: staging kept its marker after the abort: False; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; 17 files listed, 0 mismatches []; PREP FAILED: nothing deleted: /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4/12c8b723-4a84-4277-90c6-4cb5c
+
+[M] mutant M9: inside() compares abspath instead of realpath; built, sha256 2cff383eb5f8b370
+
+[M] M9 (inside() compares abspath instead of realpath): J2 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or J2 still PASSes on it (so J2 would not notice this guard missing)
+  -> PASS: J2 on M9: FAIL: symlink; exit 0; refused: False; real tree unchanged: False; 
+
+[M] M9 alone: J1 on it (observation, not a test)
+  PASS: symlink; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/mut/M9_J1/J1_alias/fixture (a second guard still holds: defence in depth, so this mutant alone cannot show J1 failing)
+
+[M] mutant M10: only the directory itself is tested for a link, not its parents; built, sha256 e8f6a8161212f9f0
+
+[M] M10 (only the directory itself is tested for a link, not its parents): J3 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or J3 still PASSes on it (so J3 would not notice this guard missing)
+  -> PASS: J3 on M10: FAIL: symlink; exit 0; refused: False; real run dir unchanged: False; 
+
+[M] M10 alone: J1 on it (observation, not a test)
+  PASS: symlink; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/mut/M10_J1/J1_alias/fixtur (a second guard still holds: defence in depth, so this mutant alone cannot show J1 failing)
+
+[M] mutant M11: M9 + M10, i.e. the round-1 guard logic; built, sha256 1970819ae85579ff
+
+[M] M11 (M9 + M10, i.e. the round-1 guard logic): J1 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or J1 still PASSes on it (so J1 would not notice this guard missing)
+  -> PASS: J1 on M11: FAIL: symlink; exit 0; refused: False; real tree unchanged: False; 
+
+[M] M11 (M9 + M10, i.e. the round-1 guard logic): J2 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or J2 still PASSes on it (so J2 would not notice this guard missing)
+  -> PASS: J2 on M11: FAIL: symlink; exit 0; refused: False; real tree unchanged: False; 
+
+[M] M11 (M9 + M10, i.e. the round-1 guard logic): J3 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or J3 still PASSes on it (so J3 would not notice this guard missing)
+  -> PASS: J3 on M11: FAIL: symlink; exit 0; refused: False; real run dir unchanged: False; 
+
+[M] mutant M12: the '.git on the path' refusal removed; built, sha256 bdfe0fe24053b62d
+
+[M] M12 (the '.git on the path' refusal removed): L2 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or L2 still PASSes on it (so L2 would not notice this guard missing)
+  -> PASS: L2 on M12: FAIL: top <scratch>/r2/final_wsl/mut/M12_L2/guard/L2_repo/.git/objects: RESULT reached the walk of <scratch>/r2/final_wsl/mut/M12_L2/guard/L2_repo/.git/objects without refusing
+
+[M] mutant M13: the filesystem-root refusal removed (the protected-path check still refuses the root, with another message); built, sha256 49f7e7db95d3c18c
+
+[M] M13 (the filesystem-root refusal removed (the protected-path check still refuses the root, with another message)): L3 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or L3 still PASSes on it (so L3 would not notice this guard missing)
+  -> PASS: L3 on M13: FAIL: top /: RESULT refused: refusing to delete /: it is or contains the repository root (paths.root) (<scratch>/r2/final_wsl/fixture)
+
+[M] mutant M13+M2: the filesystem-root refusal and the protected-path check removed; built, sha256 d800263f6f39d364
+
+[M] M13+M2 (the filesystem-root refusal and the protected-path check removed): L3 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or L3 still PASSes on it (so L3 would not notice this guard missing)
+  -> PASS: L3 on M13+M2: FAIL: top /: RESULT reached the walk of / without refusing
+
+[M] mutant M14: a nested .git no longer refused; built, sha256 b93e40524c8a5f50
+
+[M] M14 (a nested .git no longer refused): F13 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or F13 still PASSes on it (so F13 would not notice this guard missing)
+  -> PASS: F13 on M14: FAIL: exit 0; message: False; unchanged: False; 
+
+[M] mutant M15: C06, C08 and C09 PASS on zero comparisons (the round-1 behaviour); built, sha256 0773cd752280a0fe
+
+[M] M15 (C06, C08 and C09 PASS on zero comparisons (the round-1 behaviour)): N1 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or N1 still PASSes on it (so N1 would not notice this guard missing)
+  -> PASS: N1 on M15: FAIL: observe.dat changed: True; exit 1; C06=PASS C07=FAIL C08=PASS C09=PASS; [PASS] C06  frequencies: nothing compared: 6 of 6 station(s) failed C07 | [PASS] C08  impedance values: nothing compared: 6 of 6 station(s) failed C07
+
+[M] mutant M16: no link test on the path at all; built, sha256 7d4473c41828e242
+
+[M] M16 (no link test on the path at all): L1 must FAIL
+  This test fails if the mutant cannot be built from the script under test, or L1 still PASSes on it (so L1 would not notice this guard missing)
+  -> PASS: L1 on M16: FAIL: symlink; top <scratch>/r2/final_wsl/mut/M16_L1/guard/L1_link: RESULT reached the walk of <scratch>/r2/final_wsl/mut/M16_L1/guard/L1_link without refusing
+
+==== summary ====
+| group | test | result | observed |
+|---|---|---|---|
+| A | A1 clean full run of the fixture | PASS | exit 0; C01=PASS C02=PASS C03=PASS C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; OK: 14 checks: 14 PASS, 0 FAIL, 0 N/A; wrote /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4/12c8b723-4a84-4277- |
+| A | A2 clean --check-only | PASS | exit 0; C01=PASS C02=PASS C03=N/A C04=PASS C05=N/A C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; 14 checks: 12 PASS, 0 FAIL, 2 N/A |
+| A | A3 full run with an explicit sites.origin [697.0, 6699.5] km | PASS | exit 0; 14 check lines; C01=PASS C02=PASS C03=N/A C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; [N/A] C03  origin: N/A: sites.origin is explicit (E 697.00000 N 6699.50000 km), so no femticPy centring to compare; C04 and C11 test the written coord |
+| B | B1 flip the sign of Im(Zxy), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08']; [FAIL] C08  impedance values: 1008 values, max relative difference 2.0e+00; bad: ['A1 100 Hz ZXY 0.033211 vs -0.033211'] |
+| B | B2 scale the Re and Im SE of Zxy by 1.01, station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C09']; [FAIL] C09  error floors: 504 SE pairs, max relative difference 1.0e-02; floor active in 100%/95%/97%/100% of Zxx/Zxy/Zyx/Zyy; bad: ['A1 100 Hz ZXY SE 0.0027734 vs 0.0027459', 'A1 100 Hz ZXY SE 0.0027734  |
+| B | B3 move station 1 (and its dummy VTF H-station) 2 m north | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C04']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (observe.dat MT point (-3.81600, -6.58700) is within 1 m of 0 sites); 6 dummy VTF H-stations  |
+| B | B4 frequency x (1 + 2e-6), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 2.00e-06 over 126 of 126 data lines; bad: ['A1 100 Hz'] |
+| B | B5 swap the site_id fields of station_map.csv rows 1 and 2 | PASS | inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 1; FAIL ['C04', 'C08', 'C09']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, sa |
+| B | B6 frequency + 1e-5 Hz at the lowest band (8e-3 relative), station 1 | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 7.97e-03 over 126 of 126 data lines; bad: ['A1 0.0012653 Hz'] |
+| C | C1 swap whole rows 1 and 2 of station_map.csv | PASS | inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H |
+| C | C2 frequency + 1e-5 Hz at 100 Hz (1e-7 relative), station 1 | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 1.00e-07 over 126 of 126 data lines |
+| C | C3 frequency x (1 + 5e-7), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 5.00e-07 over 126 of 126 data lines |
+| C | C4 move station 1 (and its VTF H-station) 0.2 m north | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station |
+| D | D1 one CRLF in inversion/control.dat | PASS | inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C01']; [FAIL] C01  LF line endings: CR in ['inversion/control.dat'] |
+| D | D2 DATAID of A1.edi changed to A1x (an input fault: a fixture copy of the EDIs) | PASS | EDI changed: True; exit 1; FAIL ['C02', 'C07']; [FAIL] C02  site ids: 6 table ids, 6 DATAIDs, 6 files; identical sets: False |
+| D | D3 drop the last data line of station 1 (and its count) | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C07']; [FAIL] C07  data line count: 125 data lines = sum over 6 sites of selected bands present (126); bad stations: [('A1', 20, 21)] |
+| D | D4 conjugate every impedance (exp(+i omega t) left in) | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08', 'C10']; [FAIL] C10  time convention: median phase Zxy 36.6 deg, Zyx 216.9 deg |
+| D | D5 move site 1 of files/obs_site.dat 2 m | PASS | files/obs_site.dat changed: True (changed: ['files/obs_site.dat']); exit 1; FAIL ['C11']; [FAIL] C11  mesh-site coordinates: obs_site.dat obs_site.dat point (-3.81600, -6.58700) is within 1 m of 0 sites; observing_site.dat 6 sites, max 0.64 m; resistivity_attr.dat 6 sites, max 0.64 m |
+| D | D6 makeMtr.param core edge 0.2 -> 0.21 km | PASS | files/makeMtr.param changed: True (changed: ['files/makeMtr.param']); exit 1; FAIL ['C12']; [FAIL] C12  mesh tables: differ: ['makeMtr ellipsoids'] |
+| D | D7 one topography.dat height 0 -> 0.001 km (flat mode) | PASS | files/topography.dat changed: True (changed: ['files/topography.dat']); exit 1; FAIL ['C13']; [FAIL] C13  geometry: flat topography.dat has non-zero heights |
+| D | D8 inversion/control.dat TRADE_OFF_PARAM 3 -> 1 | PASS | inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C14']; [FAIL] C14  inversion control.dat: TRADE_OFF_PARAM [1.0] != [3.0] |
+| N | N1 every MT station loses its last data line (and its count), so every station fails C07 | PASS | observe.dat changed: True; exit 1; C06=N/A C07=FAIL C08=N/A C09=N/A; [N/A] C06  frequencies: nothing compared: 6 of 6 station(s) failed C07 / [N/A] C08  impedance values: nothing compared: 6 of 6 station(s) failed C07 |
+| E | full run, C03: femticPy centres the sites on a point 2 m north of the bbox centre (consistently, so C04 and C11 cannot see it) | PASS | exit 1; FAIL ['C03']; output dir created: False; [FAIL] C03  origin: femticPy origin E 697.34870 N 6699.56310 km; bbox centre E 697.34870 N 6699.56110 km |
+| E | full run, C05: the femticPy path drops its lowest selected band | PASS | exit 1; FAIL ['C05', 'C07', 'C10']; output dir created: False; [FAIL] C05  frequency selection: 21 bands selected from 53 candidates; femticPy path chose the same list: False |
+| F | F1 --force on an unchanged prep directory replaces it | PASS | exit 0; 17 files listed, 0 mismatches []; OK: 14 checks: 14 PASS, 0 FAIL, 0 N/A; wrote <scratch>/r2/fin |
+| F | F2 --force refuses a directory holding mesh products and half-space runs | PASS | exit 1; directory unchanged: True; refusal names the 4 foreign entries: True; PREP FAILED: nothing deleted: <scratch>/r2/final_wsl/runs/F2_foreign holds 4 file |
+| F | F3 --force refuses when a prep product was edited since | PASS | exit 1; directory unchanged: True; 'CHANGED inversion/observe.dat' listed: True |
+| F | F4 --force --force-delete-foreign deletes the foreign files | PASS | exit 0; foreign files left []; 17 files listed, 0 mismatches [];  |
+| F | F5a a link inside the run directory, --force | PASS | symlink; exit 1; refused: True; link kept: True; target untouched: True; run dir intact: True; PREP FAILED: refusing to delete /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4/12c8b723-4a84-4277-90c6-4cb |
+| F | F5b a link inside the run directory, --force --force-delete-foreign | PASS | symlink; exit 1; refused: True; link kept: True; target untouched: True; run dir intact: True; PREP FAILED: refusing to delete /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4/12c8b723-4a84-4277-90c6-4cb |
+| F | F6a --out = the fixture root (holds the config and the EDIs), --force | PASS | exit 1; refused: True; fixture (config, EDIs) unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/fixtur |
+| F | F6b --out = the fixture root (holds the config and the EDIs), --force --force-delete-foreign | PASS | exit 1; refused: True; fixture (config, EDIs) unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/fixtur |
+| F | F7 an existing RUN.staging without prep's marker is not deleted | PASS | exit 1; notes.txt kept: True; PREP FAILED: nothing deleted: <scratch>/r2/final_wsl/guard/F7 |
+| F | F8 a stale RUN.staging with prep's marker is replaced | PASS | exit 0; stale staging removed: True;  |
+| F | F9 no --force on an existing directory | PASS | exit 1; unchanged: True; PREP FAILED: <scratch>/r2/final_wsl/runs/F9_noforce exists. W |
+| F | F10 --force on a copy of the committed mesh/vulcan_v2 (no manifest, halfspace/, mesh_logs/) | PASS | exit 1; unchanged: True; lists halfspace/, mesh_logs/ and 'no prep_manifest.sha256': True; 145 files in the copy |
+| F | F11 --force-delete-foreign without --force | PASS | exit 1; output written: False; PREP FAILED: --force-delete-foreign only widens --force; give both |
+| F | F12 the re-inventory: a mesh.dat copied into the run directory during a --force run stops it | PASS | exit 1; aborted, mesh.dat and the originals kept; PREP FAILED: nothing deleted: <scratch>/r2/final_wsl/runs/F12 |
+| F | F13 a git repository nested in the run directory | PASS | exit 1; message: True; unchanged: True; PREP FAILED: refusing to delete /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4/12c8b723-4a84-4277-90c6-4cb |
+| J | J1 --out reaches the fixture root through a linked parent (alias/fixture), config by its real path, --force --force-delete-foreign | PASS | symlink; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/J1_alias/fixture: /mnt/c/U |
+| J | J2 the config is given through a linked parent (alias/fixture/config/fixture.yml), --out is the real fixture root, --force --force-delete-foreign | PASS | symlink; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/J2_real/fixture: it is or  |
+| J | J3 --out reaches an ordinary run directory with foreign files through a linked parent, --force --force-delete-foreign | PASS | symlink; exit 1; refused: True; real run dir unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/J3_alias/run: /mnt/c/Users |
+| K | K1 a run stopped by the late CR scan, then the same command again | PASS | staging kept its marker after the abort: True; rerun exit 0; 'not created by this version': False; 'left by an earlier run': True; staging gone: True; 17 files listed, 0 mismatches [];  |
+| K | K2 a --force run stopped by the re-inventory; the added mesh.dat is moved out, then the same command again | PASS | staging kept its marker after the abort: True; rerun exit 0; 'not created by this version': False; 'left by an earlier run': True; staging gone: True; 17 files listed, 0 mismatches [];  |
+| L | L1 delete_plan on a link (symlink or junction) as the directory itself | PASS | symlink; top <scratch>/r2/final_wsl/guard/L1_link: RESULT refused: refusing to delete /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-wor |
+| L | L2 delete_plan on a directory inside a .git directory | PASS | top <scratch>/r2/final_wsl/guard/L2_repo/.git/objects: RESULT refused: refusing to delete /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude |
+| L | L3 delete_plan on the filesystem root of the scratch directory | PASS | top /: RESULT refused: refusing to delete /: it is a filesystem root |
+| L | L4 delete_plan on a directory that holds the home directory (HOME and USERPROFILE pointed into the scratch tree) | PASS | top <scratch>/r2/final_wsl/guard/L4_parent: RESULT refused: refusing to delete /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees- |
+| L | L5 delete_plan on the directory that holds the script under test | PASS | top /mnt/d/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4/scripts: RESULT refused: refusing to delete /mnt/d/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4/scripts: it is or contains this script (/mnt/d/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4/scripts/prep_vulcan.py) |
+| G | G1 DISTORTION 1 (with its two TRADE_OFF_PARAM values) is rejected by load_config | PASS | exit 1; message: True; output written: False; PREP FAILED: config: inversion.DISTORTION 1 is not supported: with DISTORTION != 0 FEMTIC reads distortion_iter<N>.dat at start, distortion_iter0.dat for ITERATION '0 N', and exits if it is missing (f |
+| H | H1 renaming J6_BxRepaced -> J6_BxReplaced (EDI file, DATAID/LOC/REFLOC/SECTID, site table) | PASS | products that differ: ['inversion/station_map.csv']; station_map rows that differ: [3] -> ['3,1003,J6_BxReplaced,J6_BxReplaced.edi,4.89690,-1.26010,696.0886,6704.4580,0.08600,21'] |
+| H | H2 the rename keeps J6's FEMTIC station number among all 120 EDIs (femticPy numbers stations in np.sort order of the EDI file names; site rows are sorted by id) | PASS | 120 EDIs; station number 97 before, 97 after (J5 < J6 < J7) |
+| I | I0 keys of config/vulcan_mesh_v2.yml that load_config never reads | info | none |
+| I | data.error_floor_Z -> [0.2, 0.06, 0.06, 0.2] changes the products (positive control of the comparison) | PASS | products that differ from the clean run: ['inversion/observe.dat'] |
+| I | inversion.NUM_THREADS -> 4 changes the products (positive control of the comparison) | PASS | products that differ from the clean run: ['inversion/control.dat'] |
+| I | data.error_floor_VTF -> 0.5 leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.utm_zone -> 54 leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.hemisphere -> 'N' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.datum -> 'GDA94' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | mesh.topography.dem_file -> 'no_such_dem.txt' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| M | M1 (links inside the directory no longer refused): F5a must FAIL | PASS | F5a on M1: FAIL: symlink; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False;  |
+| M | M1 (links inside the directory no longer refused): F5b must FAIL | PASS | F5b on M1: FAIL: symlink; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False;  |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): F6a must FAIL | PASS | F6a on M2: FAIL: exit 1; refused: False; fixture (config, EDIs) unchanged: True; PREP FAILED: nothing deleted: <scratch>/r2/final_wsl/mut/M2_F |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): F6b must FAIL | PASS | F6b on M2: FAIL: exit 0; refused: False; fixture (config, EDIs) unchanged: False;  |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): L4 must FAIL | PASS | L4 on M2: FAIL: top <scratch>/r2/final_wsl/mut/M2_L4/guard/L4_parent: RESULT reached the walk of /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026- |
+| M | M2 (the protected-path check removed (repository, config, inputs, script, home)): L5 must FAIL | PASS | L5 on M2: FAIL: top <scratch>/r2/final_wsl/mutants: RESULT reached the walk of /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees- |
+| M | M3 (foreign files refused even with --force-delete-foreign): F4 must FAIL | PASS | F4 on M3: FAIL: exit 1; foreign files left ['inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'halfspace/acc_3/b1/femtic_0.log', 'mesh_logs/products.md5']; 17 files listed, 4 mismatches ['halfspace/acc_3/b1/femtic_0.log', 'inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'm |
+| M | M4 (--force-delete-foreign accepted without --force): F11 must FAIL | PASS | F11 on M4: FAIL: exit 0; output written: True;  |
+| M | M5 alone: F9 on it | info | PASS: exit 1; unchanged: True; PREP FAILED: nothing deleted: <scratch>/r2/final_wsl/mut/M5_F (a second guard still holds: defence in depth, so this mutant alone  |
+| M | M7 (the re-inventory just before the delete made blind): F12 must FAIL | PASS | F12 on M7: FAIL: exit 0; exit 0 without 'changed during the run'; the added mesh.dat is gone; original files changed;  |
+| M | M5+M7 (both refusals of a run without --force removed): F9 must FAIL | PASS | F9 on M5+M7: FAIL: exit 0; unchanged: False;  |
+| M | M6 (the staging marker ignored): F8 must FAIL | PASS | F8 on M6: FAIL: exit 1; stale staging removed: False; PREP FAILED: nothing deleted: /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4/12c8b723-4a84-4277-90c6-4cb5c |
+| M | M6 (the staging marker ignored): K1 must FAIL | PASS | K1 on M6: FAIL: staging kept its marker after the abort: True; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; no prep_manifest.sha256; PREP FAILED: nothing deleted: /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-workt |
+| M | M6 (the staging marker ignored): K2 must FAIL | PASS | K2 on M6: FAIL: staging kept its marker after the abort: True; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; 17 files listed, 0 mismatches []; PREP FAILED: nothing deleted: /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--cla |
+| M | M8 (the staging marker dropped before the CR scan and the re-inventory (the round-1 order)): K1 must FAIL | PASS | K1 on M8: FAIL: staging kept its marker after the abort: False; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; no prep_manifest.sha256; PREP FAILED: nothing deleted: /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--claude-work |
+| M | M8 (the staging marker dropped before the CR scan and the re-inventory (the round-1 order)): K2 must FAIL | PASS | K2 on M8: FAIL: staging kept its marker after the abort: False; rerun exit 1; 'not created by this version': True; 'left by an earlier run': False; staging gone: False; 17 files listed, 0 mismatches []; PREP FAILED: nothing deleted: /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEMTIC-2026--cl |
+| M | M9 (inside() compares abspath instead of realpath): J2 must FAIL | PASS | J2 on M9: FAIL: symlink; exit 0; refused: False; real tree unchanged: False;  |
+| M | M9 alone: J1 on it | info | PASS: symlink; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/mut/M9_J1/J1_alias/fixture (a second guar |
+| M | M10 (only the directory itself is tested for a link, not its parents): J3 must FAIL | PASS | J3 on M10: FAIL: symlink; exit 0; refused: False; real run dir unchanged: False;  |
+| M | M10 alone: J1 on it | info | PASS: symlink; exit 1; refused: True; real tree unchanged: True; PREP FAILED: refusing to delete <scratch>/r2/final_wsl/mut/M10_J1/J1_alias/fixtur (a second guar |
+| M | M11 (M9 + M10, i.e. the round-1 guard logic): J1 must FAIL | PASS | J1 on M11: FAIL: symlink; exit 0; refused: False; real tree unchanged: False;  |
+| M | M11 (M9 + M10, i.e. the round-1 guard logic): J2 must FAIL | PASS | J2 on M11: FAIL: symlink; exit 0; refused: False; real tree unchanged: False;  |
+| M | M11 (M9 + M10, i.e. the round-1 guard logic): J3 must FAIL | PASS | J3 on M11: FAIL: symlink; exit 0; refused: False; real run dir unchanged: False;  |
+| M | M12 (the '.git on the path' refusal removed): L2 must FAIL | PASS | L2 on M12: FAIL: top <scratch>/r2/final_wsl/mut/M12_L2/guard/L2_repo/.git/objects: RESULT reached the walk of /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN |
+| M | M13 (the filesystem-root refusal removed (the protected-path check still refuses the root, with another message)): L3 must FAIL | PASS | L3 on M13: FAIL: top /: RESULT refused: refusing to delete /: it is or contains the repository root (paths.root) (<scratch>/r2/final_wsl/fixture) |
+| M | M13+M2 (the filesystem-root refusal and the protected-path check removed): L3 must FAIL | PASS | L3 on M13+M2: FAIL: top /: RESULT reached the walk of / without refusing |
+| M | M14 (a nested .git no longer refused): F13 must FAIL | PASS | F13 on M14: FAIL: exit 0; message: False; unchanged: False;  |
+| M | M15 (C06, C08 and C09 PASS on zero comparisons (the round-1 behaviour)): N1 must FAIL | PASS | N1 on M15: FAIL: observe.dat changed: True; exit 1; C06=PASS C07=FAIL C08=PASS C09=PASS; [PASS] C06  frequencies: nothing compared: 6 of 6 station(s) failed C07 / [PASS] C08  impedance values: nothing compared: 6 of 6 station(s) failed C07 |
+| M | M16 (no link test on the path at all): L1 must FAIL | PASS | L1 on M16: FAIL: symlink; top <scratch>/r2/final_wsl/mut/M16_L1/guard/L1_link: RESULT reached the walk of /mnt/c/Users/joint/AppData/Local/Temp/claude/D--BEN-FEM |
+
+85 tests: 85 PASS, 0 FAIL
+exit 0; wall 103 s
+
+#################### Part 2 ####################
+prep under test: <scratch>\r2\prep_vulcan_HEAD.py (sha256 41a34c0fc8e2ef58)
+repository: D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4; python 3.13.5 (C:\Users\joint\anaconda3\python.exe) on win32
+fixture sites: A1, J5, J6_BxRepaced, J7, Vul24-19, Vul25_004
+
+[A] A1 clean full run of the fixture
+  This test fails if prep exits non-zero or any of C01-C14 is not PASS (in a full run C03 and C05 compare against femticPy, so all 14 apply)
+  -> PASS: exit 0; C01=PASS C02=PASS C03=PASS C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; OK: 14 checks passed; wrote <scratch>\r2\final_head\fixture\out\c
+
+[A] A2 clean --check-only
+  This test fails if prep exits non-zero, C03 or C05 is anything but N/A (under --check-only they have no femticPy result to compare, so PASS would be vacuous), or any other check is not PASS
+  -> FAIL: exit 0; C01=PASS C02=PASS C03=PASS C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; 14 checks, 0 failed
+
+[A] A3 full run with an explicit sites.origin [697.0, 6699.5] km
+  This test fails if prep exits non-zero, C03 is not reported (it used to be skipped silently, giving 13 checks) or is anything but N/A, or any other check is not PASS
+  -> FAIL: exit 0; 13 check lines; C01=PASS C02=PASS C03=None C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; (no C03 line)
+
+[B] B1 flip the sign of Im(Zxy), station 1, 100 Hz
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C08 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08']; [FAIL] C08  impedance values: 1008 values, max relative difference 2.0e+00; bad: ['A1 100 Hz ZXY 0.033211 vs -0.033211']
+
+[B] B2 scale the Re and Im SE of Zxy by 1.01, station 1, 100 Hz
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C09 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C09']; [FAIL] C09  error floors: 504 SE pairs, max relative difference 1.0e-02; floor active in 100%/95%/97%/100% of Zxx/Zxy/Zyx/Zyy; bad: ['A1 100 Hz ZXY SE 0.0027734 vs 0.0027459', 'A1 100 Hz ZXY SE 0.0027734 vs 0.0027459']
+
+[B] B3 move station 1 (and its dummy VTF H-station) 2 m north
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C04 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C04']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (observe.dat MT point (-3.81600, -6.58700) is within 1 m of 0 sites); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station id
+
+[B] B4 frequency x (1 + 2e-6), station 1, 100 Hz
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C06 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 2.00e-06 over 126 data lines; bad: ['A1 100 Hz']
+
+[B] B5 swap the site_id fields of station_map.csv rows 1 and 2
+  This test fails if the injection leaves inversion/station_map.csv unchanged, or prep --check-only does not exit 1 with C04 FAIL
+  -> PASS: inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 1; FAIL ['C04', 'C08', 'C09']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+
+[B] B6 frequency + 1e-5 Hz at the lowest band (8e-3 relative), station 1
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C06 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 7.97e-03 over 126 data lines; bad: ['A1 0.0012653 Hz']
+
+[C] C1 swap whole rows 1 and 2 of station_map.csv
+  This test fails if the injection leaves inversion/station_map.csv unchanged, or prep --check-only exits non-zero or reports any FAIL (the check's tolerance should absorb this change: C04)
+  -> PASS: inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+
+[C] C2 frequency + 1e-5 Hz at 100 Hz (1e-7 relative), station 1
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only exits non-zero or reports any FAIL (the check's tolerance should absorb this change: C06)
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 1.00e-07 over 126 data lines
+
+[C] C3 frequency x (1 + 5e-7), station 1, 100 Hz
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only exits non-zero or reports any FAIL (the check's tolerance should absorb this change: C06)
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 5.00e-07 over 126 data lines
+
+[C] C4 move station 1 (and its VTF H-station) 0.2 m north
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only exits non-zero or reports any FAIL (the check's tolerance should absorb this change: C04)
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+
+[D] D1 one CRLF in inversion/control.dat
+  This test fails if the injection leaves inversion/control.dat unchanged, or prep --check-only does not exit 1 with C01 FAIL
+  -> PASS: inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C01']; [FAIL] C01  LF line endings: CR in ['inversion\\control.dat']
+
+[D] D2 DATAID of A1.edi changed to A1x (an input fault: a fixture copy of the EDIs)
+  This test fails if the EDI is unchanged, or prep --check-only does not exit 1 with C02 FAIL
+  -> PASS: EDI changed: True; exit 1; FAIL ['C02', 'C07']; [FAIL] C02  site ids: 6 table ids, 6 DATAIDs, 6 files; identical sets: False
+
+[D] D3 drop the last data line of station 1 (and its count)
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C07 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C07']; [FAIL] C07  data line count: 125 data lines = sum over 6 sites of selected bands present (126); bad stations: [('A1', 20, 21)]
+
+[D] D4 conjugate every impedance (exp(+i omega t) left in)
+  This test fails if the injection leaves inversion/observe.dat unchanged, or prep --check-only does not exit 1 with C10 FAIL
+  -> PASS: inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08', 'C10']; [FAIL] C10  time convention: median phase Zxy 36.6 deg, Zyx 216.9 deg
+
+[D] D5 move site 1 of files/obs_site.dat 2 m
+  This test fails if the injection leaves files/obs_site.dat unchanged, or prep --check-only does not exit 1 with C11 FAIL
+  -> PASS: files/obs_site.dat changed: True (changed: ['files/obs_site.dat']); exit 1; FAIL ['C11']; [FAIL] C11  mesh-site coordinates: obs_site.dat obs_site.dat point (-3.81600, -6.58700) is within 1 m of 0 sites; observing_site.dat 6 sites, max 0.64 m; resistivity_attr.dat 6 sites, max 0.64 m
+
+[D] D6 makeMtr.param core edge 0.2 -> 0.21 km
+  This test fails if the injection leaves files/makeMtr.param unchanged, or prep --check-only does not exit 1 with C12 FAIL
+  -> PASS: files/makeMtr.param changed: True (changed: ['files/makeMtr.param']); exit 1; FAIL ['C12']; [FAIL] C12  mesh tables: differ: ['makeMtr ellipsoids']
+
+[D] D7 one topography.dat height 0 -> 0.001 km (flat mode)
+  This test fails if the injection leaves files/topography.dat unchanged, or prep --check-only does not exit 1 with C13 FAIL
+  -> PASS: files/topography.dat changed: True (changed: ['files/topography.dat']); exit 1; FAIL ['C13']; [FAIL] C13  geometry: flat topography.dat has non-zero heights
+
+[D] D8 inversion/control.dat TRADE_OFF_PARAM 3 -> 1
+  This test fails if the injection leaves inversion/control.dat unchanged, or prep --check-only does not exit 1 with C14 FAIL
+  -> PASS: inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C14']; [FAIL] C14  inversion control.dat: TRADE_OFF_PARAM [1.0] != [3.0]
+
+[N] N1 every MT station loses its last data line (and its count), so every station fails C07
+  This test fails if observe.dat is unchanged, prep --check-only does not exit 1 with C07 FAIL, or any of C06, C08 and C09 is anything but N/A (they compared nothing, so a PASS would be vacuous)
+  -> FAIL: observe.dat changed: True; exit 1; C06=PASS C07=FAIL C08=PASS C09=PASS; [PASS] C06  frequencies: max relative difference 0.00e+00 over 120 data lines | [PASS] C08  impedance values: 0 values, max relative difference 0.0e+00
+
+[E] full run, C03: femticPy centres the sites on a point 2 m north of the bbox centre (consistently, so C04 and C11 cannot see it)
+  This test fails if prep exits 0, C03 is not FAIL, or the output directory is created
+  -> PASS: exit 1; FAIL ['C03']; output dir created: False; [FAIL] C03  origin: origin E 697.34870 N 6699.56310 km; bbox centre E 697.34870 N 6699.56110 km
+
+[E] full run, C05: the femticPy path drops its lowest selected band
+  This test fails if prep exits 0, C05 is not FAIL, or the output directory is created
+  -> PASS: exit 1; FAIL ['C05', 'C07', 'C10']; output dir created: False; [FAIL] C05  frequency selection: 21 bands selected from 53 candidates; femticPy path chose the same list: False
+
+[F] F1 --force on an unchanged prep directory replaces it
+  This test fails if prep exits non-zero, or the replaced directory lacks a prep_manifest.sha256 that lists every file in it with a matching sha256
+  -> FAIL: exit 0; no prep_manifest.sha256; OK: 14 checks passed; wrote <scratch>\r2\final_head\runs\F1_clean
+
+[F] F2 --force refuses a directory holding mesh products and half-space runs
+  This test fails if prep exits 0, any file of the directory is deleted or changed, or the listing does not name inversion/mesh.dat, inversion/resistivity_block_iter0.dat, halfspace/ and mesh_logs/
+  -> FAIL: exit 0; directory unchanged: False; refusal names the 4 foreign entries: False; 
+
+[F] F3 --force refuses when a prep product was edited since
+  This test fails if prep exits 0, the directory changes, or the edited observe.dat is not listed as CHANGED
+  -> FAIL: exit 0; directory unchanged: False; 'CHANGED inversion/observe.dat' listed: False
+
+[F] F4 --force --force-delete-foreign deletes the foreign files
+  This test fails if prep exits non-zero, a foreign file survives, or the new manifest does not verify
+  -> FAIL: exit 2; foreign files left ['inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'halfspace/acc_3/b1/femtic_0.log', 'mesh_logs/products.md5']; no prep_manifest.sha256; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: --force-delete-foreign
+
+[F] F5a a link inside the run directory, --force
+  This test fails if prep exits other than 1 without 'refusing to delete', or the link, its target's files or the run directory's files are touched
+  -> FAIL: junction; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False; 
+
+[F] F5b a link inside the run directory, --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or the link, its target's files or the run directory's files are touched
+  -> FAIL: junction; exit 2; refused: False; link kept: True; target untouched: True; run dir intact: True; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: -
+
+[F] F6a --out = the fixture root (holds the config and the EDIs), --force
+  This test fails if prep exits other than 1 without 'refusing to delete', or any fixture file is deleted or changed
+  -> FAIL: exit 0; refused: False; fixture (config, EDIs) unchanged: False; 
+
+[F] F6b --out = the fixture root (holds the config and the EDIs), --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or any fixture file is deleted or changed
+  -> FAIL: exit 2; refused: False; fixture (config, EDIs) unchanged: True; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: --force-delete-foreign
+
+[F] F7 an existing RUN.staging without prep's marker is not deleted
+  This test fails if prep exits 0 or deletes the unmarked staging directory's notes.txt
+  -> FAIL: exit 0; notes.txt kept: False; 
+
+[F] F8 a stale RUN.staging with prep's marker is replaced
+  This test fails if prep exits non-zero, the stale staging directory survives, or the run directory is not written
+  -> PASS: exit 0; stale staging removed: True; 
+
+[F] F9 no --force on an existing directory
+  This test fails if prep exits 0 or changes the directory
+  -> PASS: exit 1; unchanged: True; PREP FAILED: <scratch>\r2\final_head\runs\F9_noforce exists; use 
+
+[F] F10 --force on a copy of the committed mesh/vulcan_v2 (no manifest, halfspace/, mesh_logs/)
+  This test fails if prep exits 0, the copy changes, or the listing does not name halfspace/, mesh_logs/ and the missing manifest
+  -> FAIL: exit 0; unchanged: False; lists halfspace/, mesh_logs/ and 'no prep_manifest.sha256': False; 145 files in the copy
+
+[F] F11 --force-delete-foreign without --force
+  This test fails if prep exits 0 or writes the output
+  -> FAIL: exit 2; output written: False; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: -
+
+[F] F12 the re-inventory: a mesh.dat copied into the run directory during a --force run stops it
+  This test fails if prep exits 0, or the added mesh.dat or any original file of the directory is deleted or changed
+  -> FAIL: exit 0; exit 0 without 'changed during the run'; the added mesh.dat is gone; original files changed; 
+
+[F] F13 a git repository nested in the run directory
+  This test fails if prep exits other than 1 without 'contains a git repository', or any file of the directory is deleted or changed
+  -> FAIL: exit 2; message: False; unchanged: True; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: -
+
+[J] J1 --out reaches the fixture root through a linked parent (alias/fixture), config by its real path, --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or any file below the real directory is deleted, changed or added
+  -> FAIL: junction; exit 2; refused: False; real tree unchanged: True; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: --force-delete-foreign
+
+[J] J2 the config is given through a linked parent (alias/fixture/config/fixture.yml), --out is the real fixture root, --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or any file below the real directory is deleted, changed or added
+  -> FAIL: junction; exit 2; refused: False; real tree unchanged: True; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: --force-delete-foreign
+
+[J] J3 --out reaches an ordinary run directory with foreign files through a linked parent, --force --force-delete-foreign
+  This test fails if prep exits other than 1 without 'refusing to delete', or any file of the real run directory is deleted, changed or added
+  -> FAIL: junction; exit 2; refused: False; real run dir unchanged: True; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: --force-delete-foreign
+
+[K] K1 a run stopped by the late CR scan, then the same command again
+  This test fails if the first run does not exit 1 with 'CR bytes', its RUN.staging lacks prep's marker afterwards, or the rerun exits non-zero, says 'not created by this version', leaves RUN.staging, or writes a run directory whose manifest does not verify
+  -> FAIL: staging kept its marker after the abort: False; rerun exit 0; 'not created by this version': False; 'left by an earlier run': False; staging gone: True; no prep_manifest.sha256; 
+
+[K] K2 a --force run stopped by the re-inventory; the added mesh.dat is moved out, then the same command again
+  This test fails if the first run does not stop at the re-inventory, its RUN.staging lacks prep's marker afterwards, or the rerun exits non-zero, says 'not created by this version', leaves RUN.staging, or writes a run directory whose manifest does not verify
+  -> FAIL: first run: exit 0 without 'changed during the run'; the added mesh.dat is gone; original files changed; 
+
+[L] L1 delete_plan on a link (symlink or junction) as the directory itself
+  This test fails if delete_plan does not refuse with 'is a link' before walking the directory
+  -> FAIL: junction; top <scratch>\r2\final_head\guard\L1_link: no RESULT line: Traceback (most recent call last):
+  File "<string>", line 14, in <module>
+    m.delete_plan(top, c)
+    ^^^^^^^^^^^^^
+AttributeError: module 'prep_under_test' has no attribute 'delete_plan'
+
+[L] L2 delete_plan on a directory inside a .git directory
+  This test fails if delete_plan does not refuse with 'inside a .git directory' before walking it
+  -> FAIL: top <scratch>\r2\final_head\guard\L2_repo\.git\objects: no RESULT line: Traceback (most recent call last):
+  File "<string>", line 14, in <module>
+    m.delete_plan(top, c)
+    ^^^^^^^^^^^^^
+AttributeError: module 'prep_under_test' has no attribute 'delete_plan'
+
+[L] L3 delete_plan on the filesystem root of the scratch directory
+  This test fails if delete_plan does not refuse with 'filesystem root' before walking it
+  -> FAIL: top C:\: no RESULT line: Traceback (most recent call last):
+  File "<string>", line 14, in <module>
+    m.delete_plan(top, c)
+    ^^^^^^^^^^^^^
+AttributeError: module 'prep_under_test' has no attribute 'delete_plan'
+
+[L] L4 delete_plan on a directory that holds the home directory (HOME and USERPROFILE pointed into the scratch tree)
+  This test fails if delete_plan does not refuse with 'the home directory' before walking it
+  -> FAIL: top <scratch>\r2\final_head\guard\L4_parent: no RESULT line: Traceback (most recent call last):
+  File "<string>", line 14, in <module>
+    m.delete_plan(top, c)
+    ^^^^^^^^^^^^^
+AttributeError: module 'prep_under_test' has no attribute 'delete_plan'
+
+[L] L5 delete_plan on the directory that holds the script under test
+  This test fails if delete_plan does not refuse with 'this script' before walking it
+  -> FAIL: top <scratch>\r2: no RESULT line: Traceback (most recent call last):
+  File "<string>", line 14, in <module>
+    m.delete_plan(top, c)
+    ^^^^^^^^^^^^^
+AttributeError: module 'prep_under_test' has no attribute 'delete_plan'
+
+[G] G1 DISTORTION 1 (with its two TRADE_OFF_PARAM values) is rejected by load_config
+  This test fails if prep exits 0, writes an output directory, or does not say 'DISTORTION 1 is not supported'
+  -> FAIL: exit 0; message: False; output written: True; 
+
+[H] H1 renaming J6_BxRepaced -> J6_BxReplaced (EDI file, DATAID/LOC/REFLOC/SECTID, site table)
+  This test fails if observe.dat, inversion/control.dat or any files/* differ from the clean run, or station_map.csv differs in any row but J6's
+  -> PASS: products that differ: ['inversion/station_map.csv']; station_map rows that differ: [3] -> ['3,1003,J6_BxReplaced,J6_BxReplaced.edi,4.89690,-1.26010,696.0886,6704.4580,0.08600,21']
+
+[H] H2 the rename keeps J6's FEMTIC station number among all 120 EDIs (femticPy numbers stations in np.sort order of the EDI file names; site rows are sorted by id)
+  This test fails if J6's index in the sorted list of the 120 EDI names changes
+  -> PASS: 120 EDIs; station number 97 before, 97 after (J5 < J6 < J7)
+
+[I] I0 keys of config/vulcan_mesh_v2.yml that load_config never reads (observation, not a test)
+  none
+
+[I] data.error_floor_Z -> [0.2, 0.06, 0.06, 0.2] changes the products (positive control of the comparison)
+  This test fails if no product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: ['inversion/observe.dat']
+
+[I] inversion.NUM_THREADS -> 4 changes the products (positive control of the comparison)
+  This test fails if no product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: ['inversion/control.dat']
+
+[I] data.error_floor_VTF -> 0.5 leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[I] sites.utm_zone -> 54 leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[I] sites.hemisphere -> 'N' leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[I] sites.datum -> 'GDA94' leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[I] mesh.topography.dem_file -> 'no_such_dem.txt' leaves every product unchanged (dead key)
+  This test fails if any product file (observe.dat, control.dat, station_map.csv, files/*) differs
+  -> PASS: products that differ from the clean run: none
+
+[M] skipped (--skip-mutants)
+
+==== summary ====
+| group | test | result | observed |
+|---|---|---|---|
+| A | A1 clean full run of the fixture | PASS | exit 0; C01=PASS C02=PASS C03=PASS C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; OK: 14 checks passed; wrote C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35796\scr |
+| A | A2 clean --check-only | FAIL | exit 0; C01=PASS C02=PASS C03=PASS C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; 14 checks, 0 failed |
+| A | A3 full run with an explicit sites.origin [697.0, 6699.5] km | FAIL | exit 0; 13 check lines; C01=PASS C02=PASS C03=None C04=PASS C05=PASS C06=PASS C07=PASS C08=PASS C09=PASS C10=PASS C11=PASS C12=PASS C13=PASS C14=PASS; (no C03 line) |
+| B | B1 flip the sign of Im(Zxy), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08']; [FAIL] C08  impedance values: 1008 values, max relative difference 2.0e+00; bad: ['A1 100 Hz ZXY 0.033211 vs -0.033211'] |
+| B | B2 scale the Re and Im SE of Zxy by 1.01, station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C09']; [FAIL] C09  error floors: 504 SE pairs, max relative difference 1.0e-02; floor active in 100%/95%/97%/100% of Zxx/Zxy/Zyx/Zyy; bad: ['A1 100 Hz ZXY SE 0.0027734 vs 0.0027459', 'A1 100 Hz ZXY SE 0.0027734  |
+| B | B3 move station 1 (and its dummy VTF H-station) 2 m north | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C04']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (observe.dat MT point (-3.81600, -6.58700) is within 1 m of 0 sites); 6 dummy VTF H-stations  |
+| B | B4 frequency x (1 + 2e-6), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 2.00e-06 over 126 data lines; bad: ['A1 100 Hz'] |
+| B | B5 swap the site_id fields of station_map.csv rows 1 and 2 | PASS | inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 1; FAIL ['C04', 'C08', 'C09']; [FAIL] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: False (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, sa |
+| B | B6 frequency + 1e-5 Hz at the lowest band (8e-3 relative), station 1 | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C06']; [FAIL] C06  frequencies: max relative difference 7.97e-03 over 126 data lines; bad: ['A1 0.0012653 Hz'] |
+| C | C1 swap whole rows 1 and 2 of station_map.csv | PASS | inversion/station_map.csv changed: True (changed: ['inversion/station_map.csv']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H |
+| C | C2 frequency + 1e-5 Hz at 100 Hz (1e-7 relative), station 1 | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 1.00e-07 over 126 data lines |
+| C | C3 frequency x (1 + 5e-7), station 1, 100 Hz | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C06  frequencies: max relative difference 5.00e-07 over 126 data lines |
+| C | C4 move station 1 (and its VTF H-station) 0.2 m north | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 0; FAIL none; [PASS] C04  stations: 6 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.64 m); 6 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station |
+| D | D1 one CRLF in inversion/control.dat | PASS | inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C01']; [FAIL] C01  LF line endings: CR in ['inversion\\control.dat'] |
+| D | D2 DATAID of A1.edi changed to A1x (an input fault: a fixture copy of the EDIs) | PASS | EDI changed: True; exit 1; FAIL ['C02', 'C07']; [FAIL] C02  site ids: 6 table ids, 6 DATAIDs, 6 files; identical sets: False |
+| D | D3 drop the last data line of station 1 (and its count) | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C07']; [FAIL] C07  data line count: 125 data lines = sum over 6 sites of selected bands present (126); bad stations: [('A1', 20, 21)] |
+| D | D4 conjugate every impedance (exp(+i omega t) left in) | PASS | inversion/observe.dat changed: True (changed: ['inversion/observe.dat']); exit 1; FAIL ['C08', 'C10']; [FAIL] C10  time convention: median phase Zxy 36.6 deg, Zyx 216.9 deg |
+| D | D5 move site 1 of files/obs_site.dat 2 m | PASS | files/obs_site.dat changed: True (changed: ['files/obs_site.dat']); exit 1; FAIL ['C11']; [FAIL] C11  mesh-site coordinates: obs_site.dat obs_site.dat point (-3.81600, -6.58700) is within 1 m of 0 sites; observing_site.dat 6 sites, max 0.64 m; resistivity_attr.dat 6 sites, max 0.64 m |
+| D | D6 makeMtr.param core edge 0.2 -> 0.21 km | PASS | files/makeMtr.param changed: True (changed: ['files/makeMtr.param']); exit 1; FAIL ['C12']; [FAIL] C12  mesh tables: differ: ['makeMtr ellipsoids'] |
+| D | D7 one topography.dat height 0 -> 0.001 km (flat mode) | PASS | files/topography.dat changed: True (changed: ['files/topography.dat']); exit 1; FAIL ['C13']; [FAIL] C13  geometry: flat topography.dat has non-zero heights |
+| D | D8 inversion/control.dat TRADE_OFF_PARAM 3 -> 1 | PASS | inversion/control.dat changed: True (changed: ['inversion/control.dat']); exit 1; FAIL ['C14']; [FAIL] C14  inversion control.dat: TRADE_OFF_PARAM [1.0] != [3.0] |
+| N | N1 every MT station loses its last data line (and its count), so every station fails C07 | FAIL | observe.dat changed: True; exit 1; C06=PASS C07=FAIL C08=PASS C09=PASS; [PASS] C06  frequencies: max relative difference 0.00e+00 over 120 data lines / [PASS] C08  impedance values: 0 values, max relative difference 0.0e+00 |
+| E | full run, C03: femticPy centres the sites on a point 2 m north of the bbox centre (consistently, so C04 and C11 cannot see it) | PASS | exit 1; FAIL ['C03']; output dir created: False; [FAIL] C03  origin: origin E 697.34870 N 6699.56310 km; bbox centre E 697.34870 N 6699.56110 km |
+| E | full run, C05: the femticPy path drops its lowest selected band | PASS | exit 1; FAIL ['C05', 'C07', 'C10']; output dir created: False; [FAIL] C05  frequency selection: 21 bands selected from 53 candidates; femticPy path chose the same list: False |
+| F | F1 --force on an unchanged prep directory replaces it | FAIL | exit 0; no prep_manifest.sha256; OK: 14 checks passed; wrote <scratch>\r2\final_head\runs\F1_clean |
+| F | F2 --force refuses a directory holding mesh products and half-space runs | FAIL | exit 0; directory unchanged: False; refusal names the 4 foreign entries: False;  |
+| F | F3 --force refuses when a prep product was edited since | FAIL | exit 0; directory unchanged: False; 'CHANGED inversion/observe.dat' listed: False |
+| F | F4 --force --force-delete-foreign deletes the foreign files | FAIL | exit 2; foreign files left ['inversion/mesh.dat', 'inversion/resistivity_block_iter0.dat', 'halfspace/acc_3/b1/femtic_0.log', 'mesh_logs/products.md5']; no prep_manifest.sha256; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEA |
+| F | F5a a link inside the run directory, --force | FAIL | junction; exit 0; refused: False; link kept: False; target untouched: True; run dir intact: False;  |
+| F | F5b a link inside the run directory, --force --force-delete-foreign | FAIL | junction; exit 2; refused: False; link kept: True; target untouched: True; run dir intact: True; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: - |
+| F | F6a --out = the fixture root (holds the config and the EDIs), --force | FAIL | exit 0; refused: False; fixture (config, EDIs) unchanged: False;  |
+| F | F6b --out = the fixture root (holds the config and the EDIs), --force --force-delete-foreign | FAIL | exit 2; refused: False; fixture (config, EDIs) unchanged: True; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: --force-delete-foreign |
+| F | F7 an existing RUN.staging without prep's marker is not deleted | FAIL | exit 0; notes.txt kept: False;  |
+| F | F8 a stale RUN.staging with prep's marker is replaced | PASS | exit 0; stale staging removed: True;  |
+| F | F9 no --force on an existing directory | PASS | exit 1; unchanged: True; PREP FAILED: <scratch>\r2\final_head\runs\F9_noforce exists; use  |
+| F | F10 --force on a copy of the committed mesh/vulcan_v2 (no manifest, halfspace/, mesh_logs/) | FAIL | exit 0; unchanged: False; lists halfspace/, mesh_logs/ and 'no prep_manifest.sha256': False; 145 files in the copy |
+| F | F11 --force-delete-foreign without --force | FAIL | exit 2; output written: False; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: - |
+| F | F12 the re-inventory: a mesh.dat copied into the run directory during a --force run stops it | FAIL | exit 0; exit 0 without 'changed during the run'; the added mesh.dat is gone; original files changed;  |
+| F | F13 a git repository nested in the run directory | FAIL | exit 2; message: False; unchanged: True; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: - |
+| J | J1 --out reaches the fixture root through a linked parent (alias/fixture), config by its real path, --force --force-delete-foreign | FAIL | junction; exit 2; refused: False; real tree unchanged: True; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: --force-delete-foreign |
+| J | J2 the config is given through a linked parent (alias/fixture/config/fixture.yml), --out is the real fixture root, --force --force-delete-foreign | FAIL | junction; exit 2; refused: False; real tree unchanged: True; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: --force-delete-foreign |
+| J | J3 --out reaches an ordinary run directory with foreign files through a linked parent, --force --force-delete-foreign | FAIL | junction; exit 2; refused: False; real run dir unchanged: True; usage: prep_vulcan_HEAD.py [-h] [--out OUT] [--force] [--check-only DIR]
+                           config
+prep_vulcan_HEAD.py: error: unrecognized arguments: --force-delete-foreign |
+| K | K1 a run stopped by the late CR scan, then the same command again | FAIL | staging kept its marker after the abort: False; rerun exit 0; 'not created by this version': False; 'left by an earlier run': False; staging gone: True; no prep_manifest.sha256;  |
+| K | K2 a --force run stopped by the re-inventory; the added mesh.dat is moved out, then the same command again | FAIL | first run: exit 0 without 'changed during the run'; the added mesh.dat is gone; original files changed;  |
+| L | L1 delete_plan on a link (symlink or junction) as the directory itself | FAIL | junction; top <scratch>\r2\final_head\guard\L1_link: no RESULT line: Traceback (most recent call last):
+  File "<string>", line 14, in <module>
+    m.delete_plan(top |
+| L | L2 delete_plan on a directory inside a .git directory | FAIL | top <scratch>\r2\final_head\guard\L2_repo\.git\objects: no RESULT line: Traceback (most recent call last):
+  File "<string>", line 14, in <module>
+    m.delete_plan( |
+| L | L3 delete_plan on the filesystem root of the scratch directory | FAIL | top C:\: no RESULT line: Traceback (most recent call last):
+  File "<string>", line 14, in <module>
+    m.delete_plan(top, c)
+    ^^^^^^^^^^^^^
+AttributeError: module 'prep_under_test' has no attribute 'delete_plan' |
+| L | L4 delete_plan on a directory that holds the home directory (HOME and USERPROFILE pointed into the scratch tree) | FAIL | top <scratch>\r2\final_head\guard\L4_parent: no RESULT line: Traceback (most recent call last):
+  File "<string>", line 14, in <module>
+    m.delete_plan(top, c)
+    |
+| L | L5 delete_plan on the directory that holds the script under test | FAIL | top <scratch>\r2: no RESULT line: Traceback (most recent call last):
+  File "<string>", line 14, in <module>
+    m.delete_plan(top, c)
+    ^^^^^^^^^^^^^
+AttributeErr |
+| G | G1 DISTORTION 1 (with its two TRADE_OFF_PARAM values) is rejected by load_config | FAIL | exit 0; message: False; output written: True;  |
+| H | H1 renaming J6_BxRepaced -> J6_BxReplaced (EDI file, DATAID/LOC/REFLOC/SECTID, site table) | PASS | products that differ: ['inversion/station_map.csv']; station_map rows that differ: [3] -> ['3,1003,J6_BxReplaced,J6_BxReplaced.edi,4.89690,-1.26010,696.0886,6704.4580,0.08600,21'] |
+| H | H2 the rename keeps J6's FEMTIC station number among all 120 EDIs (femticPy numbers stations in np.sort order of the EDI file names; site rows are sorted by id) | PASS | 120 EDIs; station number 97 before, 97 after (J5 < J6 < J7) |
+| I | I0 keys of config/vulcan_mesh_v2.yml that load_config never reads | info | none |
+| I | data.error_floor_Z -> [0.2, 0.06, 0.06, 0.2] changes the products (positive control of the comparison) | PASS | products that differ from the clean run: ['inversion/observe.dat'] |
+| I | inversion.NUM_THREADS -> 4 changes the products (positive control of the comparison) | PASS | products that differ from the clean run: ['inversion/control.dat'] |
+| I | data.error_floor_VTF -> 0.5 leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.utm_zone -> 54 leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.hemisphere -> 'N' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | sites.datum -> 'GDA94' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+| I | mesh.topography.dem_file -> 'no_such_dem.txt' leaves every product unchanged (dead key) | PASS | products that differ from the clean run: none |
+
+59 tests: 32 PASS, 27 FAIL
+exit 1
+
+#################### Part 3 ####################
+==== Part 3 (Windows base Python): real config, real EDIs ====
+python 3.13.5 C:\Users\joint\anaconda3\python.exe | numpy 2.3.4 | pandas 2.3.3 | pyyaml 6.0.2
+prep_vulcan.py sha256 52c25de114503165ac224117bcb240e3e5c0c70f1d292acbfa55fedaa3380825
+mesh/vulcan_v2 tree sha256 before: 8f8dd127d3e1cef662cb6b0ef43a5762f68c15c745fafdc9c4643d70e09a130a (145 files)
+
+---- 3a: python scripts/prep_vulcan.py config/vulcan_mesh_v2.yml --check-only mesh/vulcan_v2
+This test fails if it exits non-zero, any check is FAIL, any check other than C03 and C05 is not PASS, or the mesh/vulcan_v2 tree changes.
+self-checks on D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\mesh\vulcan_v2
+  [PASS] C01  LF line endings: no CR in any file
+  [PASS] C02  site ids: 120 table ids, 120 DATAIDs, 120 files; identical sets: True
+  [N/A] C03  origin: N/A under --check-only: femticPy's origin exists only in a full run; the bbox centre E 697.38400 N 6697.44045 km used here is what C04 and C11 test the written coordinates against
+  [PASS] C04  stations: 120 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.67 m); 120 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+  [N/A] C05  frequency selection: N/A under --check-only: femticPy's frequency table exists only in a full run; the independent selection (21 bands selected from 53 candidates) is what C06 and C07 test observe.dat against
+  [PASS] C06  frequencies: max relative difference 0.00e+00 over 2520 of 2520 data lines
+  [PASS] C07  data line count: 2520 data lines = sum over 120 sites of selected bands present (2520)
+  [PASS] C08  impedance values: 20160 values, max relative difference 5.0e-05
+  [PASS] C09  error floors: 10080 SE pairs, max relative difference 4.9e-05; floor active in 100%/97%/96%/100% of Zxx/Zxy/Zyx/Zyy
+  [PASS] C10  time convention: median phase Zxy -37.2 deg, Zyx 142.3 deg
+  [PASS] C11  mesh-site coordinates: obs_site.dat 120 sites, max 0.67 m; observing_site.dat 120 sites, max 0.67 m; resistivity_attr.dat 120 sites, max 0.67 m
+  [PASS] C12  mesh tables: all tables equal the config
+  [PASS] C13  geometry: sites x -7.255..7.255, y -6.622..6.622 km inside the domain; coast, topography and seeds consistent
+  [PASS] C14  inversion control.dat: all keywords equal the config
+14 checks: 12 PASS, 0 FAIL, 2 N/A
+exit 0
+mesh/vulcan_v2 tree sha256 after:  8f8dd127d3e1cef662cb6b0ef43a5762f68c15c745fafdc9c4643d70e09a130a; unchanged: True
+
+---- 3b: full prep into a scratch --out: python scripts/prep_vulcan.py config/vulcan_mesh_v2.yml --out <scratch>/v2_full_win
+This test fails if prep exits non-zero, or observe.dat, control.dat, station_map.csv or any files/* differs from mesh/vulcan_v2 (sha256), or the new prep_manifest.sha256 does not verify.
+exit 0
+OK: 14 checks: 14 PASS, 0 FAIL, 0 N/A; wrote <scratch>\r2\v2_full_win
+SAME inversion/observe.dat f4678d0522a6a8d0
+SAME inversion/control.dat 8fba4e299c817ab3
+SAME inversion/station_map.csv 4964e2f5be9204ab
+SAME files/analysis_domain.dat a0715636321d6bbe
+SAME files/bathymetry.dat a45f54c15363b376
+SAME files/coast_line.dat 3e7123b08f2e9705
+SAME files/control.dat bee0d4fadb779646
+SAME files/makeMtr.param 7c2550b50f107de8
+SAME files/obs_site.dat ac427d963865dd1c
+SAME files/observing_site.dat 81a89f039faaa4d4
+SAME files/region_seeds.dat 0d27060db3eccb66
+SAME files/resistivity_attr.dat 4f6f53ae018fcf1f
+SAME files/topography.dat 6fce1153edcd4b28
+RESULT 13 same, 0 differ (OUT=<scratch>/r2/v2_full_win REF=mesh/vulcan_v2)
+compare exit 0
+     17 OK
+README.md config_used.yml files inversion prep.log prep_manifest.sha256 
+
+---- 3c: fail case of the 3b comparison: the same products against mesh/vulcan_v3 (other site refinement)
+This control fails if the comparison reports no DIFF (it could not tell two different meshes' inputs apart).
+DIFF files/obs_site.dat ac427d963865dd1c vs ba234699c7a9bd49
+DIFF files/observing_site.dat 81a89f039faaa4d4 vs 103d02e3122d9f1e
+RESULT 11 same, 2 differ (OUT=<scratch>/r2/v2_full_win REF=mesh/vulcan_v3)
+compare exit 1
+
+#################### Part 4 ####################
+==== Part 4 (WSL conda env femticpy, validation/mesh_2026-09-25/femticpy_environment.yml): real config, real EDIs ====
+python 3.12.14 /home/tara/miniforge3/envs/femticpy/bin/python | numpy 2.5.3 | pandas 2.3.3 | pyyaml 6.0.3 | matplotlib 3.11.2
+prep_vulcan.py sha256 52c25de114503165ac224117bcb240e3e5c0c70f1d292acbfa55fedaa3380825
+mesh/vulcan_v2 tree sha256 before: fa9f36da88b009b0722e80b65cdd2e14944ca89b58d6cb2a3eae67b6c16f48d2 (145 files)
+
+---- 4a: python scripts/prep_vulcan.py config/vulcan_mesh_v2.yml --check-only mesh/vulcan_v2
+This test fails if it exits non-zero, any check is FAIL, any check other than C03 and C05 is not PASS, or the mesh/vulcan_v2 tree changes.
+self-checks on /mnt/d/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4/mesh/vulcan_v2
+  [PASS] C01  LF line endings: no CR in any file
+  [PASS] C02  site ids: 120 table ids, 120 DATAIDs, 120 files; identical sets: True
+  [N/A] C03  origin: N/A under --check-only: femticPy's origin exists only in a full run; the bbox centre E 697.38400 N 6697.44045 km used here is what C04 and C11 test the written coordinates against
+  [PASS] C04  stations: 120 MT stations, ids 1..N: True, one-to-one with the site table and station_map.csv: True (max offset 0.67 m); 120 dummy VTF H-stations (owner 1, 0 frequencies, same x y, ids = MT H-station ids): True
+  [N/A] C05  frequency selection: N/A under --check-only: femticPy's frequency table exists only in a full run; the independent selection (21 bands selected from 53 candidates) is what C06 and C07 test observe.dat against
+  [PASS] C06  frequencies: max relative difference 0.00e+00 over 2520 of 2520 data lines
+  [PASS] C07  data line count: 2520 data lines = sum over 120 sites of selected bands present (2520)
+  [PASS] C08  impedance values: 20160 values, max relative difference 5.0e-05
+  [PASS] C09  error floors: 10080 SE pairs, max relative difference 4.9e-05; floor active in 100%/97%/96%/100% of Zxx/Zxy/Zyx/Zyy
+  [PASS] C10  time convention: median phase Zxy -37.2 deg, Zyx 142.3 deg
+  [PASS] C11  mesh-site coordinates: obs_site.dat 120 sites, max 0.67 m; observing_site.dat 120 sites, max 0.67 m; resistivity_attr.dat 120 sites, max 0.67 m
+  [PASS] C12  mesh tables: all tables equal the config
+  [PASS] C13  geometry: sites x -7.255..7.255, y -6.622..6.622 km inside the domain; coast, topography and seeds consistent
+  [PASS] C14  inversion control.dat: all keywords equal the config
+14 checks: 12 PASS, 0 FAIL, 2 N/A
+exit 0
+mesh/vulcan_v2 tree sha256 after:  fa9f36da88b009b0722e80b65cdd2e14944ca89b58d6cb2a3eae67b6c16f48d2; unchanged: True
+
+---- 4b: full prep into a scratch --out: python scripts/prep_vulcan.py config/vulcan_mesh_v2.yml --out <scratch>/v2_full_wsl
+This test fails if prep exits non-zero, or observe.dat, control.dat, station_map.csv or any files/* differs from mesh/vulcan_v2 (sha256), or the new prep_manifest.sha256 does not verify.
+exit 0
+OK: 14 checks: 14 PASS, 0 FAIL, 0 N/A; wrote <scratch>/r2/v2_full_wsl
+SAME inversion/observe.dat f4678d0522a6a8d0
+SAME inversion/control.dat 8fba4e299c817ab3
+SAME inversion/station_map.csv 4964e2f5be9204ab
+SAME files/analysis_domain.dat a0715636321d6bbe
+SAME files/bathymetry.dat a45f54c15363b376
+SAME files/coast_line.dat 3e7123b08f2e9705
+SAME files/control.dat bee0d4fadb779646
+SAME files/makeMtr.param 7c2550b50f107de8
+SAME files/obs_site.dat ac427d963865dd1c
+SAME files/observing_site.dat 81a89f039faaa4d4
+SAME files/region_seeds.dat 0d27060db3eccb66
+SAME files/resistivity_attr.dat 4f6f53ae018fcf1f
+SAME files/topography.dat 6fce1153edcd4b28
+RESULT 13 same, 0 differ (OUT=<scratch>/r2/v2_full_wsl REF=mesh/vulcan_v2)
+compare exit 0
+     17 OK
+README.md config_used.yml files inversion prep.log prep_manifest.sha256 
+
+---- 4c: the Windows and WSL full-prep trees against each other (the same 13 product files)
+RESULT 13 same, 0 differ (OUT=<scratch>/r2/v2_full_wsl REF=<scratch>/r2/v2_full_win)

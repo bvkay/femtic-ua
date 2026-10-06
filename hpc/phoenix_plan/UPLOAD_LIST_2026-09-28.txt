@@ -1,0 +1,64 @@
+UPLOAD_LIST_2026-09-28.txt -- every file to upload to Phoenix for RUNBOOK_first_inversion.md (STATUS B1-B6), in upload order.
+Written by tests/gen_upload_list.sh at 2026-09-30 12:49:54: sizes (bytes, stat -c %s) and md5 measured on the PC, not typed.
+WinSCP transfer mode: Binary.
+Part A (kit, step B1): other sessions may still edit these files before you upload. The md5 manifest UPLOAD_2026-09-28.md5
+  is therefore built at upload time, in runbook step B1.1, from the files as they are then, and B1.3 checks it on Phoenix.
+  A size or md5 here that differs from your local file only means the file changed after this list was written;
+  the B1.1 manifest is the one that counts. The last two rows are this list and the manifest ('-': not measurable here).
+  tests/runbook_check.sh, runbook_mutate.py and gen_upload_list.sh go up so that the Phoenix copy of the kit is complete;
+  they are PC-only (they read the local inputs and WSL logs): do not run them on Phoenix.
+Parts B and C (step B3.1): the inputs gated on 2026-09-25 (mesh.dat and the model are gitignored, only under
+  D:\BEN\FEMTIC_2026\mesh), into the immutable input folders; no job ever runs there (runbook section 0).
+Part D (step B3.3): the rotated v2 data (STATUS D2; observe.dat sha256 d501abcf5a7dde5f). It replaces B03 and B04 under
+  the same names; step B3.2 first keeps those two as observe_unrotated.dat and station_map_unrotated.csv.
+  v3 takes the same pair (its unrotated files are byte-identical to v2's): if D1 picks v3, runbook B3.2 and B3.3 run again with vulcan_v3.
+Local root of parts A and D: the worktree named in the rows (the changes are uncommitted there); after a merge, the
+  same relative paths under D:\BEN\FEMTIC_2026.
+Not uploaded (compared with fa58604, the kit on Phoenix, by git diff on 2026-09-28; tests/runbook_check.sh checks it):
+  * 00_discover.sh and 02_env_femticpy.sh (unchanged since fa58604);
+  * hpc/ported/: the makefiles and patches are unchanged; only README.md changed (documentation, read by no script);
+  * discovery/ gained phoenix_build_foss_2026-09-25.log, and hpc/phoenix_plan/ has build_foss_20260925_181212.log: both are
+    copies of the build log that Phoenix already holds in /hpcfs/users/a1690074/femtic_src/;
+  * tools/__pycache__/ (Python's byte-code cache).
+Columns: id  step  local path  ->  Phoenix path  bytes  md5
+
+# Part A: kit (step B1) -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/
+A01  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\femtic_lib.sh -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/femtic_lib.sh 36521 34230ad01614798797d4b9d89a1a97cf
+A02  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\01_build_femtic.sh -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/01_build_femtic.sh 37339 ab3659c7260d641b3de7d39f6da62915
+A03  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\06_forward_only.slurm -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/06_forward_only.slurm 26311 a39506a103c97c3e3789749d5e0de4fe
+A04  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\04_inversion.slurm -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/04_inversion.slurm 26776 22d1c0613655f71b367a06b14d0e7e6d
+A05  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\05_chain.sh -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/05_chain.sh 11130 225156ab4c9997a4ed47ea471aef93da
+A06  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\03_mesh.slurm -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/03_mesh.slurm 11897 a462751af3903c211897f7ba38496871
+A07  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\tools\halfspace_eval.py -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/tools/halfspace_eval.py 11268 62e304198c0ddd2e094d739616e44512
+A08  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\tests\c1c2_test.sh -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/tests/c1c2_test.sh 34004 9d0c58ea94fcef7831bfb46fe35d32fd
+A09  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\tests\portability_test.sh -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/tests/portability_test.sh 12860 5f796db927d6e84870dea8bb3b0adc2f
+A10  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\tests\halfspace_eval_test.sh -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/tests/halfspace_eval_test.sh 6149 98d0c2445956e41d52e653611ea57d78
+A11  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\tests\runbook_check.sh -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/tests/runbook_check.sh 70828 0c11e158b79d1d8059b980c62e499ff8
+A12  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\tests\runbook_mutate.py -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/tests/runbook_mutate.py 10168 4980a6220d9d63944932d2608d4c9eba
+A13  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\tests\gen_upload_list.sh -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/tests/gen_upload_list.sh 6430 2a19e482892db5aad13c6c1426d2ff30
+A14  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\README_phoenix.md -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/README_phoenix.md 74419 20a18964596fd936251982a9e7809340
+A15  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\RUNBOOK_first_inversion.md -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/RUNBOOK_first_inversion.md 58437 c1a9183ab9d78b4f928020d24bbf6739
+A16  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\UPLOAD_LIST_2026-09-28.txt -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/UPLOAD_LIST_2026-09-28.txt - -
+A17  B1    D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\hpc\phoenix_plan\UPLOAD_2026-09-28.md5 -> /hpcfs/users/a1690074/FEMTIC_2026/hpc/phoenix_plan/UPLOAD_2026-09-28.md5 - -
+
+# Part B: vulcan_v2 inversion inputs as gated on 2026-09-25 (step B3.1) -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v2/
+B01  B3.1  D:\BEN\FEMTIC_2026\mesh\vulcan_v2\mesh_logs\products.md5 -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v2/products.md5 105 d4e266a93f210bcd572229bccb37ae6f
+B02  B3.1  D:\BEN\FEMTIC_2026\mesh\vulcan_v2\inversion\control.dat -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v2/control.dat 289 1ca8f744e96bd97c1725fdb0f9709861
+B03  B3.1  D:\BEN\FEMTIC_2026\mesh\vulcan_v2\inversion\observe.dat -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v2/observe.dat 496690 599109ca5e809c5f474011006595baac
+B04  B3.1  D:\BEN\FEMTIC_2026\mesh\vulcan_v2\inversion\station_map.csv -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v2/station_map.csv 8342 4d4d0fb12aee9e8be2f6dc46023fb9ea
+B05  B3.1  D:\BEN\FEMTIC_2026\mesh\vulcan_v2\inversion\resistivity_block_iter0.dat -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v2/resistivity_block_iter0.dat 56660718 0c3ae9da46c586b5d7ce388adfcfb1bd
+B06  B3.1  D:\BEN\FEMTIC_2026\mesh\vulcan_v2\inversion\mesh.dat -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v2/mesh.dat 255727272 5f3d3ffb2b1cb59902b2a8d213b8cccd
+
+# Part C: vulcan_v3 inversion inputs as gated on 2026-09-25 (step B3.1) -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v3/
+C01  B3.1  D:\BEN\FEMTIC_2026\mesh\vulcan_v3\mesh_logs\products.md5 -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v3/products.md5 105 8bcf3fff3949673067021481a6e0733d
+C02  B3.1  D:\BEN\FEMTIC_2026\mesh\vulcan_v3\inversion\control.dat -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v3/control.dat 289 1ca8f744e96bd97c1725fdb0f9709861
+C03  B3.1  D:\BEN\FEMTIC_2026\mesh\vulcan_v3\inversion\observe.dat -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v3/observe.dat 496690 599109ca5e809c5f474011006595baac
+C04  B3.1  D:\BEN\FEMTIC_2026\mesh\vulcan_v3\inversion\station_map.csv -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v3/station_map.csv 8342 4d4d0fb12aee9e8be2f6dc46023fb9ea
+C05  B3.1  D:\BEN\FEMTIC_2026\mesh\vulcan_v3\inversion\resistivity_block_iter0.dat -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v3/resistivity_block_iter0.dat 69991806 9bc8f7d40e34ac49e358bfc1b51adb2d
+C06  B3.1  D:\BEN\FEMTIC_2026\mesh\vulcan_v3\inversion\mesh.dat -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v3/mesh.dat 320390011 1d2791129eee27c388bd43ab006519cb
+
+# Part D: the rotated v2 data (step B3.3, after the B3.2 rename on Phoenix) -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v2/
+D01  B3.3  D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\mesh\vulcan_v2_rot\inversion\observe.dat -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v2/observe.dat 496678 6f1e579e818bc9bafa64bc4c091f3ba4
+D02  B3.3  D:\BEN\FEMTIC_2026\.claude\worktrees\femtic-work-9213a4\mesh\vulcan_v2_rot\inversion\station_map.csv -> /hpcfs/users/a1690074/vulcan_femtic/inputs/vulcan_v2/station_map.csv 8950 eecf20d99a12b777faf138027a267f95
+
+Totals: part A 15 files measured, 434537 bytes; part B (v2) 6 files, 312893416 bytes; part C (v3) 6 files, 390887243 bytes; part D (v2 rotated) 2 files, 505628 bytes

@@ -1,0 +1,58 @@
+== Mon Sep 28 09:13:08 PM ACST 2026  TOOLCHAIN=foss  SRC=/hpcfs/users/a1690074/femtic_src  BIN=/hpcfs/users/a1690074/femtic/bin  PORTED=/hpcfs/users/a1690074/FEMTIC_2026/hpc/ported  host=p2-cpu-14  job=16153670 partition=icelake  SMOKE_ONLY=1
+
+Currently Loaded Modules:
+  1) GCCcore/12.3.0                    13) libfabric/1.18.0-GCCcore-12.3.0
+  2) zlib/1.2.13-GCCcore-12.3.0        14) PMIx/4.2.4-GCCcore-12.3.0
+  3) binutils/2.40-GCCcore-12.3.0      15) UCC/1.2.0-GCCcore-12.3.0
+  4) GCC/12.3.0                        16) OpenMPI/4.1.5-GCC-12.3.0
+  5) numactl/2.0.16-GCCcore-12.3.0     17) OpenBLAS/0.3.23-GCC-12.3.0
+  6) XZ/5.4.2-GCCcore-12.3.0           18) FlexiBLAS/3.3.1-GCC-12.3.0
+  7) libxml2/2.11.4-GCCcore-12.3.0     19) FFTW/3.3.10-GCC-12.3.0
+  8) libpciaccess/0.17-GCCcore-12.3.0  20) gompi/2023a
+  9) hwloc/2.9.1-GCCcore-12.3.0        21) FFTW.MPI/3.3.10-gompi-2023a
+ 10) OpenSSL/1.1                       22) ScaLAPACK/2.2.0-gompi-2023a-fb
+ 11) libevent/2.1.12-GCCcore-12.3.0    23) foss/2023a
+ 12) UCX/1.14.1-GCCcore-12.3.0         24) imkl/2023.1.0
+
+ 
+
+MKLROOT=/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0  (not checked in SMOKE_ONLY mode: T1 checks what ldd resolves)
+-- SMOKE_ONLY: testing /hpcfs/users/a1690074/femtic/bin/femtic (installed 2026-09-28 21:10:38) with /gpfs/apps/icl/software/OpenMPI/4.1.5-GCC-12.3.0/bin/mpirun
+
+=============== T1: ldd /hpcfs/users/a1690074/femtic/bin/femtic | grep -i mkl ===============
+	libmkl_intel_ilp64.so.2 => /apps/icl/software/imkl/2023.1.0/mkl/2023.1.0/lib/intel64/libmkl_intel_ilp64.so.2 (0x00007fd4e68b3000)
+	libmkl_gnu_thread.so.2 => /apps/icl/software/imkl/2023.1.0/mkl/2023.1.0/lib/intel64/libmkl_gnu_thread.so.2 (0x00007fd4e4d14000)
+	libmkl_core.so.2 => /apps/icl/software/imkl/2023.1.0/mkl/2023.1.0/lib/intel64/libmkl_core.so.2 (0x00007fd4e0933000)
+	libgomp.so.1 => /gpfs/apps/icl/software/GCCcore/12.3.0/lib64/libgomp.so.1 (0x00007fd4e08ea000)
+	libmpi.so.40 => /gpfs/apps/icl/software/OpenMPI/4.1.5-GCC-12.3.0/lib/libmpi.so.40 (0x00007fd4e07b0000)
+T1 (linkage): PASS
+total 3841
+-rwxr-xr-x 1 a1690074 a1690074 1494008 Sep 28 21:10 femtic
+-rw-rw-r-- 1 a1690074 a1690074     732 Sep 28 21:11 femtic_env.sh
+-rw-r--r-- 1 a1690074 a1690074   19992 Sep 28 21:11 femtic_lib.sh
+-rwxr-xr-x 1 a1690074 a1690074  243544 Sep 28 21:10 makeDHexaMesh
+-rwxr-xr-x 1 a1690074 a1690074   72200 Sep 28 21:10 makeMtr
+-rwxr-xr-x 1 a1690074 a1690074  443024 Sep 28 21:10 makeTetraMesh
+-rwxr-xr-x 1 a1690074 a1690074  178768 Sep 28 21:10 mergeResultOfFEMTIC
+-rwxr-xr-x 1 a1690074 a1690074  903368 Sep 28 21:11 tetgen
+-rwxr-xr-x 1 a1690074 a1690074  122768 Sep 28 21:10 TetGen2Femtic
+-- femtic in /hpcfs/users/a1690074/femtic_src/smoke_foss_20260928_211308/straight (straight), ITERATION '0 2'
+   exit 0; last log line: # End femtic ( 17 sec )
+-- frequencies in example: 4
+-- femtic in /hpcfs/users/a1690074/femtic_src/smoke_foss_20260928_211308/restart (leg1), ITERATION '0 1'
+   exit 0; last log line: # End femtic ( 10 sec )
+-- femtic in /hpcfs/users/a1690074/femtic_src/smoke_foss_20260928_211308/restart (leg2), ITERATION '1 2'
+   exit 0; last log line: # End femtic ( 10 sec )
+-- T5 comparison (femtic.cnv columns: Iter# Retrial# Alpha Damp Roughness Misfit RMS ObjFunc)
+   iter 1  straight:          1         0   1.000000e+00   5.000000e-01   9.935719e+01   2.331502e+03   1.422629e+00   2.430859e+03
+   iter 1  restart :          1         0   1.000000e+00   5.000000e-01   9.935719e+01   2.331502e+03   1.422629e+00   2.430859e+03
+   relative misfit difference 0.000e+00 (tolerance 1e-4)
+   iter 2  straight:          2         0   1.000000e+00   5.000000e-01   2.410951e+02   1.309987e+03   1.066369e+00   1.551083e+03
+   iter 2  restart :          2         0   1.000000e+00   5.000000e-01   2.410951e+02   1.309987e+03   1.066369e+00   1.551083e+03
+   relative misfit difference 0.000e+00 (tolerance 1e-3)
+-- iteration-0 row (compare with the WSL build of the same example; expect >= 6 equal significant digits):
+            0         0   1.000000e+00   5.000000e-01   0.000000e+00   5.752642e+03   2.234639e+00   5.752642e+03
+T2 (smoke run): PASS    T5 (restart equivalence): PASS    work dir: /hpcfs/users/a1690074/femtic_src/smoke_foss_20260928_211308
+
+== Mon Sep 28 09:13:54 PM ACST 2026  SMOKE_ONLY DONE  T1=PASS  T2=PASS  T5=PASS   log: /hpcfs/users/a1690074/femtic_src/smoke_foss_20260928_211308.log
+   next: 02_env_femticpy.sh, 03_mesh.slurm, then 06_forward_only.slurm (first Phoenix job on the real mesh)

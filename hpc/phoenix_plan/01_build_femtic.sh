@@ -151,7 +151,7 @@ if [ "$SMOKE_ONLY" = 1 ]; then
   done
   # shellcheck disable=SC1091
   source "$BIN/femtic_env.sh" || die "SMOKE_ONLY: sourcing $BIN/femtic_env.sh failed"
-  [ "${FEMTIC_LIB_VERSION:-0}" -ge 2 ] || die "SMOKE_ONLY: $BIN/femtic_lib.sh predates this script -- install -m 644 $PLAN_DIR/femtic_lib.sh $BIN/"
+  [ "${FEMTIC_LIB_VERSION:-0}" -ge 4 ] || die "SMOKE_ONLY: $BIN/femtic_lib.sh is version ${FEMTIC_LIB_VERSION:-unset}; this script needs FEMTIC_LIB_VERSION >= 4 (version 2, installed 2026-09-25, misreads PARDISO memory and has no layout rule; version 3 loses N_iv when DIV_NUM_RHS_FWD > N_iv) -- rebuild on the login node (step B, installs it), or install -m 644 $PLAN_DIR/femtic_lib.sh $BIN/"
   [ "${FEMTIC_TOOLCHAIN:-$TOOLCHAIN}" = "$TOOLCHAIN" ] \
     || die "SMOKE_ONLY: $BIN/femtic_env.sh belongs to a TOOLCHAIN=$FEMTIC_TOOLCHAIN build; rerun with TOOLCHAIN=$FEMTIC_TOOLCHAIN"
   if [ -f "$PLAN_DIR/femtic_lib.sh" ] && ! cmp -s "$PLAN_DIR/femtic_lib.sh" "$BIN/femtic_lib.sh"; then
@@ -526,7 +526,9 @@ else
 fi
 
 echo; echo "== $(date)  $([ "$SMOKE_ONLY" = 1 ] && echo SMOKE_ONLY || echo BUILD) DONE  T1=$T1  T2=$T2  T5=$T5   log: $LOG"
-echo "   next: 02_env_femticpy.sh, 03_mesh.slurm, then 06_forward_only.slurm (first Phoenix job on the real mesh)"
+echo "   next: copy the gated WSL mesh (mesh.dat, resistivity_block_iter0.dat, control.dat, observe.dat, station_map.csv)"
+echo "         into vulcan_femtic/inputs/vulcan_v2 and vulcan_v3 and check it (RUNBOOK B3; not 03_mesh.slurm: ungated);"
+echo "         then 06_forward_only.slurm, one job per work directory vulcan_femtic/work/<mesh>/gate100 and gate3 (RUNBOOK B4a)"
 [ "$T1" = PASS ] && [ "$T2" != FAIL ] && [ "$T5" != FAIL ] || exit 3
 exit 0
 

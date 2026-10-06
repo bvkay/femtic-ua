@@ -1,0 +1,253 @@
+# checks run 2026-09-30 08:15:03 +0800 in /d/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4 at commit 55bbf44 plus the uncommitted worktree
+# femtic_lib.sh (worktree) md5 34230ad01614798797d4b9d89a1a97cf; python Python 3.13.5; GNU bash, version 5.2.37(1)-release (x86_64-pc-msys)
+
+######## cnv_compare.py  (check a + T5 rows)
+rows: Phoenix straight [0, 1, 2], WSL run_logs [0, 1, 2, 3, 4, 5], WSL s6_foss2023a [0, 1, 2, 3]
+
+== Check a. This test fails if Misfit or RMS of any common iteration agree to fewer than 6 significant digits.
+-- fail cases first (the same comparison must say FAIL):
+  F1 rows shifted by one (Phoenix iter k vs WSL iter k+1)
+    iter 0 vs 1: Misfit 5.752642e+03 / 2.331502e+03 (0 digits, rel 5.9e-01); RMS 2.234639e+00 / 1.422629e+00 (0 digits, rel 3.6e-01); whole row differs in Roughness,Misfit,RMS,ObjFunc -> BELOW 6
+    iter 1 vs 2: Misfit 2.331502e+03 / 1.309987e+03 (0 digits, rel 4.4e-01); RMS 1.422629e+00 / 1.066369e+00 (1 digits, rel 2.5e-01); whole row differs in Roughness,Misfit,RMS,ObjFunc -> BELOW 6
+    iter 2 vs 3: Misfit 1.309987e+03 / 9.912418e+02 (0 digits, rel 2.4e-01); RMS 1.066369e+00 / 9.276060e-01 (0 digits, rel 1.3e-01); whole row differs in Roughness,Misfit,RMS,ObjFunc -> BELOW 6
+    => FAIL
+  F2 WSL iteration-0 Misfit changed in the 6th digit (5.752642e+03 -> 5.752652e+03)
+    iter 0 vs 0: Misfit 5.752642e+03 / 5.752652e+03 (5 digits, rel 1.7e-06); RMS 2.234639e+00 / 2.234639e+00 (7 digits, rel 0.0e+00); whole row differs in Misfit -> BELOW 6
+    iter 1 vs 1: Misfit 2.331502e+03 / 2.331502e+03 (7 digits, rel 0.0e+00); RMS 1.422629e+00 / 1.422629e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    iter 2 vs 2: Misfit 1.309987e+03 / 1.309987e+03 (7 digits, rel 0.0e+00); RMS 1.066369e+00 / 1.066369e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    => FAIL
+  F3 boundary: 7th digit changed (5.752643e+03) -> must still PASS at 6 digits
+    iter 0 vs 0: Misfit 5.752642e+03 / 5.752643e+03 (6 digits, rel 1.7e-07); RMS 2.234639e+00 / 2.234639e+00 (7 digits, rel 0.0e+00); whole row differs in Misfit -> ok
+    iter 1 vs 1: Misfit 2.331502e+03 / 2.331502e+03 (7 digits, rel 0.0e+00); RMS 1.422629e+00 / 1.422629e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    iter 2 vs 2: Misfit 1.309987e+03 / 1.309987e+03 (7 digits, rel 0.0e+00); RMS 1.066369e+00 / 1.066369e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    => PASS
+  fail cases behave as designed: yes
+-- real comparison:
+  A1 Phoenix straight (foss/2023a, 2 ranks x 2 threads) vs WSL run_logs/femtic.cnv (gcc 15.3/OpenMPI 5.0.10/MKL 2026.1, 2 x 2)
+    iter 0 vs 0: Misfit 5.752642e+03 / 5.752642e+03 (7 digits, rel 0.0e+00); RMS 2.234639e+00 / 2.234639e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    iter 1 vs 1: Misfit 2.331502e+03 / 2.331502e+03 (7 digits, rel 0.0e+00); RMS 1.422629e+00 / 1.422629e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    iter 2 vs 2: Misfit 1.309987e+03 / 1.309987e+03 (7 digits, rel 0.0e+00); RMS 1.066369e+00 / 1.066369e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    => PASS
+  A2 Phoenix straight vs WSL build_logs/s6_foss2023a.log (gcc 12.3/OpenMPI 4.1.5/MKL 2023.1, same versions as foss/2023a+imkl/2023.1.0; 2 x 4 per smoke_crosscheck.txt)
+    iter 0 vs 0: Misfit 5.752642e+03 / 5.752642e+03 (7 digits, rel 0.0e+00); RMS 2.234639e+00 / 2.234639e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    iter 1 vs 1: Misfit 2.331502e+03 / 2.331502e+03 (7 digits, rel 0.0e+00); RMS 1.422629e+00 / 1.422629e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    iter 2 vs 2: Misfit 1.309987e+03 / 1.309987e+03 (7 digits, rel 0.0e+00); RMS 1.066369e+00 / 1.066369e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    => PASS
+
+== T5 rows (femtic.cnv half of check b). Fails if a restart row is not print-identical to the straight row.
+  T5 fail case: straight iter 1 vs leg2 iter 2
+    iter 1 vs 2: Misfit 2.331502e+03 / 1.309987e+03 (0 digits, rel 4.4e-01); RMS 1.422629e+00 / 1.066369e+00 (1 digits, rel 2.5e-01); whole row differs in Roughness,Misfit,RMS,ObjFunc -> BELOW 6
+    => FAIL
+  T5 straight vs restart leg1 (iterations 0, 1)
+    iter 0 vs 0: Misfit 5.752642e+03 / 5.752642e+03 (7 digits, rel 0.0e+00); RMS 2.234639e+00 / 2.234639e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    iter 1 vs 1: Misfit 2.331502e+03 / 2.331502e+03 (7 digits, rel 0.0e+00); RMS 1.422629e+00 / 1.422629e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    => PASS
+  T5 straight vs restart leg2 (iterations 1, 2)
+    iter 1 vs 1: Misfit 2.331502e+03 / 2.331502e+03 (7 digits, rel 0.0e+00); RMS 1.422629e+00 / 1.422629e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    iter 2 vs 2: Misfit 1.309987e+03 / 1.309987e+03 (7 digits, rel 0.0e+00); RMS 1.066369e+00 / 1.066369e+00 (7 digits, rel 0.0e+00); whole row identical -> ok
+    => PASS
+  all four restart rows string-identical to the straight rows: True
+
+SUMMARY cnv_compare: check a PASS (A1 True, A2 True); T5 rows identical True; fail cases as designed True
+exit=0
+
+######## model_diff.py  (check b)
+md5 of 16 files checked against MANIFEST.md5: all equal
+
+== Check b (model). This test fails if restart/resistivity_block_iter2.dat is not byte-identical to straight's.
+-- fail case first: straight iteration 1 vs straight iteration 2 (a real model change must show up)
+  straight iter1 vs iter2: 289 blocks, element->block map identical True, ids/bounds/weights/types identical True; resistivities differing 288; max rel diff 2.09e-01; max |diff| 1398074.00 ulp7; worst block 263: 6.676018e+01 vs 5.277944e+01
+-- md5 identity:
+  resistivity_block_iter1.dat    straight ea1ff241bf544864360c8bfb596781fe  restart ea1ff241bf544864360c8bfb596781fe  IDENTICAL
+  resistivity_block_iter2.dat    straight 709398b8293173be3c2a497f6c18a664  restart e025b5df4f4c468f79548a4c521facca  differ
+  result_0_iter0.csv             straight 4439adbcdc32c797ea634950707f204a  restart 6f34ead5e94659aa6c30af1551fb972f  differ
+  result_0_iter1.csv             straight 3d371a8a786eab58c40fb8d99d779ed7  restart afb79ca0bc21d3cc1e6a0aae596febb0  differ
+  result_0_iter2.csv             straight f49120c3e25a48b461b606177a248a8b  restart 1f34655cb00920854893cf2937c2d7f1  differ
+  result_1_iter0.csv             straight cbefb2aea7a29b7f346fbbc1e94894ae  restart cbefb2aea7a29b7f346fbbc1e94894ae  IDENTICAL
+  result_1_iter1.csv             straight ec565d2e95f3875cc5d1587e05e128e2  restart 10a8a87f5c02c7d02cb27c2db9a3719a  differ
+  result_1_iter2.csv             straight ed1d13e6a6aa8594d5a82034a2c1b89c  restart 88dd36cff84328dee2213d33b63b9ded  differ
+  => check b (byte identity of the final model): FAIL
+-- size of the differences:
+  iter2 model straight vs restart: 289 blocks, element->block map identical True, ids/bounds/weights/types identical True; resistivities differing 29; max rel diff 9.97e-07; max |diff| 1.00 ulp7; worst block 51: 1.003219e+02 vs 1.003220e+02
+  responses (result_<rank>_iter<N>.csv). Fail case first: straight iteration 0 vs straight iteration 1
+  result_0 straight iter0 vs iter1: 2304 numbers, 1152 differ; max |dCal|/|Z|_row 1.1e-01; max |dRes| 3.5e+00 SD; Obs and SD identical True
+  baseline, no restart involved (identical inputs, two fresh runs: straight and restart leg 1):
+  result_0_iter0.csv straight vs restart: 2304 numbers, 16 differ; max |dCal|/|Z|_row 1.1e-09; max |dRes| 0.0e+00 SD; Obs and SD identical True
+  result_1_iter0.csv straight vs restart: 2304 numbers, 0 differ; max |dCal|/|Z|_row 0.0e+00; max |dRes| 0.0e+00 SD; Obs and SD identical True
+  restart: leg 2 (ITERATION 1 2) recomputes iteration 1 from the PRINTED resistivity_block_iter1.dat,
+  so restart/result_*_iter1.csv and _iter2.csv both come from leg 2 (leg 1's iter1 csv was overwritten):
+  result_0_iter1.csv straight vs restart: 2304 numbers, 645 differ; max |dCal|/|Z|_row 4.0e-07; max |dRes| 3.3e-06 SD; Obs and SD identical True
+  result_1_iter1.csv straight vs restart: 2304 numbers, 715 differ; max |dCal|/|Z|_row 3.2e-07; max |dRes| 3.0e-06 SD; Obs and SD identical True
+  result_0_iter2.csv straight vs restart: 2304 numbers, 525 differ; max |dCal|/|Z|_row 3.9e-07; max |dRes| 1.6e-06 SD; Obs and SD identical True
+  result_1_iter2.csv straight vs restart: 2304 numbers, 544 differ; max |dCal|/|Z|_row 3.0e-07; max |dRes| 2.0e-06 SD; Obs and SD identical True
+
+SUMMARY model_diff: fail cases detected True; final model byte-identical False; iter2 model: 29 of 288 free blocks differ, max rel 9.97e-07 = 1.00 ulp7; responses max |dCal|/|Z|: iter0 baseline 1.1e-09, iter1 4.0e-07, iter2 3.9e-07; max |dRes| iter2 2.0e-06 SD; Obs/SD identical True
+exit=0
+
+######## lib_parsers.sh
+4 logs match MANIFEST.md5
+lib: D:/BEN/FEMTIC_2026/.claude/worktrees/femtic-work-9213a4/hpc/phoenix_plan/femtic_lib.sh  FEMTIC_LIB_VERSION=4  md5 34230ad01614798797d4b9d89a1a97cf  (36521 B)
+
+== hand-read lines (the expected values come from these)
+-- straight/femtic_0.log
+130:# Total memory consumed by in-core forward solver for internal float point arrays    : 205789 [KByte]
+272:# Total memory consumed by in-core forward solver for internal float point arrays    : 206534 [KByte]
+410:# Total memory consumed by in-core forward solver for internal float point arrays    : 206687 [KByte]
+467:# Number of equation = 40919, Number of equation after degeneration = 39254
+137:# Solve phase of matrix solver for right-hand sides consisting of interpolator vectors.( 1 sec )
+138-# Solve phase is performed simultaneously for 144 right-hand sides( 1 sec )
+139-# Calculate derivatives of EM field.( 2 sec )
+100:# Start Forward Computation.  Iteration : 0,  Retrial : 0
+98:# Calculate Roughening Matrix .( 0 sec )
+171:# Calculate response functions. ( 4 sec )
+228:# Calculate response functions. ( 7 sec )
+232:# Release memory of coefficient matrix and sparse solver. ( 7 sec )
+-- straight/femtic_1.log
+130:# Total memory consumed by in-core forward solver for internal float point arrays    : 206994 [KByte]
+263:# Total memory consumed by in-core forward solver for internal float point arrays    : 206491 [KByte]
+392:# Total memory consumed by in-core forward solver for internal float point arrays    : 206736 [KByte]
+449:# Number of equation = 40919, Number of equation after degeneration = 39254
+137:# Solve phase of matrix solver for right-hand sides consisting of interpolator vectors.( 1 sec )
+138-# Solve phase is performed simultaneously for 144 right-hand sides( 1 sec )
+139-# Calculate derivatives of EM field.( 2 sec )
+100:# Start Forward Computation.  Iteration : 0,  Retrial : 0
+98:# Calculate Roughening Matrix .( 0 sec )
+171:# Calculate response functions. ( 4 sec )
+228:# Calculate response functions. ( 7 sec )
+232:# Release memory of coefficient matrix and sparse solver. ( 7 sec )
+
+== fail cases (comparator must print FAIL)
+  FAIL F1 v2 femtic_pardiso_max_gb on a '2.5e+07 KB' line         got [0.0] expected [23.8]
+  FAIL F2 femtic_niv_measured, real log cut before 1st sensitivity got [] expected [144]
+  -> fail cases printed FAIL: 2 of 2
+  (control: v4 on the same '2.5e+07' line gives [23.8], expected 23.8)
+
+== version-4 parsers on the real Phoenix logs
+  PASS femtic_pardiso_kb straight/femtic_0.log                    got [206687]
+  PASS femtic_pardiso_kb straight/femtic_1.log                    got [206994]
+  PASS femtic_pardiso_kb both straight logs                       got [206994]
+  PASS femtic_pardiso_max_gb straight/ (206994/1048576)           got [0.2]
+  PASS femtic_pardiso_log_gb straight/femtic_0.log                got [0.20]
+  PASS femtic_pardiso_log_gb restart/femtic_1.log (206674)        got [0.20]
+  PASS femtic_log_neq straight/femtic_0.log                       got [39254]
+  PASS femtic_log_neq all four logs                               got [39254]
+  PASS femtic_niv_measured straight/femtic_0.log                  got [144]
+  PASS femtic_niv_measured straight/femtic_1.log                  got [144]
+  PASS femtic_niv_measured restart/femtic_[01].log (leg 2)        got [144]
+  PASS femtic_fwd_times straight/femtic_0.log                     got [0.001 4;0.01 3;]
+  PASS femtic_fwd_times straight/femtic_1.log                     got [0.1 4;1 3;]
+  PASS femtic_fwd_times restart/femtic_0.log (leg 2, iter 1)      got [0.001 3;0.01 3;]
+  PASS femtic_nfreq straight/femtic_0.log                         got [4]
+  PASS femtic_last_iter straight/ and restart/                    got [2 2]
+  PASS femtic_cnv_row 0 straight/femtic.cnv (Misfit, RMS)         got [5.752642e+03 2.234639e+00]
+  PASS femtic_block_check restart iter2 vs iter0                  got [OK 34559 289]
+  PASS femtic_obs_counts observe.dat (36 sta, 36x4x8 data)        got [36 1152]
+
+== version-2 (HEAD, installed on Phoenix during B2) on the same real logs, for comparison
+  PASS v2 femtic_pardiso_max_gb straight/                         got [0.2]
+  PASS v2 femtic_fwd_times straight/femtic_0.log                  got [0.001 4;0.01 3;]
+
+SUMMARY lib_parsers: fail cases 2/2 FAIL as designed; real-log checks 21 passed, 0 failed
+exit=0
+
+######## timing.sh
+== per-iteration stamps (rank 0 and rank 1 logs; 'iterK@Ts' = iteration K started at T s)
+  straight/femtic_0_straight.log.txt     iter0@0s iter1@7s iter2@14s End@17s
+  straight/femtic_1_straight.log.txt     iter0@0s iter1@7s iter2@14s End@17s
+  restart/femtic_0.log.leg1              iter0@0s iter1@7s End@10s
+  restart/femtic_0_leg2.log.txt          iter1@0s iter2@6s End@10s
+  restart/femtic_1_leg2.log.txt          iter1@0s iter2@6s End@10s
+  slurm .out 'last log line' per run:
+      exit 0; last log line: # End femtic ( 17 sec )
+      exit 0; last log line: # End femtic ( 10 sec )
+      exit 0; last log line: # End femtic ( 10 sec )
+  whole job (first and last '== ' date lines of the .out):
+   == Mon Sep 28 09:13:08 PM ACST 2026  TOO
+   == Mon Sep 28 09:13:54 PM ACST 2026  SMO
+
+== threads and ranks
+  straight/femtic_0_straight.log.txt     # Number of threads is specified to be 2 .
+  straight/femtic_1_straight.log.txt     # Number of threads is specified to be 2 .
+  restart/femtic_0.log.leg1              # Number of threads is specified to be 2 .
+  restart/femtic_0_leg2.log.txt          # Number of threads is specified to be 2 .
+  restart/femtic_1_leg2.log.txt          # Number of threads is specified to be 2 .
+  control.dat NUM_THREADS: straight 2, restart 2; WSL 2x2 run 2
+  WSL command: mpirun -np 2 --oversubscribe --bind-to none /home/tara/femtic_wsl/bin/femtic
+  Phoenix command (kit 55bbf44, 01_build_femtic.sh:487): ( cd "$1" && OMP_NUM_THREADS=2 mpirun -np 2 --bind-to none "$BIN/femtic" > "stdout_$2.txt" 2>&1 ); rc=$?
+
+== PARDISO lines (KB) per factorisation, all runs
+  straight/femtic_0_straight.log.txt     in-core 205789 206534 206687  | analysis peak 42893 42913 42889  | permanent 36720 36749 36725 
+  straight/femtic_1_straight.log.txt     in-core 206994 206491 206736  | analysis peak 42805 42915 42912  | permanent 36667 36747 36732 
+  restart/femtic_0.log.leg1              in-core 206700 206573  | analysis peak 42888 42888  | permanent 36716 36713 
+  restart/femtic_0_leg2.log.txt          in-core 206580 206796  | analysis peak 42860 42874  | permanent 36721 36694 
+  restart/femtic_1_leg2.log.txt          in-core 206481 206674  | analysis peak 42920 42840  | permanent 36759 36693 
+  WSL 2x2 run: max RSS of one process 530748 KB (time -v), summed peak of both ranks 1057500 KiB (ps, 2 s); no RSS was sampled on Phoenix
+
+== d. speed sanity: Phoenix-predicted time of the WSL 2x2 run (ITERATION 0 5 = 5 x (forward + sensitivity) + 1 forward)
+  Phoenix straight rank 0: forward+sensitivity 7 s (iteration 0->1 stamps), forward only 3 s (iteration 2 -> End)
+  fail case (synthetic: Phoenix 3x slower, forward+sensitivity 21 s, forward 9 s): ratio 3.09 FAIL
+  real: predicted 38 s vs WSL wall 36.9 s (time -v, includes mpirun start-up): ratio 1.03 PASS
+  for scale: WSL 2 ranks x 4 threads, ITERATION 0 3 (main build, GNU libgomp): End femtic 15 s; at the Phoenix 2x2 rate it would take 24 s
+exit=0
+
+######## build_logs.sh
+== e1. This test fails if a binary's size in the 09-28 build listing differs from the 09-25 18:12 listing.
+-- fail case: the same comparison on the two files the kit changed between the builds (must FAIL)
+  FAIL 09-28 vs 09-25 size of femtic_env.sh                               got [732] expected [613]
+  FAIL 09-28 vs 09-25 size of femtic_lib.sh                               got [19992] expected [18193]
+-- real: the seven binaries
+  PASS 09-28 vs 09-25 size of femtic                                      [1494008]
+  PASS 09-28 vs 09-25 size of makeTetraMesh                               [443024]
+  PASS 09-28 vs 09-25 size of makeMtr                                     [72200]
+  PASS 09-28 vs 09-25 size of TetGen2Femtic                               [122768]
+  PASS 09-28 vs 09-25 size of makeDHexaMesh                               [243544]
+  PASS 09-28 vs 09-25 size of mergeResultOfFEMTIC                         [178768]
+  PASS 09-28 vs 09-25 size of tetgen                                      [903368]
+-- the smoke job's own listing of $BIN (written on the compute node 2 min later) vs the 09-28 build log
+  PASS smoke vs build size of femtic                                      [1494008]
+  PASS smoke vs build size of femtic_env.sh                               [732]
+  PASS smoke vs build size of femtic_lib.sh                               [19992]
+  PASS smoke vs build size of tetgen                                      [903368]
+
+== e2. This test fails if femtic_env.sh (09-28) is not the size the HEAD writer produces, or 09-25's not fa58604's.
+   reconstructed from the writers (lines of 01_build_femtic.sh at each commit): fa58604 -> 613 B, 55bbf44 (HEAD) -> 732 B
+-- fail case: the 09-28 file against the fa58604 writer (must FAIL)
+  FAIL 09-28 femtic_env.sh size = fa58604 writer                          got [732] expected [613]
+  PASS 09-28 femtic_env.sh size = HEAD writer                             [732]
+  PASS 09-25 femtic_env.sh size = fa58604 writer                          [613]
+  PASS 09-28 femtic_lib.sh size = git show 55bbf44 (HEAD)                 [19992]
+  PASS 09-25 femtic_lib.sh size = git show fa58604                        [18193]
+  PASS worktree femtic_lib.sh is NOT what ran (size differs from 19992)   [yes]
+
+== e3. Same source and toolchain: this test fails if the commits, the module list, the compile commands or the
+   warnings differ between the 09-25 18:12 and 09-28 21:10 build logs (order-independent; make -j reorders lines).
+  PASS source commits                                                     [-- femtic @ 26c8606 (2026-08-31) -- makeTetraMesh @ 92a9a32 (2026-06-19) -- makeMtr @ df8e207 (2021-11-17) -- TetGen2Femtic @ ceb8bfb (2026-08-26) -- makeDHexaMesh @ 66afbfc (2026-06-19) -- mergeResultOfFEMTIC @ 4fe54e1 (2022-05-31) -- tetgen @ e05aca7 (2025-04-15) ]
+  PASS modules (lines 1-24 of 'Currently Loaded Modules')                 [e1aec0e5]
+  PASS compile/link commands (sorted)                                     [e29024c8 n=107]
+  PASS compiler warnings (count)                                          [25]
+-- fail case: the same sorted-command comparison against the 09-25 19:44 icelake log (stopped before compiling)
+  FAIL compile/link commands vs 09-25 19:44                               got [0] expected [107]
+
+== e4. What stopped the two 09-25 evening attempts (fa58604 kit; its 01 line 176 is the COMMIT_SHA.txt read)
+-- build_foss_20260925_193715.log
+== Fri Sep 25 19:37:15 ACST 2026  TOOLCH
+host=p2-dmv-1  job=16122323 partition=interactive
+WARNING: unknown source version for: femtic makeTetraMesh makeMtr TetGen2Femtic makeDHexaMesh mergeResultOfFEM
+ERROR: no libmkl_core.so under MKLROOT=/apps/icl/software/imkl/2023.1.0/mkl/2023.1.0
+   last line: log: /hpcfs/users/a1690074/femtic_src/build_foss_20260925_193715.log
+-- build_foss_20260925_194435.log
+== Fri Sep 25 07:44:35 PM ACST 2026  TOO
+host=p2-cpu-37  job=16122362 partition=icelake
+WARNING: unknown source version for: femtic makeTetraMesh makeMtr TetGen2Femtic makeDHexaMesh mergeResultOfFEM
+   last line: =============== femtic  (Makefile.gcc_openmpi_mkl ) ===============
+
+== B2 criteria (RUNBOOK B2 'Fails if'), on the job output
+-- fail case: the DONE grep on the 09-28 build log (a BUILD line, not SMOKE_ONLY) must give 0
+  build log count = 0 (0 expected: the criterion '= 1' FAILS there)
+  PASS SMOKE_ONLY DONE grep on slurm-femtic_smoke-16153670.out            [1]
+  PASS slurm .out byte-identical to smoke_foss_20260928_211308.log        [yes]
+  sacct ExitCode 0:0: NOT in the copied files (no sacct/rcstat output was copied) - unverified
+
+SUMMARY build_logs: fail cases FAIL as designed: e1 2/2, e2 1/1, e3 1/1, B2 grep on build log gave 0 (0);
+  real checks 22 passed, 0 failed
+exit=0

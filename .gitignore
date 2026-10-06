@@ -20,6 +20,15 @@ mesh/**/resistivity_block_iter0.dat
 **/Sensitivity*.iter*
 **/femtic_[0-9]*.log
 
+# raw Phoenix output: copy it into the inbox hpc/phoenix_out/<date>/; the session files the text evidence into
+# validation/phoenix_<date>/ with a MANIFEST.md5 (RUNBOOK_first_inversion.md section 0). The other four rules catch
+# raw dumps left directly in hpc/ (they match only there: hpc/phoenix_plan/ and validation/ stay visible).
+hpc/phoenix_out/
+hpc/smoke_*/
+hpc/smoke_*.log
+hpc/slurm-*.out
+hpc/build_*.log
+
 # python / jupyter / editors
 __pycache__/
 *.pyc

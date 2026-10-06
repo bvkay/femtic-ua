@@ -1,0 +1,23 @@
+FORMAT
+type:	ensight gold
+
+GEOMETRY
+model:	Mesh.geo
+
+VARIABLE
+scalar per element:	BlockIDs	BlockIDs
+scalar per element:	1	Resistivity[Ohm-m]	Resistivity.iter*
+scalar per element:	1	Sensitiivty	Sensitivity.iter*
+scalar per element:	1	NormalizedSensitiivty	NormalizedSensitivity.iter*
+scalar per element:	1	SensitiivtyDensity	SensitivityDensity.iter*
+scalar per element:	1	NormalizedSensitiivtyDensity	NormalizedSensitivityDensity.iter*
+
+TIME
+time set:	1
+number of steps:	3
+filename start number:	0
+filename increment:	1
+time values:
+0
+1
+2

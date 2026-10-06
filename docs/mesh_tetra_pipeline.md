@@ -2,7 +2,17 @@
 
 Internal guide for the MT group. It covers the makeTetraMesh, TetGen, makeMtr and TetGen2Femtic chain, with and without femticPy, and ends with a first-guess parameter set for the Vulcan survey.
 
-Status (2026-09-25): written from a line-by-line reading of the tool sources and manuals listed in section 1.2, plus two measurements taken from this project's own files. **Nothing in section 8 has been meshed or forward-tested yet.** Section 9 is the test that must pass before a mesh is used for inversion.
+Status (2026-09-25, as first written): from a line-by-line reading of the tool sources and manuals listed in section 1.2, plus two measurements taken from this project's own files. At that point nothing in section 8 had been meshed or forward-tested. Section 9 is the test that must pass before a mesh is used for inversion.
+
+Status (2026-09-28): **section 8 has been meshed and forward-tested.** Its parameter set was built as mesh v1, then refined at the sites into v2 and v3. All three went through the section 9 test on 2026-09-25:
+
+- v1 failed at 20-200 Hz in 3 ohm-m;
+- v2 failed one added limit at 200 Hz;
+- v3 passed.
+
+<!-- src: v1 = the section 8 set: mesh/vulcan_v1/files/observing_site.dat:2 and mesh/vulcan_v1/files/obs_site.dat:2-7 hold the section 8.2 circles and spheres, and every other mesh input matches vulcan_first_guess below; verdicts: validation/mesh_2026-09-25/halfspace_accuracy.md:9-14 -->
+
+The measured sizes are well above this guide's estimates (section 8.4), and the test as run differs from section 9 as written (section 9.1). Paragraphs marked **As built (2026-09-28)** record where the measurements overrule this guide. From 2026-09-28 all FEMTIC and mesh-tool compute runs on Phoenix (hpc/phoenix_plan/README_phoenix.md), not on the WSL PC that ran the 2026-09-25 builds and tests.
 
 ---
 
@@ -18,7 +28,8 @@ If you read nothing else, read these nine points. Each one is expanded later, wi
 6. **Do not use fix_output1.py as a fix.** It clamps any tetgen region attribute above 30 to 30, which hides seeds that missed their region. Seed every closed region and check the attribute set instead (section 10.2).
 7. **control.dat is keyword-per-line.** The keyword goes alone on its line and the values go on the following lines, because the parser matches substrings. `EXTENDED_REGION` contains `END` (section 3.1).
 8. **Sphere tables are not exactly what they say.** makeMtr's site spheres come out finer than their table inside each shell, then jump at the shell boundary. TetGen2Femtic's site circles can come out finer than their table if the profile is convex (sections 3.10 and 3.11).
-9. **For Vulcan:** use a flat surface at z = 0, a domain of +-500 km on all three axes, a 15 m edge at each site, about 1.2 million tetrahedra and about 21 000 parameter cells. The machine-readable set is at the end of this file under `vulcan_first_guess`.
+9. **For Vulcan:** use a flat surface at z = 0, a domain of +-500 km on all three axes, a 15 m edge at each site, about 1.2 million tetrahedra and about 21 000 parameter cells. The machine-readable set is at the end of this file under `vulcan_first_guess`. **As built (2026-09-28):** the 15 m site edge (mesh v1: 1,534,902 tetrahedra, 55,992 parameter cells) failed the section 9 test at 20-200 Hz in 3 ohm-m. The candidates are v2, with a 4 m site-triangle target that came out as 4.1-4.2 m (2,446,095 tetrahedra, 65,341 cells), and v3, with a 2.75 m target that came out as 2.6 m at 102 sites and 4.1 m at 18 (3,068,130 and 68,654). Which one to use is not yet decided or recorded.
+   <!-- src: counts mesh/vulcan_v{1,2,3}/mesh_logs/mesh_stats.txt:1 (elements) and :103 (earth_cells); 4 m and 2.75 m targets mesh/vulcan_v2/files/observing_site.dat:2 and mesh/vulcan_v3/files/observing_site.dat:2 (circle 1); as built: per_site tri_max_edge in mesh/vulcan_v{2,3}/mesh_logs/mesh_stats.json (v2 4.09-4.21 m at all 120 sites; v3 2.56-2.64 m at 102 sites and 4.09-4.12 m at 18), summarised at mesh/vulcan_v{2,3}/mesh_logs/mesh_stats.txt:93; the 18 sites are listed at validation/mesh_2026-09-25/halfspace_accuracy.md:225; verdicts validation/mesh_2026-09-25/halfspace_accuracy.md:9-14 -->
 
 ---
 
@@ -58,6 +69,8 @@ The binaries in /home/tara/femtic_wsl/bin were built with the upstream Makefile 
 - makeTetraMesh is built **without `_MOD_FOR_NMT`**, so observation lines never insert mesh nodes (makeTetraMesh/src/BoundaryCurveList.cpp:1361-1367 is compiled out). It is also built without `_TOPO_FUNC`, so topography always comes from the files (makeTetraMesh/src/TopographyData.cpp:335-338).
 - TetGen2Femtic is built **without `_ADDITIONAL_FIXED_AREA`**. resistivity_attr.dat ends after the site list (TetGen2Femtic/src/MeshData.cpp:710-766 is compiled out).
 - `-DNDEBUG` turns asserts off. Some input mistakes, such as a missing `ELLIPSOIDS` block, then produce out-of-bounds reads instead of a clean message (makeTetraMesh/src/Ellipsoids.cpp:341).
+- **Phoenix (2026-09-28).** The ported Makefiles that built the Phoenix binaries use the same macro set: `-D_USE_OMP -D_THICKNESS_FUNC -DNDEBUG` for makeTetraMesh, `-O2 -DNDEBUG` for makeMtr and TetGen2Femtic, and none of the optional format macros above. Whether a Phoenix build reproduces a WSL-built mesh byte for byte is untested.
+  <!-- src: hpc/ported/makeTetraMesh/Makefile.gcc_mkl:29-33; hpc/ported/makeMtr/Makefile.gcc:16; hpc/ported/TetGen2Femtic/Makefile.gcc:16; Phoenix build hpc/phoenix_plan/build_foss_20260925_181212.log:183,210,217 -->
 
 ---
 
@@ -450,8 +463,15 @@ This project measured it with iteration 0 of the bundled INV_MT_01 example, a 10
 Empirically, then, with OWNER_ELEMENT 0 the rho_a error is about (0.5 to 2) times h/delta, and the phase error about (11 to 40) degrees times h/delta. The largest ratios are at 0.001 Hz, where 1-3 % errors from other sources also contribute. The low end matches the h/4 argument (0.5 h/delta in rho_a, 14 degrees times h/delta in phase); the high end comes from worse elements under particular sites. Rules that follow:
 
 - **OWNER_ELEMENT 0:** a 5 % rho_a error needs h/delta of about 0.025-0.1. At Vulcan's delta_min of 0.061 km that is a 1.5-6 m element under every site, which is not affordable for 120 sites. Do not rely on the default.
-- **OWNER_ELEMENT -1 with dummy VTF stations, H taken from the air element:** this removes the first-order H error. Use the ordinary finite-element rule, **h <= delta_min/4 within about 1 delta_min of the site**, and let the test in section 9 confirm it. Nothing has measured this configuration yet; it is the first thing section 9 measures.
+- **OWNER_ELEMENT -1 with dummy VTF stations, H taken from the air element:** this removes the first-order H error. Use the ordinary finite-element rule, **h <= delta_min/4 within about 1 delta_min of the site**, and let the test in section 9 confirm it. (Written before any measurement; see the next point.)
 - h here is the edge of the frozen surface triangle holding the site (observing_site.dat circle 1, up to ALPHA = 1.5 times its target) and the depth of the element below it (obs_site.dat sphere 1). Size both.
+- **As built (2026-09-28): h <= delta_min/4 was not enough.** All three Vulcan meshes used OWNER_ELEMENT -1. Take h as each mesh's largest site triangle: 12.6 m (v1), 4.2 m (v2) and 4.1 m (v3). Across all 44 mesh, model and band results of the 2026-09-25 test:
+  - every band with h/delta below 0.05 passed;
+  - every band with h/delta above 0.1 failed: v1 at 62.9 and 200 Hz in 3 ohm-m, with 8.3 % and 13.1 % in rho_a; <!-- src: per_freq "62.896" and "200" max_abs_rho_err_pct in mesh/vulcan_v1/halfspace/acc_3/acc_eval_v1_3.json: 8.3495 and 13.0559 -->
+  - between 0.065 and 0.068 the outcome varied. v1 at 20 Hz and v2 at 200 Hz failed, and v3 at 200 Hz passed.
+
+  So for a 5 % rho_a and 2 % diagonal budget, what passed is h of about delta_min/20 or less, not delta_min/4. OWNER_ELEMENT 0 was never run on these meshes, so section 9 step 4's comparison has not been made.
+  <!-- src: largest site triangle = tri_max_edge max, mesh/vulcan_v{1,2,3}/mesh_logs/mesh_stats.txt:93; verdict and rho_a per band: per_freq pass and max_abs_rho_err_pct in mesh/vulcan_v{1,2,3}/halfspace/acc_*/acc_eval_*.json; delta = 0.503 sqrt(rho/f) km; OWNER_ELEMENT 0 untested: validation/mesh_2026-09-25/halfspace_accuracy.md:322 -->
 
 ### 6.3 Element size away from the sites and at depth
 
@@ -482,6 +502,8 @@ Empirically, then, with OWNER_ELEMENT 0 the rho_a error is about (0.5 to 2) time
 - Data: sites x frequencies x 8. Vulcan: 120 x 53 x 8 = 50 880 real data for the 53 bands common to all sites (Vulcan/frequency_table.csv).
 - Memory scales with N_param^2 for the model-space normal matrix and with N_data^2 for the data-space one, plus the N_data x N_param sensitivity.
 - With about 2e4 cells and 5e4 data, the model-space method (`INV_METHOD 0`, manual.txt:73-82) builds the smaller matrix: about 3.5 GB, against about 21 GB for the data-space one.
+- **As built (2026-09-28): the data-space method is the smaller one.** prep keeps 21 of the 53 bands (4 per decade from 100 Hz down), so Nd = 120 x 21 x 8 = 20,160. The 2026-09-25 builds have M = 55,992 / 65,341 / 68,654 cells (v1 / v2 / v3), so M > Nd. By the formula above, the normal matrix is M^2 x 8 B = 25 / 34 / 38 GB in model space, against Nd^2 x 8 B = 3.3 GB in data space. The config had set `INV_METHOD 1` before any mesh was built, as the bounded choice while N_cells was unknown, and prep writes what the config says; the measured counts confirm that choice. hpc/phoenix_plan/README_phoenix.md section 6 gives FEMTIC's actual rank-0 terms.
+  <!-- src: band rule and INV_METHOD config/vulcan_mesh_v2.yml (frequencies: and inversion: blocks); 120 sites x 21 bands mesh/vulcan_v2/inversion/observe.dat; INV_METHOD 1 mesh/vulcan_v2/inversion/control.dat:14-15 (byte-identical in v1 and v3); M mesh/vulcan_v{1,2,3}/mesh_logs/mesh_stats.txt:103, committed 2026-09-25 in 55bbf44; set before the mesh: mesh/vulcan_v1/config_used.yml:177 (the prep record, file time 2026-09-25 14:31, older than MAIN mesh/vulcan_v1/inversion/mesh.dat at 14:43) and the "bounded choice" comment at config/vulcan_mesh_v2.yml:198-206 -->
 
 ---
 
@@ -545,6 +567,12 @@ They are not AusLAMP values.
    - The volume spheres in obs_site.dat are `0.03/0.015/0`, `0.1/0.04/0.3`, `0.3/0.1/0.6`, `0.6/0.2/0.6`. Vertical reach is 30, 70, 120 and 240 m.
    - The surface circles in observing_site.dat are `0.03/0.015`, `0.1/0.027`, `0.3/0.068`, `0.6/0.14`, `0.8/0.2`. These trace the **effective** makeMtr profile (section 3.10), so the frozen surface is never coarser than the volume beneath it.
    - Cost: about 5700 extra tetrahedra per isolated site.
+   - **As built (2026-09-28): size the site triangle at about delta_min/20, not delta_min/4.** The evidence is all 44 mesh, model and band results of the 2026-09-25 section 9 test, with h taken as each mesh's largest site triangle (section 6.2). The 39 results with h/delta of 0.048 or less all passed. The 2 results at 0.114 and above both failed. Only 3 results fell in between, at 0.0645-0.0683, and 2 of 3 failed. So delta_min/20 (h/delta = 0.05) is the size below which every tested result passed; it is not an optimum, because nothing between 0.048 and 0.0645 was run.
+     - With delta_min = 0.061 km (200 Hz, 3 ohm-m), delta_min/20 is about 3.1 m. For observe.dat's top band, 100 Hz (delta 0.087 km), it is about 4.4 m.
+     - v2's 4.1-4.2 m site triangles meet the 100 Hz figure (h/delta 0.048 at 100 Hz). Neither v2 nor v3 (4.1 m at 18 sites) meets the 200 Hz one.
+     - makeTetraMesh accepts surface edges up to 1.5 times the observing_site.dat circle-1 target: v3's 2.75 m target gave 4.1 m at 18 sites. Set the target to at most two-thirds of the h you want, and read tri_max_edge in mesh_logs/mesh_stats.txt after the build.
+     - Any rebuild, for example a cell-count fix (section 8.5), must keep this.
+     <!-- src: h = largest site triangle, max of per_site tri_max_edge in mesh/vulcan_v{1,2,3}/mesh_logs/mesh_stats.json (12.58 / 4.21 / 4.12 m; summary line mesh/vulcan_v{1,2,3}/mesh_logs/mesh_stats.txt:93); pass and skin_depth_km of every per_freq entry in mesh/vulcan_v{1,2,3}/halfspace/acc_*/acc_eval_*.json (44 entries): below 0.05 the largest h/delta is 0.0483 (v2, 100 Hz, 3 ohm-m, pass); above 0.1 the entries are 0.1145 (v1, 62.9 Hz) and 0.2041 (v1, 200 Hz), both fail; between are 0.0645 (v1, 20 Hz, fail), 0.0670 (v3, 200 Hz, pass) and 0.0683 (v2, 200 Hz, fail), all 3 ohm-m; delta 0.0616 km at 200 Hz in mesh/vulcan_v1/halfspace/acc_3/acc_eval_v1_3.json and 0.0871 km at 100 Hz in mesh/vulcan_v2/halfspace/acc_3/acc_eval_v2_3_bs_highf.json; 1.5 times the target: validation/mesh_2026-09-25/halfspace_accuracy.md:225 -->
 6. **Parameter cells.**
    - Same ellipsoid geometry, with B = 1.5 L in the top 0.5 km and 2 L below: 0.3 km cells to 0.5 km depth, 0.6 km by 1.5 km, 2.4 km by 8 km, 16 km by 45 km. That is roughly B ~ 0.3-0.36 z.
    - Site circles `0.25/0.15`, `0.8/0.3`: 150 m cells within 250 m of each site, for near-surface freedom under the high-frequency data. Two circles avoid the TetGen2Femtic extrapolation oddity.
@@ -555,7 +583,8 @@ They are not AusLAMP values.
 8. **Seeds.** Air (0, 0, -250) with attribute 10; earth (0, 0, 250) with attribute 20. This is also what scripts/run_mesh_chain.sh generates by default for two-attribute models (run_mesh_chain.sh:100-108).
 9. **FEMTIC side.**
    - `MESH_TYPE 1`, `OWNER_ELEMENT -1` with a dummy VTF station at every site (manual.txt:1552-1596).
-   - `INV_METHOD 0`, because there are about 2e4 cells and 5e4 data (section 6.6).
+   - `INV_METHOD 0`, because there are about 2e4 cells and 5e4 data (section 6.6). **As built (2026-09-28): `INV_METHOD 1`.** The config set it before any mesh was built, as the bounded choice; the 2026-09-25 builds confirm it, with 55,992-68,654 cells against observe.dat's 20,160 data (section 6.6).
+     <!-- src: mesh/vulcan_v1/mesh_logs/mesh_stats.txt:103; mesh/vulcan_v3/mesh_logs/mesh_stats.txt:103; mesh/vulcan_v2/inversion/control.dat:14-15; set before the mesh: mesh/vulcan_v1/config_used.yml:177 (see section 6.6) -->
 
 ### 8.3 Literal inputs
 
@@ -746,16 +775,26 @@ print(f"wrote inputs for {len(x)} sites to {out}")
 
 ### 8.4 Expected size
 
-| Quantity | Estimate | Range (factor 2) |
-|---|---|---|
-| Tetrahedra | **about 1.2 million** (0.68 M from the 120 site neighbourhoods, 0.51 M background) | 0.6-2.4 M |
-| Parameter cells | **about 21 000** (13 000 background, 8000 from the site circles) | 10 000-42 000 |
-| Earth-surface triangles | about 1e5 | - |
-| Real data (53 bands) | 50 880 | - |
+<!-- src (measured column): mesh/vulcan_v{1,2,3}/mesh_logs/mesh_stats.txt:1 (elements), :103 (earth_cells) and :2 (earth-surface faces); data: mesh/vulcan_v2/inversion/observe.dat, 120 sites x 21 bands x 8 -->
+
+| Quantity | Estimate | Range (factor 2) | Measured v1 / v2 / v3 (2026-09-25) |
+|---|---|---|---|
+| Tetrahedra | **about 1.2 million** (0.68 M from the 120 site neighbourhoods, 0.51 M background) | 0.6-2.4 M | 1,534,902 / 2,446,095 / 3,068,130 |
+| Parameter cells | **about 21 000** (13 000 background, 8000 from the site circles) | 10 000-42 000 | 55,992 / 65,341 / 68,654 |
+| Earth-surface triangles | about 1e5 | - | 144,316 / 218,292 / 258,318 |
+| Real data (53 bands) | 50 880 | - | 20,160 (21 bands) |
 
 Method: the size functions coded in makeMtr and TetGen2Femtic, integrated over the box, then scaled by factors fitted to the AusLAMP mesh (Appendix B). This is an order-of-magnitude figure. **The mesh is too large if** output.6.ele has more than about 2.5 M elements; **it is too small if** it has fewer than about 0.5 M. Either way, compare the element sizes actually produced (ParaView on output.6.vtk) with the tables before changing any parameter.
 
 Forward cost: FEMTIC's PARDISO factorisation for the 34 559-element example peaked at 42 MB (VALIDATION.md). Nested-dissection fill grows as N^(4/3), which suggests a few GB per factorisation at 1.2 M elements. Measure it in section 9 with one frequency before planning inversion runs.
+
+**As built (2026-09-28).**
+
+- **Tetrahedra.** v1 is this section's parameter set. It has 1.3 times the central estimate, inside the factor-2 range. v2 and v3 refine only the site neighbourhood (observing_site.dat and obs_site.dat). v3 is above the 2.5 M "too large" mark; it was built because v2 missed one limit at 200 Hz.
+- **Parameter cells: 2.7 times the estimate, outside the range.** resistivity_attr.dat is byte-identical in v1, v2 and v3. Even so, the count rose 17 % from v1 to v2 and 23 % from v1 to v3, when only the site zone was refined. The cause is untested. Section 8.5's "too many cells" knob has not been tried. Because the growth followed the site refinement, it may not bring the count near 21,000 on its own; that is an inference.
+- **Forward cost.** PARDISO's factors took 16,465 / 22,903 / 26,841 MiB per process (v1 / v2 / v3), not a few GB. The peak RSS of one forward process (1 rank x 8 threads) was 19.8 / 28.3 / 33.7 GB.
+
+<!-- src: v1 = section 8 set: mesh/vulcan_v1/files/*.dat equal the vulcan_first_guess JSON below; resistivity_attr.dat md5 ccdc705b7ce8a2485824a47c2dd6726d in all of mesh/vulcan_v{1,2,3}/files/; counts mesh/vulcan_v{1,2,3}/mesh_logs/mesh_stats.txt:1,103; PARDISO MB column of mesh/vulcan_v1/halfspace/acc_100/acc_eval_v1_100.txt, mesh/vulcan_v2/halfspace/acc_3/acc_eval_v2_3.txt and mesh/vulcan_v3/halfspace/acc_3/acc_eval_v3_3.txt; peak RSS validation/mesh_2026-09-25/halfspace_accuracy.md:80 -->
 
 ### 8.5 Which knob to turn
 
@@ -766,6 +805,14 @@ Forward cost: FEMTIC's PARDISO factorisation for the 34 559-element example peak
 | Long-period failure (worse towards 1000 s) | analysis_domain to +-1000 km on all axes; last ellipsoid radius 1500 km | Check the bottom resistivity of the test model |
 | Too many elements | Drop obs_site sphere 1 and observing_site circle 1 (costs high-frequency accuracy) | Core L 0.2 to 0.25 km |
 | Too many cells | Raise resistivity_attr rows 1-2 | Drop the site circles |
+
+**No tested Phoenix mesh-build route yet (2026-09-28).** Every knob in this table means rebuilding the mesh, and no rebuild route is tested now:
+- scripts/run_mesh_chain.sh, the gated chain that built v1-v3, has run only in WSL, and no modelling may run on the WSL PC any more.
+- hpc/phoenix_plan/03_mesh.slurm is a different, ungated chain: it reads files/regions.txt, not region_seeds.dat.
+- The Phoenix-built mesh tools use the same format macros as the WSL ones (section 1.3), but they have never run. Whether they reproduce a WSL mesh byte for byte is untested.
+<!-- src: WSL only: run_dir /home/tara/femtic_wsl/mesh_runs/... at mesh/vulcan_v{1,2,3}/mesh_logs/summary.txt:1; no modelling on the PC: docs/journal/2026-09-28_pickup.md:54; 03 reads regions.txt: hpc/phoenix_plan/03_mesh.slurm:31,102-103; run_mesh_chain.sh reads region_seeds.dat: scripts/run_mesh_chain.sh:117-118; Phoenix mesh tools built and installed, never run: hpc/phoenix_plan/build_foss_20260925_181212.log:208,215,222,246 (T1 at :249-255 is ldd of femtic only) -->
+
+Before any rebuild, such as the cell-count fix, prove a route. Rebuild v2 or v3 from its files/ and compare with its mesh_logs/products.md5: two WSL runs of the chain gave a byte-identical mesh.dat, but new binaries need not. Then re-run the section 9 test on the new mesh. <!-- src: byte-identical reruns: validation/mesh_2026-09-25/chain_proof.md:256 (tetgen deterministic) and :375 (test T5, mesh.dat and block byte-identical); products.md5 in mesh/vulcan_v{2,3}/mesh_logs/ -->
 
 ---
 
@@ -784,6 +831,31 @@ Procedure:
 5. Turn knobs in the order of section 8.5. Do not widen the tolerance to pass. If a band cannot pass at an affordable size, record it and give that band a larger error floor, or drop it.
 
 A layered check is optional. Put `LAYERS`, then `1`, then `0.5` on successive lines of control.dat. That gives a facet at 0.5 km, an extra closed region and an extra seed, and makes the mesh conform to a 2-layer model with its analytic 1-D answer. Without LAYERS, a layered model is represented by whichever cells straddle the interface, and that tests the parameterisation rather than the solver.
+
+### 9.1 As built (2026-09-28): the test as run, and what it left untested
+
+The test ran on v1, v2 and v3 on 2026-09-25, on the WSL PC (validation/mesh_2026-09-25/halfspace_accuracy.md). It differs from the procedure above in five ways:
+
+- **Models: 3 and 100 ohm-m, not 3 and 60.** In 100 ohm-m, delta(1000 s) is 159 km, not 123. <!-- src: mesh/vulcan_v3/mesh_logs/mesh_stats.txt:174 (delta 159.0626 km at 0.001 Hz, 100 ohm-m) -->
+- **A third limit was added.** A site also fails if |Zxx| or |Zyy| exceeds 2 % of |Zxy|; the criterion above has no diagonal test. v2's only failure rests on it: 2.09 % at site G7, 200 Hz, 3 ohm-m. The next worst site there, H3, has 1.68 %.
+- **OWNER_ELEMENT -1 only.** Step 4's second run, with OWNER_ELEMENT 0, was not made.
+- **Bands.** The test used 8 bands from 200 Hz to 0.0063 Hz. Seven of them are observe.dat bands; 200 Hz is not. Four more observe.dat bands were run as supplements: 100 and 31.514 Hz (v2, 3 ohm-m), and 0.0019947 and 0.0012553 Hz (v3, 100 ohm-m). **10 of the 21 observe.dat bands were not run on any mesh:** 10.013, 3.1521, 1.001, 0.31537, 0.19951, 0.1001, 0.031537, 0.019951, 0.01001 and 0.0031521 Hz.
+- **v2 was not run in 100 ohm-m** (halfspace_accuracy.md, deviation d).
+
+<!-- src: models, limits and bands validation/mesh_2026-09-25/halfspace_accuracy.md:28-32,61,254-259; delta(1000 s, 100 ohm-m) mesh/vulcan_v3/mesh_logs/mesh_stats.txt:174; G7 and H3 recomputed from MAIN/mesh/vulcan_v2/halfspace/acc_3/b1/result_0_iter0.csv (max of |Zxx|, |Zyy| over |Zxy| at 200 Hz); untested bands = the 21 frequencies of mesh/vulcan_v2/inversion/observe.dat minus every per_freq band of mesh/vulcan_v{1,2,3}/halfspace/acc_*/acc_eval_*.json; OWNER_ELEMENT 0 untested validation/mesh_2026-09-25/halfspace_accuracy.md:322; v2 at 100 ohm-m validation/mesh_2026-09-25/halfspace_accuracy.md:98-103 -->
+
+Also untested, or passed by a narrow margin:
+
+- **1000 s.** The longest period run is 797 s (0.0012553 Hz), on v3 only. At 1000 s in 100 ohm-m, the sites are 3.10 skin depths from the nearest side face and 3.14 from the bottom. That is just inside section 6.4's rule of at least 3 delta.
+- **The v3 long-period excess is one site at 0.0063 and 0.0020 Hz, but not at 797 s.** In 100 ohm-m, site 105 (Vul24-19) is the worst site at all three bands of 0.0063 Hz and below:
+  - 0.0063033 Hz: 2.91 %, against 0.77 % for the next worst site;
+  - 0.0019947 Hz: 4.37 %, against 0.91 %;
+  - 0.0012553 Hz (797 s): 1.30 %, but here the next worst site (64) is close behind at 1.26 %, so at the longest period the excess is not a single-site outlier.
+
+<!-- src: mesh/vulcan_v3/mesh_logs/mesh_stats.txt:174 (side/d and bottom/d at 0.001 Hz, 100 ohm-m; defined in scripts/mesh_stats.py:365); worst_sites_by_rho in mesh/vulcan_v3/halfspace/acc_100/acc_eval_v3_100.json and mesh/vulcan_v3/halfspace/acc_100/acc_eval_v3_100_bs_lowf.json; site 105 = Vul24-19 in mesh/vulcan_v3/inversion/station_map.csv:106 -->
+
+**From 2026-09-28 the test runs on Phoenix.** `hpc/phoenix_plan/06_forward_only.slurm` with `START_RHO=<ohm-m>` runs a uniform model at all 21 observe.dat bands, and `tools/halfspace_eval.py` applies the three limits above. The evaluator reproduces all 7 stored WSL verdicts, but it has not run on Phoenix yet (hpc/phoenix_plan/README_phoenix.md section 3 step 8 and section 9).
+<!-- src: hpc/phoenix_plan/README_phoenix.md section 3 step 8 (the START_RHO gate) and section 9 (the 2026-09-28 verification row) -->
 
 ---
 
@@ -826,7 +898,7 @@ A layered check is optional. Put `LAYERS`, then `1`, then `0.5` on successive li
 - **Rules:**
   - Keep scripts and inputs LF-only; check with `grep -c $'\r' file`.
   - Write files with `newline="\n"`.
-  - Run the chain on ext4 inside WSL.
+  - Run the chain on a Linux filesystem. The 2026-09-25 builds ran on ext4 inside WSL. From 2026-09-28 compute runs on Phoenix, where scripts/run_mesh_chain.sh has not been run yet: the only Phoenix run records are the discovery and build logs in hpc/phoenix_plan/.
   - scripts/run_mesh_chain.sh converts its inputs (run_mesh_chain.sh:84-86).
 
 ### 10.4 Sites outside the domain, wrong axis order, uncentred coordinates
@@ -865,11 +937,13 @@ A layered check is optional. Put `LAYERS`, then `1`, then `0.5` on successive li
    - INTERPOLATE's point count is written as `3.0`. `>>` into an int reads 3, and then **reads `.0` as the epsilon = 0**, so the written 1e-6 is lost. Any node lying exactly on a data point divides by zero (TopographyData.cpp:416).
    - The SEA_DEPTH minimum 0.01 is written as `0.0`. Sea nodes may then sit on the sea surface (section 10.1).
    - Write the integer as an integer and use `%g`.
+   - Fixed in this project's vendored femticPy by patch 0005, which writes `%.10g` and `%d` (external/femticPy/patches/series).
 6. **ndiv < 0 for a subsurface region.** Its faces become "Earth surface" faces (section 3.11).
 7. **Non-nested ellipsoids.** makeTetraMesh does not check the short horizontal axis. It aborts later with a transition-region error (Ellipsoids.cpp:267-283).
 8. **Seed at a region boundary or in the wrong region.** See section 10.2. Never place two seeds in one region.
 9. **resistivity_attr.dat line 2 is not the air.** TetGen2Femtic exits (MeshData.cpp:579-586).
-10. **femticPy frequency format.** Frequencies are written as `%.5f` (femticPy.py:385). 1.57e-4 Hz becomes 0.00016, 2 % off, and 6.3e-5 Hz becomes 0.00006, 5 % off. Irrelevant up to 1000 s (0.001 Hz, written 0.00100), but check before inverting longer periods.
+10. **femticPy frequency format.** Frequencies are written as `%.5f` (femticPy.py:385). 1.57e-4 Hz becomes 0.00016, 2 % off, and 6.3e-5 Hz becomes 0.00006, 5 % off. Irrelevant up to 1000 s (0.001 Hz, written 0.00100), but check before inverting longer periods. **Fixed in this project's vendored femticPy** by patch 0001, which writes `%.6e`; observe.dat now carries `1.255300e-03`.
+    <!-- src: external/femticPy/patches/0001-write_observe-frequency-precision.patch; mesh/vulcan_v2/inversion/observe.dat:24 -->
 
 ---
 
@@ -917,9 +991,11 @@ Not used, and must not be used:
 - N_tet was taken as C_t times the integral of dV / L^3, and N_cell as C_c times the integral over the Earth of dV / B^3. The integration used a graded tensor grid for the background, and spherical grids of Voronoi-owned points around each site.
 - The constants were fitted on the femticPy AusLAMP run: 109 sites, notebook parameters, 1 453 333 tetrahedra, 206 736 cells. That gave C_t = 7.67 (the mean tetrahedron volume is about 0.13 L^3, i.e. mean edge about L) and C_c = 1.28.
 - One calibration point, and a mesh 1000 times larger in scale, so treat Vulcan's numbers as good to about a factor of 2.
-- The estimator (size_estimator.py) and the EDI scan used for section 6.1 were scratch scripts; rerun them after the first real mesh and replace these estimates with measured counts.
+- The estimator (size_estimator.py) and the EDI scan used for section 6.1 were scratch scripts; rerun them after the first real mesh and replace these estimates with measured counts. The measured counts are now in section 8.4 (2026-09-28). The estimator has not been rerun or recalibrated.
 
 ## vulcan_first_guess
+
+<!-- 2026-09-28: only "status" and femtic_control_recommendations changed (INV_METHOD 1 as built: mesh/vulcan_v2/inversion/control.dat:14-15; cells mesh/vulcan_v1/mesh_logs/mesh_stats.txt:103 and mesh/vulcan_v3/mesh_logs/mesh_stats.txt:103; data mesh/vulcan_v2/inversion/observe.dat). Every value the section 8.3 generator reads is the unchanged first guess, which mesh v1 used. -->
 
 The Vulcan first-guess parameter set of section 8, in machine-readable form. It is the last fenced block tagged `json` in this file, and the generator in section 8.3 loads it with the regex shown there (a script can do the same). Lengths are in km, angles in degrees, resistivities in ohm-m. Ellipsoid rows follow the column lists given next to them.
 
@@ -927,7 +1003,7 @@ The Vulcan first-guess parameter set of section 8, in machine-readable form. It 
 {
   "schema": "femtic-tetra-mesh-first-guess/1",
   "survey": "Vulcan, Stuart Shelf SA: 120 MT sites, impedance only, periods 0.005-1000 s",
-  "status": "first guess, not yet meshed or forward-tested; gate on the half-space forward accuracy test before inverting",
+  "status": "first guess of 2026-09-25, meshed as v1 (config/vulcan_mesh_v1.yml); v1 failed the half-space test at 20-200 Hz in 3 ohm-m, v2 and v3 refine the site zone; measured sizes in section 8.4, the test as run in section 9.1",
   "units": {"length": "km", "resistivity": "ohm-m", "angle": "deg"},
   "frame": {
     "axes": "x = north, y = east, z = down (positive below the flat surface)",
@@ -1022,8 +1098,10 @@ The Vulcan first-guess parameter set of section 8, in machine-readable form. It 
     "MESH_TYPE": 1,
     "OWNER_ELEMENT": -1,
     "observe_dat": "one dummy VTF station (0 frequencies, owner type 1) at every MT site; MT station owner type 0 with its H-station ID set to the dummy ID (manual.txt:1552-1596)",
-    "INV_METHOD": 0,
-    "INV_METHOD_reason": "about 2e4 cells < about 5e4 data, so the model-space normal matrix is the smaller one"
+    "INV_METHOD": 1,
+    "INV_METHOD_reason": "as built, M = 55,992-68,654 cells > Nd = 20,160 data (21 bands), so the data-space matrix is the smaller one",
+    "INV_METHOD_first_guess": 0,
+    "INV_METHOD_first_guess_reason": "about 2e4 cells < about 5e4 data, so the model-space normal matrix is the smaller one"
   },
   "design_basis": {
     "T_min_s": 0.005,

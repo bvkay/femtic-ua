@@ -54,7 +54,7 @@ echo "== $(date) job ${SLURM_JOB_ID:-none} (${SLURM_JOB_NAME:-?}) partition=${SL
 BIN=${BIN:-/hpcfs/users/$USER/femtic/bin}
 PROJECT=${PROJECT:-/hpcfs/users/$USER/vulcan_femtic}
 MESHDIR=${MESHDIR:-$PROJECT/meshGen}
-INVDIR=${INVDIR:-$PROJECT/inversion/inv01}
+INVDIR=${INVDIR:-$PROJECT/work/meshgen/inv01}   # an ungated mesh: its own work/<mesh>, never inputs/ or work/v{2,3}
 NREFINE=${NREFINE:-5}                 # meshGen.sh uses 5 passes: output.1 .. output.5 -> output.6
 MAX_ELEMENTS=${MAX_ELEMENTS:-500000}  # warning threshold for the Vulcan mesh
 FIX_ELE=${FIX_ELE:-0}                 # 1 = CSIRO fix_output1.py: cap region attribute of output.1.ele at FIX_ELE_MAX
@@ -62,7 +62,7 @@ FIX_ELE_MAX=${FIX_ELE_MAX:-30}
 
 # shellcheck disable=SC1091
 source "$BIN/femtic_env.sh" || { echo "ERROR: $BIN/femtic_env.sh missing -- run 01_build_femtic.sh"; exit 1; }
-[ "${FEMTIC_LIB_VERSION:-0}" -ge 2 ] || { echo "ERROR: $BIN/femtic_lib.sh predates this script -- install -m 644 <phoenix_plan>/femtic_lib.sh $BIN/"; exit 1; }
+[ "${FEMTIC_LIB_VERSION:-0}" -ge 4 ] || { echo "ERROR: $BIN/femtic_lib.sh is version ${FEMTIC_LIB_VERSION:-unset}; this script needs FEMTIC_LIB_VERSION >= 4 (version 2, installed 2026-09-25, misreads PARDISO memory and has no layout rule; version 3 loses N_iv when DIV_NUM_RHS_FWD > N_iv) -- install -m 644 <phoenix_plan>/femtic_lib.sh $BIN/"; exit 1; }
 export OMP_NUM_THREADS=${THREADS:-${SLURM_CPUS_PER_TASK:-1}}   # makeTetraMesh has one OpenMP loop; tetgen etc. are serial
 for exe in makeTetraMesh tetgen makeMtr TetGen2Femtic; do
   command -v "$exe" >/dev/null || { echo "ERROR: $exe not on PATH ($BIN)"; exit 1; }

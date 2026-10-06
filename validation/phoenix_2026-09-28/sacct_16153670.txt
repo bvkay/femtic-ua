@@ -1,0 +1,7 @@
+# pasted by Ben 2026-09-30 from p2-log-2
+# sacct -j 16153670 --format=JobID,State,ExitCode,Elapsed,TotalCPU,NodeList
+       JobID      State ExitCode    Elapsed   TotalCPU        NodeList
+------------ ---------- -------- ---------- ---------- ---------------
+16153670      COMPLETED      0:0   00:00:48  02:31.789       p2-cpu-14
+16153670.ba+  COMPLETED      0:0   00:00:48  02:31.788       p2-cpu-14
+16153670.ex+  COMPLETED      0:0   00:00:48  00:00.001       p2-cpu-14

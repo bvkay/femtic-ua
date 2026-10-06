@@ -1,0 +1,343 @@
+# Start femtic Linux Version 5.0 ( 0 sec )
+# Read analysis control data from control.dat.( 0 sec )
+#==============================================================================
+# Summary of control data
+#==============================================================================
+# Condition of perfect electric conductor is specified at the bottom boundary.
+# Type of mesh : Tetrahedron.
+# Number of threads is specified to be 2 .
+# In-core mode is used.
+# Division number of right-hand sides at solve phase in forward calculation : 1
+# Division number of right-hand sides at solve phase in inversion : 1
+# Coefficient matrix of normal equation is assumed to be indefinite.
+# Renumbering is not performed.
+# Horizontal electric field is used for calculating response functions.
+# EM field is interpolated from the values of the edges of the lower element.
+# Release memory of coefficient matrix and sparse solver after forward calculation.
+# Type of bound constraints method : Simple bound constraining
+# Minimum distance to resistivity bounds in common logarithm scale : 0.01 .
+# Following variables are written to BINARY file.
+#  - Resistivity
+#  - Sensitivity
+#  - Sensitivity density
+# Method of inversion : Gauss-newton method (Model space)
+# Distortion matrices are NOT estimated as model parameters.
+# Roughening matrix is created using shared faces of elements.
+# Trade-off parameter for the spatial variation of the resistivity : 1 .
+# Weighting factor of alpha (X,Y,Z) = (1, 1, 1) .
+# Factor of inverse distance weighting : 1.
+# Initial iteration number : 1.
+# Maximun iteration number : 2.
+# Threshold value for determining if objective functional decrease : 0.001.
+# Convergence criterion of inversion is that change ratios of objective function and its components are less than 1 [%] .
+# Initial factor of step-length damping : 0.5.
+# Minimum factor of step-length damping : 0.1.
+# Maximum factor of step-length damping : 1.
+# If residual increase, factor of step-length damping is muliplied by 0.5 times.
+# If residual decrease 3 times in a row, factor of step-length damping is muliplied by 1.25 times.
+# Maximum number of retrials : 2.
+#==============================================================================
+# Read mesh data from mesh.dat .( 0 sec )
+# Read data of resisitivity block model .( 0 sec )
+# Read observed data .( 0 sec )
+# Number of the stations of the impedance tensor : 36
+# Station ID     Station ID (Ref)  Owner Element  Electric field
+# 1              1                 Lower          Horizontal
+# 2              2                 Lower          Horizontal
+# 3              3                 Lower          Horizontal
+# 4              4                 Lower          Horizontal
+# 5              5                 Lower          Horizontal
+# 6              6                 Lower          Horizontal
+# 7              7                 Lower          Horizontal
+# 8              8                 Lower          Horizontal
+# 9              9                 Lower          Horizontal
+# 10             10                Lower          Horizontal
+# 11             11                Lower          Horizontal
+# 12             12                Lower          Horizontal
+# 13             13                Lower          Horizontal
+# 14             14                Lower          Horizontal
+# 15             15                Lower          Horizontal
+# 16             16                Lower          Horizontal
+# 17             17                Lower          Horizontal
+# 18             18                Lower          Horizontal
+# 19             19                Lower          Horizontal
+# 20             20                Lower          Horizontal
+# 21             21                Lower          Horizontal
+# 22             22                Lower          Horizontal
+# 23             23                Lower          Horizontal
+# 24             24                Lower          Horizontal
+# 25             25                Lower          Horizontal
+# 26             26                Lower          Horizontal
+# 27             27                Lower          Horizontal
+# 28             28                Lower          Horizontal
+# 29             29                Lower          Horizontal
+# 30             30                Lower          Horizontal
+# 31             31                Lower          Horizontal
+# 32             32                Lower          Horizontal
+# 33             33                Lower          Horizontal
+# 34             34                Lower          Horizontal
+# 35             35                Lower          Horizontal
+# 36             36                Lower          Horizontal
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Total number of stations : 36 .
+#  - Number of impedance tensor stations : 36 .
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Forward calculation is performed for the frequencies/periods below.
+# Freq#  Frequency[Hz]  Period[sec]    
+# 0      0.001          1000           
+# 1      0.01           100            
+# 2      0.1            10             
+# 3      1              1              
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Find element including each station .( 0 sec )
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Total number of model parameter : 288.
+#  - Number of unfixed resisitivity parameters : 288.
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Calculate Roughening Matrix .( 0 sec )
+###############################################################################
+# Start Forward Computation.  Iteration : 1,  Retrial : 0
+###############################################################################
+#================================================================================================
+# Start forward calculation. Frequency : 0.1 [Hz], Polarization : Ex-polarization
+#================================================================================================
+# Start 3D forward calculation with 0th order 3D edge-based element.( 0 sec )
+# Number of equation = 40919, Number of equation after degeneration = 39254
+# Calculating EM field of the boundary planes with 2D forward analysis.        
+#-----------------------------[ Boundary Plane 2 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 281, Number of equation after degeneration = 247
+# Set matrix structure. ( 0 sec )
+# Anaysis phase of matrix solver for boundary plane. Polarization : 0 Plane : 2. ( 0 sec )
+# Set values of matrix and right hand side vector. ( 0 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 0 Plane : 2. ( 0 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 0 Plane : 2. ( 0 sec )
+#-----------------------------[ Boundary Plane 3 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 268, Number of equation after degeneration = 236
+# Set matrix structure. ( 0 sec )
+# Anaysis phase of matrix solver for boundary plane. Polarization : 0 Plane : 3. ( 0 sec )
+# Set values of matrix and right hand side vector. ( 0 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 0 Plane : 3. ( 0 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 0 Plane : 3. ( 0 sec )
+#------------------------------------------------------------------------------
+# Set matrix structure. ( 0 sec )
+# Anaysis phase of matrix solver for 3D forward calculation. Polarization : 0. ( 0 sec )
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Total peak memory required during the analysis and symbolic factorization phase    : 42920 [KByte]
+# Permanent memory required from the analysis phase to the solve phases              : 36759 [KByte]
+# Total memory consumed by in-core forward solver for internal float point arrays    : 206481 [KByte]
+# Minimum memory consumed by out-core forward solver for internal float point arrays : 15250 [KByte]
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Set values of matrix and right hand side vector. ( 0 sec )
+# Numerical factorization phase of matrix solver for 3D forward calculation. Polarization : 0.( 0 sec )
+# Solve phase of matrix solver for 3D forward calculation. Polarization : 0.( 1 sec )
+# Calulate right-hand sides vectors consisting of interpolator vectors.( 1 sec )
+# Solve phase of matrix solver for right-hand sides consisting of interpolator vectors.( 1 sec )
+# Solve phase is performed simultaneously for 144 right-hand sides( 1 sec )
+# Calculate derivatives of EM field.( 2 sec )
+#================================================================================================
+# Start forward calculation. Frequency : 0.1 [Hz], Polarization : Ey-polarization
+#================================================================================================
+# Start 3D forward calculation with 0th order 3D edge-based element.( 2 sec )
+# Number of equation = 40919, Number of equation after degeneration = 39254
+# Calculating EM field of the boundary planes with 2D forward analysis.        
+#-----------------------------[ Boundary Plane 0 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 274, Number of equation after degeneration = 242
+# Set matrix structure. ( 2 sec )
+# Anaysis phase of matrix solver for boundary plane. Polarization : 1 Plane : 0. ( 2 sec )
+# Set values of matrix and right hand side vector. ( 2 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 1 Plane : 0. ( 2 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 1 Plane : 0. ( 2 sec )
+#-----------------------------[ Boundary Plane 1 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 267, Number of equation after degeneration = 234
+# Set matrix structure. ( 2 sec )
+# Anaysis phase of matrix solver for boundary plane. Polarization : 1 Plane : 1. ( 2 sec )
+# Set values of matrix and right hand side vector. ( 2 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 1 Plane : 1. ( 2 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 1 Plane : 1. ( 2 sec )
+#------------------------------------------------------------------------------
+# Set values of matrix and right hand side vector. ( 2 sec )
+# Numerical factorization phase of matrix solver for 3D forward calculation. Polarization : 1.( 2 sec )
+# Solve phase of matrix solver for 3D forward calculation. Polarization : 1.( 3 sec )
+# Calulate right-hand sides vectors consisting of interpolator vectors.( 3 sec )
+# Solve phase of matrix solver for right-hand sides consisting of interpolator vectors.( 3 sec )
+# Solve phase is performed simultaneously for 144 right-hand sides( 3 sec )
+# Calculate derivatives of EM field.( 3 sec )
+#==============================================================================
+# Calculate response functions. ( 3 sec )
+# Calculate sensitivity matrix of frequency 0.1[Hz].( 3 sec )
+# Sensitivity matrix of frequency 0.1[Hz] is saved in the out-of-core file sensMatFreq2.
+#==============================================================================
+#================================================================================================
+# Start forward calculation. Frequency : 1 [Hz], Polarization : Ex-polarization
+#================================================================================================
+# Start 3D forward calculation with 0th order 3D edge-based element.( 3 sec )
+# Number of equation = 40919, Number of equation after degeneration = 39254
+# Calculating EM field of the boundary planes with 2D forward analysis.        
+#-----------------------------[ Boundary Plane 2 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 281, Number of equation after degeneration = 247
+# Set values of matrix and right hand side vector. ( 3 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 0 Plane : 2. ( 3 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 0 Plane : 2. ( 3 sec )
+#-----------------------------[ Boundary Plane 3 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 268, Number of equation after degeneration = 236
+# Set values of matrix and right hand side vector. ( 3 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 0 Plane : 3. ( 3 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 0 Plane : 3. ( 3 sec )
+#------------------------------------------------------------------------------
+# Set values of matrix and right hand side vector. ( 3 sec )
+# Numerical factorization phase of matrix solver for 3D forward calculation. Polarization : 0.( 3 sec )
+# Solve phase of matrix solver for 3D forward calculation. Polarization : 0.( 4 sec )
+# Calulate right-hand sides vectors consisting of interpolator vectors.( 4 sec )
+# Solve phase of matrix solver for right-hand sides consisting of interpolator vectors.( 4 sec )
+# Solve phase is performed simultaneously for 144 right-hand sides( 4 sec )
+# Calculate derivatives of EM field.( 5 sec )
+#================================================================================================
+# Start forward calculation. Frequency : 1 [Hz], Polarization : Ey-polarization
+#================================================================================================
+# Start 3D forward calculation with 0th order 3D edge-based element.( 5 sec )
+# Number of equation = 40919, Number of equation after degeneration = 39254
+# Calculating EM field of the boundary planes with 2D forward analysis.        
+#-----------------------------[ Boundary Plane 0 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 274, Number of equation after degeneration = 242
+# Set values of matrix and right hand side vector. ( 5 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 1 Plane : 0. ( 5 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 1 Plane : 0. ( 5 sec )
+#-----------------------------[ Boundary Plane 1 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 267, Number of equation after degeneration = 234
+# Set values of matrix and right hand side vector. ( 5 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 1 Plane : 1. ( 5 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 1 Plane : 1. ( 5 sec )
+#------------------------------------------------------------------------------
+# Set values of matrix and right hand side vector. ( 5 sec )
+# Numerical factorization phase of matrix solver for 3D forward calculation. Polarization : 1.( 5 sec )
+# Solve phase of matrix solver for 3D forward calculation. Polarization : 1.( 6 sec )
+# Calulate right-hand sides vectors consisting of interpolator vectors.( 6 sec )
+# Solve phase of matrix solver for right-hand sides consisting of interpolator vectors.( 6 sec )
+# Solve phase is performed simultaneously for 144 right-hand sides( 6 sec )
+# Calculate derivatives of EM field.( 6 sec )
+#==============================================================================
+# Calculate response functions. ( 6 sec )
+# Calculate sensitivity matrix of frequency 1[Hz].( 6 sec )
+# Sensitivity matrix of frequency 1[Hz] is saved in the out-of-core file sensMatFreq3.
+#==============================================================================
+# Release memory of coefficient matrix and sparse solver. ( 6 sec )
+###############################################################################
+# Start Inversion.  Iteration : 1
+###############################################################################
+###############################################################################
+# Start Forward Computation.  Iteration : 2,  Retrial : 0
+###############################################################################
+#================================================================================================
+# Start forward calculation. Frequency : 0.1 [Hz], Polarization : Ex-polarization
+#================================================================================================
+# Start 3D forward calculation with 0th order 3D edge-based element.( 6 sec )
+# Number of equation = 40919, Number of equation after degeneration = 39254
+# Calculating EM field of the boundary planes with 2D forward analysis.        
+#-----------------------------[ Boundary Plane 2 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 281, Number of equation after degeneration = 247
+# Set values of matrix and right hand side vector. ( 6 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 0 Plane : 2. ( 6 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 0 Plane : 2. ( 6 sec )
+#-----------------------------[ Boundary Plane 3 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 268, Number of equation after degeneration = 236
+# Set values of matrix and right hand side vector. ( 6 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 0 Plane : 3. ( 6 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 0 Plane : 3. ( 6 sec )
+#------------------------------------------------------------------------------
+# Set matrix structure. ( 6 sec )
+# Anaysis phase of matrix solver for 3D forward calculation. Polarization : 0. ( 7 sec )
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Total peak memory required during the analysis and symbolic factorization phase    : 42840 [KByte]
+# Permanent memory required from the analysis phase to the solve phases              : 36693 [KByte]
+# Total memory consumed by in-core forward solver for internal float point arrays    : 206674 [KByte]
+# Minimum memory consumed by out-core forward solver for internal float point arrays : 15298 [KByte]
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Set values of matrix and right hand side vector. ( 7 sec )
+# Numerical factorization phase of matrix solver for 3D forward calculation. Polarization : 0.( 7 sec )
+# Solve phase of matrix solver for 3D forward calculation. Polarization : 0.( 8 sec )
+#================================================================================================
+# Start forward calculation. Frequency : 0.1 [Hz], Polarization : Ey-polarization
+#================================================================================================
+# Start 3D forward calculation with 0th order 3D edge-based element.( 8 sec )
+# Number of equation = 40919, Number of equation after degeneration = 39254
+# Calculating EM field of the boundary planes with 2D forward analysis.        
+#-----------------------------[ Boundary Plane 0 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 274, Number of equation after degeneration = 242
+# Set values of matrix and right hand side vector. ( 8 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 1 Plane : 0. ( 8 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 1 Plane : 0. ( 8 sec )
+#-----------------------------[ Boundary Plane 1 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 267, Number of equation after degeneration = 234
+# Set values of matrix and right hand side vector. ( 8 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 1 Plane : 1. ( 8 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 1 Plane : 1. ( 8 sec )
+#------------------------------------------------------------------------------
+# Set values of matrix and right hand side vector. ( 8 sec )
+# Numerical factorization phase of matrix solver for 3D forward calculation. Polarization : 1.( 8 sec )
+# Solve phase of matrix solver for 3D forward calculation. Polarization : 1.( 8 sec )
+#==============================================================================
+# Calculate response functions. ( 9 sec )
+#==============================================================================
+#================================================================================================
+# Start forward calculation. Frequency : 1 [Hz], Polarization : Ex-polarization
+#================================================================================================
+# Start 3D forward calculation with 0th order 3D edge-based element.( 9 sec )
+# Number of equation = 40919, Number of equation after degeneration = 39254
+# Calculating EM field of the boundary planes with 2D forward analysis.        
+#-----------------------------[ Boundary Plane 2 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 281, Number of equation after degeneration = 247
+# Set values of matrix and right hand side vector. ( 9 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 0 Plane : 2. ( 9 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 0 Plane : 2. ( 9 sec )
+#-----------------------------[ Boundary Plane 3 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 268, Number of equation after degeneration = 236
+# Set values of matrix and right hand side vector. ( 9 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 0 Plane : 3. ( 9 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 0 Plane : 3. ( 9 sec )
+#------------------------------------------------------------------------------
+# Set values of matrix and right hand side vector. ( 9 sec )
+# Numerical factorization phase of matrix solver for 3D forward calculation. Polarization : 0.( 9 sec )
+# Solve phase of matrix solver for 3D forward calculation. Polarization : 0.( 9 sec )
+#================================================================================================
+# Start forward calculation. Frequency : 1 [Hz], Polarization : Ey-polarization
+#================================================================================================
+# Start 3D forward calculation with 0th order 3D edge-based element.( 9 sec )
+# Number of equation = 40919, Number of equation after degeneration = 39254
+# Calculating EM field of the boundary planes with 2D forward analysis.        
+#-----------------------------[ Boundary Plane 0 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 274, Number of equation after degeneration = 242
+# Set values of matrix and right hand side vector. ( 9 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 1 Plane : 0. ( 9 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 1 Plane : 0. ( 9 sec )
+#-----------------------------[ Boundary Plane 1 ]-----------------------------
+# Calculate electric field on a boundary plane with 0th order edge-based element.
+# Number of equation = 267, Number of equation after degeneration = 234
+# Set values of matrix and right hand side vector. ( 9 sec )
+# Numerical factorization phase of matrix solver for boundary plane. Polarization : 1 Plane : 1. ( 9 sec )
+# Solve phase of matrix solver for boundary plane. Polarization : 1 Plane : 1. ( 9 sec )
+#------------------------------------------------------------------------------
+# Set values of matrix and right hand side vector. ( 9 sec )
+# Numerical factorization phase of matrix solver for 3D forward calculation. Polarization : 1.( 9 sec )
+# Solve phase of matrix solver for 3D forward calculation. Polarization : 1.( 10 sec )
+#==============================================================================
+# Calculate response functions. ( 10 sec )
+#==============================================================================
+# Release memory of coefficient matrix and sparse solver. ( 10 sec )
+# Reach maximum iteration number.
+# End femtic ( 10 sec )
