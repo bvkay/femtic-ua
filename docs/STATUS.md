@@ -163,6 +163,20 @@ against the version-5 kit, as expected; rerun it only at 06d044f (ARCH/README.md
 | C5 rotation | 09-28 | yes | 66 / 2 | follow-ups (round 3) unverified |
 | kit C1+C2, docs C6, prep C3/C4/C7 | 09-28 | mixed | 28/0, 46/3, 40/2 | later rounds unverified |
 
+### 1.10 GUI phase 1 (built 2026-10-07, uncommitted; docs/journal/2026-10-06_gui_phase1.md)
+**Scope confirmed by Ben in chat (2026-10-06 night): Results tab in phase 1, no network ever (design finding 14 closed).**
+
+- **Exists:** src/femtic_gui (22 files, 3,393 lines; PySide6 + pyqtgraph, VTK only in viewer3d.py), a thin shell over
+  prep_vulcan.py and make_run.sh (docs/dev/gui_design_2026-10-06.md s8). Tabs Data (bands, floors with C09's counts,
+  Check, Run prep), Mesh (counts, 3D), FEMTIC (16 keys, 4 editable), Runs (New-run form, Record result), Results.
+  Comments survive edits; Save as only; one job at a time through Git Bash (never WSL's bash); no git, no network.
+- **Launch** (env femtic_gui; pins in environment-gui.yml), from the worktree root: `femtic-gui config/vulcan_mesh_v2_rot.yml`;
+  tests `python tests/gui/run_all.py`. Not from MAIN until the merge and `pip install -e . --no-deps` there.
+- **Verdict:** 44 PASS, 0 FAIL, 0 NOT RUN (19 s); verifier 22 upheld, 0 refuted, 9 missed, ready for Ben. Its
+  offscreen walk ran real Check (16 PASS, 2 N/A), Run prep (18/18) and make_run.sh. Never seen on a real screen (M5).
+- **Open:** confirm Results (relayed scope, design finding 14) and Save-as-only; licence (MIT headers, none chosen); the
+  form lacks `--job mesh` (in abbee8a); G1, G6 (G4 closed by abbee8a's R5 mask); the verifier's nits (journal).
+
 ## 2. Decisions
 
 ### D0. Decided 2026-10-06 (Ben): KISS and the folder model (1.1)
@@ -216,12 +230,13 @@ The half-space gate on Phoenix is the acceptance test for any Python mesh toolch
 ## 3. Next steps
 
 ### What Ben does next
-1. Review and commit this worktree as bvkay (4, "Uncommitted"), then merge it to main: MAIN/ is on main at 06d044f and has no scripts/make_*.sh or runs/, which RUNBOOK.md's PC paths assume.
+1. Review and commit this worktree as bvkay (4, "Uncommitted"), then merge it to main: MAIN/ is on main at abbee8a (GUI commit follows) and has no scripts/make_*.sh or runs/, which RUNBOOK.md's PC paths assume.
 2. Re-make Run01-03 on the committed tree (delete runs/, rerun the three make_run.sh lines in the 10-06 journal) and commit runs/.
 3. PC: `bash hpc/phoenix_plan/tests/runbook_walk_test.sh` (about 50 s, 30/0 expected), then S2 `bash scripts/make_phoenix_kit.sh`.
 4. Phoenix: RUNBOOK S1, S3 (kit, check VERSION), S4 or S5 (meshes into $VF/shared/).
 5. Run01 and Run02 (R2-R6, F1); Run03 only after both PASS, and send back F2's grep output.
-6. Decide D8 (whose femtic/bin) and D9 (mail) before any student runs; confirm D1.
+6. D8 decided 2026-10-06 (students build once); D9 default no e-mail.
+7. GUI (1.10): confirm Results and Save-as-only, then try it on screen before any student does (worktree root, `conda activate femtic_gui`, `femtic-gui config/vulcan_mesh_v2_rot.yml`: Data, Runs, Mesh > 3D, once over Remote Desktop); commit it with pyproject.toml (src/femtic_mesh is already in abbee8a).
 
 ### (a) PC, light only
 - L1. After any kit or RUNBOOK edit, rerun the five kit tests (walk, run_sh, pc_scripts, c1c2, portability; 1.9). Worth

@@ -1,0 +1,7 @@
+tests/gui/fixtures/b1 - FEMTIC output of the v1 half-space accuracy run b1 (100 ohm-m, 120 stations x 2 bands,
+WSL, 2026-09-25), copied unchanged on 2026-10-07 from Ben's checkout:
+  b1_result_0_iter0.csv  = MAIN/mesh/vulcan_v1/halfspace/acc_100/b1/result_0_iter0.csv (md5 1f79b9a0e6a0fc1ca98063ad905031c2)
+  femtic.cnv             = MAIN/mesh/vulcan_v1/halfspace/acc_100/b1/femtic.cnv          (md5 0917fdac9f3671a5ca20b3bcfefe04c0)
+The csv is renamed because .gitignore drops **/result_*_iter*.csv; gui_smoke.py copies it back to its FEMTIC name.
+Its station names come from mesh/vulcan_v1/inversion/station_map.csv (the same 120 stations, same order).
+Used by tests/gui/test_readers.py (T8: site RMS vs femtic.cnv) and tests/gui/gui_smoke.py (the Results tab).

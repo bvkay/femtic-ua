@@ -1,0 +1,44 @@
+# pyproject.toml - one root project for the Python packages of this repository (src layout):
+#   src/femtic_gui   the student GUI (thin PySide6 shell over the existing scripts; docs/dev/gui_design_2026-10-06.md)
+#   src/femtic_mesh  the Python side of the mesh chain (another workflow's package; numpy only)
+# Install into the conda env of environment-gui.yml with:  pip install -e . --no-deps
+# Then:  femtic-gui [config.yml]   or   python -m femtic_gui [config.yml]
+# The pins live in environment-gui.yml (tested together); the extras below repeat them so pip can check them.
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "femtic-vulcan"
+version = "0.1.0"
+description = "FEMTIC Vulcan workflow: student GUI (femtic_gui) and mesh-chain tools (femtic_mesh)"
+requires-python = ">=3.10"
+authors = [{ name = "Ben Kay" }]
+dependencies = ["numpy>=1.23"]                 # femtic_mesh needs only this (environment-mesh.yml)
+
+[project.optional-dependencies]
+# the GUI and prep_vulcan.py (which the GUI imports and launches: PyYAML, pandas < 3 and matplotlib for femticPy)
+gui = [
+    "numpy==2.4.6",
+    "PySide6==6.11.2",
+    "pyqtgraph==0.14.0",
+    "ruamel.yaml==0.19.1",
+    "loguru==0.7.3",
+    "PyYAML==6.0.3",
+    "pandas==2.3.3",
+    "matplotlib==3.11.2",
+]
+# the 3D viewer only (src/femtic_gui/viewer3d.py); the rest of the GUI runs without it
+viewer = [
+    "pyvista==0.49.0",
+    "pyvistaqt==0.13.1",
+    "vtk==9.7.1",
+    "QtPy==2.4.3",
+]
+
+[project.scripts]
+femtic-gui = "femtic_gui.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["femtic_gui*", "femtic_mesh*"]
