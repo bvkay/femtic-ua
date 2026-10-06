@@ -3,10 +3,13 @@
 
 argv is always a list, never a shell string: sys.executable for a .py script, Git Bash for a .sh script,
 repository-relative paths with forward slashes, cwd = the repository root. stdout and stderr are merged,
-PYTHONUNBUFFERED=1, ANSI escapes stripped, each line goes out through the line signal. Before a job the console
-gets '$ <command>', after it '--- <label>: done (exit 0)', 'failed (exit N)' or 'failed to start (<program>)';
-cancel() kills the job, waits up to 3 s and writes '--- cancelled: <label>'. While a job runs, run() refuses
-another (returns False) and the tabs disable their start buttons: there is no queue.
+ANSI escapes stripped, each line goes out through the line signal. The child gets CHILD_ENV: PYTHONUNBUFFERED=1,
+and PYTHONIOENCODING=utf-8 because a Windows Python writes the ANSI code page (cp1252) to a pipe and the runner
+decodes UTF-8. PYTHONUTF8 is not set: it would also change the child's open() default (femticPy's MTtools.read
+opens EDIs without an encoding), so prep would read files differently from the command a student types.
+Before a job the console gets '$ <command>', after it '--- <label>: done (exit 0)', 'failed (exit N)' or
+'failed to start (<program>)'; cancel() kills the job, waits up to 3 s and writes '--- cancelled: <label>'.
+While a job runs, run() refuses another (returns False) and the tabs disable their start buttons: no queue.
 find_bash() finds Git Bash and never the WSL launcher (the bash.exe under System32 or WindowsApps):
 starting WSL is forbidden on this PC.
 
@@ -25,6 +28,7 @@ from PySide6 import QtCore
 
 ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
 _PLAIN_ARG = re.compile(r"[A-Za-z0-9_./:=@%+,-]+")
+CHILD_ENV = {"PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"}
 
 
 def _refused_bash(path: str) -> bool:
@@ -128,8 +132,7 @@ class JobRunner(QtCore.QObject):
         p.setWorkingDirectory(str(self.cwd))
         p.setProcessChannelMode(QtCore.QProcess.ProcessChannelMode.MergedChannels)
         e = QtCore.QProcessEnvironment.systemEnvironment()
-        e.insert("PYTHONUNBUFFERED", "1")
-        for k, v in env.items():
+        for k, v in {**CHILD_ENV, **env}.items():
             e.insert(k, v)
         p.setProcessEnvironment(e)
         p.readyReadStandardOutput.connect(lambda p=p: p is self._proc and self._read(p))

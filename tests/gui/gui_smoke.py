@@ -2,11 +2,13 @@
 """gui_smoke.py - headless smoke test of the whole GUI (T11, T13): QT_QPA_PLATFORM=offscreen, no real job.
 
 It opens a copy of config/vulcan_mesh_v2_rot.yml (paths.root made absolute, in a temporary folder), visits every
-tab, clicks a site, changes per_decade and a floor, saves as a new file, presses every job button and fills the
-New-run form from RUNBOOK.md's own Run06 line. JobRunner._start is replaced by a recorder (no process starts),
-QFileDialog and QMessageBox are stubbed (no modal dialog blocks), socket connections are recorded and refused,
-runs/ is a temporary copy ($RUNS) and QSettings a temporary file. Every step reports "fails if" and its failing
-case first. Exceptions raised inside Qt slots are caught through sys.excepthook and fail the step.
+tab, checks every button's tooltip, clicks a site, checks the map's labels, changes per_decade and a floor, saves
+as a new file and presses every job button; gui_smoke_steps.py, run after these steps on the same window, does the
+Runs, Mesh and Results tabs and the VTK, network and file checks. JobRunner._start is replaced by a recorder
+(no process starts), QFileDialog and QMessageBox are stubbed (no modal dialog blocks), socket connections are
+recorded and refused, runs/ is a temporary copy ($RUNS) and QSettings a temporary file. Every step reports
+"fails if" and its failing case first. Exceptions raised inside Qt slots are caught through sys.excepthook and
+fail the step.
 
     python tests/gui/gui_smoke.py
 
@@ -15,17 +17,17 @@ case first. Exceptions raised inside Qt slots are caught through sys.excepthook 
 """
 from __future__ import annotations
 
-import os
-import shlex
 import shutil
-import subprocess
 import sys
 
 from _smoke_harness import (  # first: it sets up the offscreen platform and the stubs
-    ANSWER, APP, BASE, BEFORE, CONNECTS, DIALOGS, EXC, RECORDED, STUDENT, TMP, C, MainWindow, QtCore, QtTest,
-    click, fill_form, new_window, no_exceptions, pump, runbook_line, snapshot, tree_items)
+    ANSWER, APP, BASE, DIALOGS, EXC, RECORDED, STUDENT, TMP, C, MainWindow, QtCore, QtTest, click, new_window,
+    no_exceptions, pump)
+from PySide6 import QtWidgets
 
-from femtic_gui.jobs import display_command  # noqa: E402
+import gui_smoke_steps
+from femtic_gui import plots
+from femtic_gui.jobs import display_command
 
 W: MainWindow = None  # type: ignore[assignment]
 
@@ -57,6 +59,30 @@ def test_open_and_visit_every_tab():
     C.passes(check, "real")
 
 
+def test_every_button_has_a_tooltip():
+    """This test fails if any push button of the open window has no tooltip (what it runs, or why it is disabled),
+    or the Results tab's 'Open 3D viewer' does not say to select a model before one is selected. Failing case: the
+    Results tab's 'Choose mesh.dat...' and 'Open 3D viewer' as phase 1 left them (no tooltip; verifier 10-06)."""
+    R = W.results_tab
+
+    def check(_when):
+        buttons = W.findChildren(QtWidgets.QPushButton)
+        bare = [b.text() for b in buttons if not b.toolTip()]
+        ok = not bare and "select a model" in R.view_btn.toolTip()
+        return ok, "%d push buttons, without a tooltip %s; Open 3D viewer: %r" % (
+            len(buttons), bare, R.view_btn.toolTip()[:60])
+
+    saved = [(b, b.toolTip()) for b in (R.choose_mesh_btn, R.view_btn)]
+    for b, _t in saved:
+        b.setToolTip("")
+    try:
+        C.fails_first(check, "phase 1")
+    finally:
+        for b, t in saved:
+            b.setToolTip(t)
+    C.passes(check, "real")
+
+
 def test_click_a_site_draws_it():
     """This test fails unless clicking a site's row selects it in State, rings it on the map and draws its xy and yx
     curves (two frames each). Failing case: the check before the click."""
@@ -75,6 +101,38 @@ def test_click_a_site_draws_it():
                             pos=t.visualItemRect(t.item(row, 0)).center())
     no_exceptions("site click")
     C.passes(check, "after")
+
+
+def test_site_map_labels_selected_only():
+    """This test fails unless the Data tab's map keeps all 120 markers and, at its default whole-survey view, shows
+    at most 1 label, the selected site's, while a view zoomed to a few sites labels every site in it. Failing
+    case: every label shown, as phase 1 drew them (the zoom threshold above the 120 sites)."""
+    m = W.data_tab.map
+
+    def check(_when):
+        m.autoRange()
+        pump()
+        default = m.visible_labels()
+        x, y = m._xy[W.state.site]
+        m.setRange(xRange=(x - 1.2, x + 1.2), yRange=(y - 1.2, y + 1.2), padding=0)
+        pump()
+        (x0, x1), (y0, y1) = m.getViewBox().viewRange()
+        in_view = sorted(i for i, (a, b) in m._xy.items() if x0 <= a <= x1 and y0 <= b <= y1)
+        zoomed = sorted(m.visible_labels())
+        m.autoRange()
+        pump()
+        ok = len(m._points.data) == 120 and default == [W.state.site] and 1 < len(in_view) and zoomed == in_view
+        return ok, "%d markers; %d label(s) at the default view %s; zoomed in: %d of %d sites labelled" % (
+            len(m._points.data), len(default), default[:3], len(zoomed), len(in_view))
+
+    saved = plots.LABEL_ALL_AT_MOST
+    plots.LABEL_ALL_AT_MOST = 10 ** 6
+    try:
+        C.fails_first(check, "phase 1")
+    finally:
+        plots.LABEL_ALL_AT_MOST = saved
+    C.passes(check, "real")
+    no_exceptions("site map labels")
 
 
 def test_per_decade_and_floor_update_previews():
@@ -206,185 +264,11 @@ def test_femtic_curated_edit():
     no_exceptions("FEMTIC edit")
 
 
-def test_new_run_form_types_the_runbook_command():
-    """This test fails unless the New-run form, filled with the values of RUNBOOK.md's Run06 line, records exactly
-    that command's argv (Git Bash as argv[0]) and previews it character for character as the RUNBOOK types it.
-    Failing case: RUNBOOK.md's Run07 line as the expectation."""
-    W.tabs.setCurrentWidget(W.runs_tab)
-    form = W.runs_tab.form
-    assert form.name.text() == "Run06", "next free run name %r, expected Run06" % form.name.text()
-    fill_form(form, runbook_line("Run06"))
-    pump()
-    del RECORDED[:]
-    click(form.button)
-    no_exceptions("make run")
-    print("    preview: %s" % form.preview.toPlainText())
-
-    def check(run):
-        line = runbook_line(run)
-        ok = (len(RECORDED) == 1 and RECORDED[0][0] == W.runs_tab.bash and RECORDED[0][1:] == shlex.split(line)[1:]
-              and display_command(RECORDED[0]) == line == form.preview.toPlainText())
-        return ok, "recorded vs RUNBOOK %s line: equal %s" % (run, ok)
-
-    C.fails_first(check, "Run07")
-    C.passes(check, "Run06")
-
-
-def test_record_result_in_temp_runs():
-    """This test fails unless Record result writes the job ids and verdict into the Run01 line of the temporary
-    INDEX.md only and shows R6's git line. Failing case: the repository's own INDEX.md, which must not change."""
-    t = W.runs_tab.table
-    row = next(r for r in range(t.rowCount()) if t.item(r, 0).text() == "Run01")
-    QtTest.QTest.mouseClick(t.viewport(), QtCore.Qt.MouseButton.LeftButton,
-                            pos=t.visualItemRect(t.item(row, 0)).center())
-    pump()
-    W.runs_tab.rec_jobs.setText("123456")
-    W.runs_tab.rec_verdict.setText("PASS smoke")
-    click(W.runs_tab.rec_button)
-    no_exceptions("record result")
-
-    def check(index):
-        line = next(ln for ln in index.read_text(encoding="utf-8").splitlines() if ln.startswith("| Run01 |"))
-        git = W.runs_tab.git_line.text()
-        ok = line.endswith("| 123456 | PASS smoke |") and git == ('git add runs/Run01 runs/INDEX.md && git commit '
-                                                                 '-m "Run01: PASS smoke"')
-        return ok, "%s: %s" % (index.parent.name, line[-40:])
-
-    C.fails_first(check, C.REPO / "runs" / "INDEX.md")
-    C.passes(check, TMP / "runs" / "INDEX.md")
-
-
-def test_mesh_tab_counts_and_runbook():
-    """This test fails unless the Mesh tab shows v2's measured counts (2446095 elements) and no design warning, and
-    Help > Runbook opens the runbook. Failing case: a config whose mesh.reuse_from is v3."""
-    def check(mesh_dir_text):
-        return "elements 2446095" in mesh_dir_text and W.mesh_tab.warnings.text() == "none", \
-            "counts: %s" % mesh_dir_text.splitlines()[1][:60]
-
-    v3 = "mesh/vulcan_v3\n" + "\n".join((C.REPO / "mesh" / "vulcan_v3" / "mesh_logs" / "mesh_stats.txt")
-                                        .read_text(encoding="utf-8").splitlines()[:2])
-    C.fails_first(check, v3)
-    W.tabs.setCurrentWidget(W.mesh_tab)
-    C.passes(check, W.mesh_tab.counts.text())
-    W.show_runbook()
-    pump()
-    texts = [w.text_view.toPlainText() for w in APP.topLevelWidgets() if hasattr(w, "text_view")]
-    assert any("Runbook" in x for x in texts), "Help > Runbook showed no runbook"
-    no_exceptions("mesh tab and runbook")
-
-
-def test_results_tab_on_fixture():
-    """This test fails unless the Results tab, opened (Open folder...) on a copy of tests/gui/fixtures/b1 with its
-    station_map.csv and a model file, lists one model, one data fit and one convergence entry; the fit shows an
-    overall RMS equal to femtic.cnv's (21.8032), 120 sites in the residual table and four curves for a clicked
-    site; the convergence plots femtic.cnv's one iteration; the model page disables its 3D button with the reason
-    (no mesh known); and the folder joins File > Recent run folders. Failing case: the tab before the folder opens."""
-    b1 = TMP / "b1"
-    b1.mkdir()
-    shutil.copy(C.HERE / "fixtures" / "b1" / "b1_result_0_iter0.csv", b1 / "result_0_iter0.csv")
-    shutil.copy(C.HERE / "fixtures" / "b1" / "femtic.cnv", b1 / "femtic.cnv")
-    shutil.copy(C.REPO / "mesh" / "vulcan_v1" / "inversion" / "station_map.csv", b1 / "station_map.csv")
-    (b1 / "resistivity_block_iter3.dat").write_text("never read by the 2D steps", encoding="utf-8")
-    R = W.results_tab
-    W.tabs.setCurrentWidget(R)
-
-    def check(_when):
-        groups = {g: len(tree_items(R.tree, g)) for g in ("model", "data fit", "convergence")}
-        if groups != {"model": 1, "data fit": 1, "convergence": 1}:
-            return False, "list %s" % groups
-        R.tree.setCurrentItem(tree_items(R.tree, "data fit")[0])
-        pump()
-        t = R.residuals
-        QtTest.QTest.mouseClick(t.viewport(), QtCore.Qt.MouseButton.LeftButton,
-                                pos=t.visualItemRect(t.item(1, 0)).center())
-        pump()
-        curves = len([i for i in R.fit_curves.rho.listDataItems() if i.name()])
-        fit = (R.misfit_note.text().split(";")[0], t.rowCount(), curves, len(R.misfit_map._sel.data))
-        R.tree.setCurrentItem(tree_items(R.tree, "convergence")[0])
-        pump()
-        cnv = [len(d.getData()[0]) for d in R.rms_plot.listDataItems()]
-        R.tree.setCurrentItem(tree_items(R.tree, "model")[0])
-        pump()
-        view = (R.view_btn.isEnabled(), "choose it" in R.view_btn.toolTip())
-        recent = str(b1) in [a.text() for a in W.recent_runs_menu.actions()]
-        ok = (fit == ("iteration 0: overall RMS 21.8032 over 240 data lines", 120, 4, 1) and cnv == [1]
-              and view == (False, True) and recent)
-        return ok, "fit %s; convergence points %s; 3D button (enabled, reason) %s; recent %s" % (fit, cnv, view,
-                                                                                               recent)
-
-    C.fails_first(check, "before")
-    ANSWER["dir"] = b1
-    click(R.open_folder_btn)
-    no_exceptions("results tab")
-    C.passes(check, "after")
-
-
-VTK_MODULES = ("vtk", "vtkmodules", "pyvista", "pyvistaqt", "femtic_gui.viewer3d")
-MODULE_CHECK = ("import sys; mods = %r; print(sorted(m for m in sys.modules if m in mods or "
-                "m == 'PySide6.QtNetwork'))" % (VTK_MODULES,))
-
-
-def test_no_vtk_no_network_after_2d_clicks():
-    """This test fails if vtk, vtkmodules, pyvista, pyvistaqt or femtic_gui.viewer3d is in sys.modules after all the
-    2D steps, PySide6.QtNetwork was loaded, or any socket connection was attempted (T11). Failing case: a child
-    process that imports femtic_gui.viewer3d, as a tab importing it at module level would."""
-    def check(mods):
-        ok = not mods and not CONNECTS
-        return ok, "loaded %s; connections %s" % (mods, CONNECTS)
-
-    child = subprocess.run([sys.executable, "-c", "import femtic_gui.viewer3d; " + MODULE_CHECK],
-                           capture_output=True, text=True, env=dict(os.environ, PYTHONPATH=str(C.REPO / "src")))
-    C.fails_first(check, eval(child.stdout.strip() or "['child failed']"))
-    C.passes(check, sorted(m for m in sys.modules if m in VTK_MODULES or m == "PySide6.QtNetwork"))
-
-
-def test_without_vtk_3d_buttons_disabled():
-    """This test fails unless, with vtkmodules unimportable (sys.modules['vtkmodules'] = None; pyvista imports it),
-    a new window opens the config, both 3D buttons are disabled with a tooltip naming the missing module, and a
-    3D Load still called shows '3D viewer unavailable' instead of failing. Failing case: the first window, where
-    VTK is installed."""
-    from femtic_gui.tabs.common import open_viewer
-
-    def check(win):
-        m = win.mesh_tab
-        n = len(DIALOGS)
-        opened = open_viewer(m, C.REPO / "mesh.dat") if not m.open_btn.isEnabled() else "skipped"
-        warned = any("3D viewer unavailable" in t for _k, _ti, t in DIALOGS[n:])
-        ok = (not m.view_btn.isEnabled() and not m.open_btn.isEnabled() and opened is None and warned
-              and "3D viewer unavailable: vtkmodules" in m.open_btn.toolTip())
-        return ok, "Open mesh button enabled %s; Load warned %s; tooltip %r" % (
-            m.open_btn.isEnabled(), warned, m.open_btn.toolTip()[:70])
-
-    C.fails_first(check, W)
-    sys.modules["vtkmodules"] = None
-    try:
-        w2 = new_window()
-        w2.open_config(STUDENT)
-        no_exceptions("second window without VTK")
-        C.passes(check, w2)
-        w2.close()
-    finally:
-        del sys.modules["vtkmodules"]
-
-
-def test_no_file_outside_temp_changed():
-    """This test fails if any file under config/, runs/, scripts/, mesh/vulcan_v2_rot/, mesh/vulcan_v1/inversion/,
-    tests/gui/fixtures/ or the runbook, or the user's own femtic_gui settings file, changed during the smoke test.
-    Failing case: a snapshot with one file's time changed."""
-    def check(after):
-        diff = sorted(k for k in set(BEFORE) | set(after) if BEFORE.get(k) != after.get(k))
-        return not diff, "%d of %d watched files changed %s" % (len(diff), len(after), diff[:3])
-
-    fake = dict(BEFORE)
-    k = next(iter(fake))
-    fake[k] = (0, 0)
-    C.fails_first(check, fake)
-    C.passes(check, snapshot())
-
-
 if __name__ == "__main__":
     try:
         C.run(globals())
+        gui_smoke_steps.W = W
+        C.run(vars(gui_smoke_steps))
     finally:
         for w in list(APP.topLevelWidgets()):
             w.close()

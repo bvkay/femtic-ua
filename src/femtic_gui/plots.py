@@ -4,6 +4,8 @@
 The stack plots log10 values with logarithmic axis labels (the data are transformed here, so error bars stay
 correct), a fixed 72 px left axis and the phase plot's x axis linked to the resistivity plot's.
 The site map plots east across and north up in km about the survey centre with the aspect locked to 1:1 (UTM).
+Every site keeps its marker; ids are labelled only for the selected site, the site under the mouse, and every
+site in view once the view holds LABEL_ALL_AT_MOST sites or fewer (Vulcan's ~1 km grid overlaps at full extent).
 
 @author ben kay
 :license: MIT
@@ -17,10 +19,11 @@ from PySide6 import QtCore, QtWidgets
 from . import theme
 
 LEFT_AXIS_PX = 72
+LABEL_ALL_AT_MOST = 20          # sites in view at or below which every site in view is labelled
 
 
 class SiteMap(pg.PlotWidget):
-    """Sites as points with their ids; clicking a point emits site_clicked(id)."""
+    """Sites as points; ids for the selected and hovered site (all when zoomed in); a click emits site_clicked(id)."""
 
     site_clicked = QtCore.Signal(str)
 
@@ -32,18 +35,22 @@ class SiteMap(pg.PlotWidget):
         self.setLabel("left", "north (km)")
         self.getAxis("left").setWidth(LEFT_AXIS_PX)
         self._xy: dict[str, tuple[float, float]] = {}
-        self._labels: list[pg.TextItem] = []
-        self._points = pg.ScatterPlotItem(size=8, pen=pg.mkPen(None), brush=theme.brush(theme.SITE))
+        self._labels: dict[str, pg.TextItem] = {}
+        self._selected = self._hovered = ""
+        self._points = pg.ScatterPlotItem(size=8, pen=pg.mkPen(None), brush=theme.brush(theme.SITE),
+                                          hoverable=True, tip=None)
         self._points.sigClicked.connect(self._clicked)
+        self._points.sigHovered.connect(self._hover)
+        self.getViewBox().sigRangeChanged.connect(lambda *_a: self._relabel())
         self._sel = pg.ScatterPlotItem(size=14, pen=pg.mkPen(theme.SITE_SELECTED, width=2), brush=pg.mkBrush(None))
         self.addItem(self._points)
         self.addItem(self._sel)
 
     def set_sites(self, sites: dict[str, tuple[float, float]], colours: dict | None = None) -> None:
         """Show sites {id: (east_km, north_km)}; colours optionally {id: QColor or colour name}."""
-        for t in self._labels:
+        for t in self._labels.values():
             self.removeItem(t)
-        self._labels = []
+        self._labels = {}
         self._xy = dict(sites)
         ids = list(sites)
         spots = []
@@ -54,13 +61,35 @@ class SiteMap(pg.PlotWidget):
         for i in ids:
             t = pg.TextItem(i, color=theme.TEXT, anchor=(-0.15, 0.5))
             t.setPos(*sites[i])
+            t.setVisible(False)
             self.addItem(t)
-            self._labels.append(t)
+            self._labels[i] = t
         self.autoRange()
+        self._relabel()
 
     def set_selected(self, sid: str) -> None:
-        """Ring the selected site."""
+        """Ring the selected site and label it."""
         self._sel.setData(pos=[self._xy[sid]] if sid in self._xy else [])
+        self._selected = sid
+        self._relabel()
+
+    def visible_labels(self) -> list[str]:
+        """The ids whose labels are shown now."""
+        return [i for i, t in self._labels.items() if t.isVisible()]
+
+    def _hover(self, _item, points, *_args) -> None:
+        sid = str(points[0].data()) if len(points) else ""
+        if sid != self._hovered:
+            self._hovered = sid
+            self._relabel()
+
+    def _relabel(self) -> None:
+        (x0, x1), (y0, y1) = self.getViewBox().viewRange()
+        in_view = [i for i, (x, y) in self._xy.items() if x0 <= x <= x1 and y0 <= y <= y1]
+        show = set(in_view) if len(in_view) <= LABEL_ALL_AT_MOST else set()
+        show |= {self._selected, self._hovered}
+        for i, t in self._labels.items():
+            t.setVisible(i in show)
 
     def _clicked(self, _item, points, *_args) -> None:
         if len(points):

@@ -10,7 +10,9 @@ No modelling runs: the jobs are 'python -c' one-liners and make_run.sh into a te
 """
 from __future__ import annotations
 
+import os
 import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -116,6 +118,35 @@ def test_failed_to_start():
 
     C.fails_first(check, PY)
     C.passes(check, str(C.REPO / "no_such_program.exe"))
+
+
+def test_non_ascii_output_reaches_the_console():
+    """This test fails if a Python job's non-ASCII line (degree, plus-minus and micro signs, u-umlaut) reaches the
+    console with a replacement character or garbled, or if the job's default file encoding differs from a plain
+    python's (PYTHONUTF8 is not set, so prep reads files as the typed command does). Run with PYTHONIOENCODING
+    and PYTHONUTF8 removed from this process. Failing case: the phase-1 child environment (PYTHONUNBUFFERED only)."""
+    text = "12.5° ± 0.1 µ Zürich"
+    code = "import locale; print(%s); print(locale.getpreferredencoding(False))" % ascii(text)
+    saved_env = {k: os.environ.pop(k) for k in ("PYTHONIOENCODING", "PYTHONUTF8") if k in os.environ}
+    try:
+        plain = subprocess.run([PY, "-c", "import locale; print(locale.getpreferredencoding(False))"],
+                               capture_output=True, text=True).stdout.strip()
+
+        def check(child_env):
+            saved, jobs.CHILD_ENV = jobs.CHILD_ENV, child_env
+            try:
+                _s, done, lines = run_job(jobs.JobRunner(C.REPO), "u", [PY, "-c", code])
+            finally:
+                jobs.CHILD_ENV = saved
+            out = lines[1:-1]
+            ok = done == [True] and out == [text, plain] and "�" not in "".join(lines)
+            return ok, "console %s (want %s); file encoding %s (plain python %s)" % (
+                ascii(out[:1]), ascii(text), out[1:], plain)
+
+        C.fails_first(check, {"PYTHONUNBUFFERED": "1"})
+        C.passes(check, jobs.CHILD_ENV)
+    finally:
+        os.environ.update(saved_env)
 
 
 def _runs_state() -> tuple:

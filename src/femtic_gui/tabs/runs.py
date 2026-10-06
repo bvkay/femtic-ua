@@ -2,9 +2,10 @@
 """runs.py - the Runs tab: runs/INDEX.md, the selected run's RUN.md, the New-run form and Record result.
 
 'Make run folder' runs scripts/make_run.sh through Git Bash exactly as RUNBOOK.md R1 types it; make_run.sh
-alone validates. After it, R2-R6 happen outside the GUI (WinSCP, Phoenix; Help > Runbook). 'Record result'
-fills the job id(s) and verdict cells of the run's INDEX.md line (RUNBOOK.md R6) and shows R6's git line to copy;
-the GUI runs no git. The runs folder is runs/ (or $RUNS, as make_run.sh reads it).
+alone validates. A made run clears the form's --purpose and job-specific fields (the next run needs its own).
+After it, R2-R6 happen outside the GUI (WinSCP, Phoenix; Help > Runbook). 'Record result' fills the job id(s)
+and verdict cells of the run's INDEX.md line (RUNBOOK.md R6) and shows R6's git line to copy; the GUI runs no
+git. The runs folder is runs/ (or $RUNS, as make_run.sh reads it).
 
 @author ben kay
 :license: MIT
@@ -133,13 +134,16 @@ class RunsTab(QtWidgets.QWidget):
     def make_run(self) -> None:
         """Run make_run.sh with the form's command."""
         argv = self.form.argv(self.bash or "bash")
-        self._mine = self.state.runner.run("make_run.sh", argv)
-        if not self._mine:
+        self._mine = True                     # before run(): its finished signal may arrive before run() returns
+        if not self.state.runner.run("make_run.sh", argv):
+            self._mine = False
             theme.set_status(self.status, "a job is running; wait or cancel it", "warn")
 
     def _job_finished(self, ok: bool) -> None:
         mine, self._mine = self._mine, False
         run = self.form.name.text().strip()
+        if mine and ok:
+            self.form.clear_after_make()
         self.reload()
         if mine:
             theme.set_status(self.status, ("%s made: next WinSCP it to Phoenix (RUNBOOK.md R2, R3)" % run) if ok else

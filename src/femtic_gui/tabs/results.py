@@ -88,6 +88,10 @@ class ResultsTab(QtWidgets.QWidget):
         f.addRow("mesh", self.mesh_label)
         f.addRow("", self.choose_mesh_btn)
         f.addRow("", self.view_btn)
+        self.choose_mesh_btn.setToolTip("Pick the mesh.dat this model was computed on (default: mesh/vulcan_<MESH>/"
+                                        "inversion/mesh.dat, MESH from the run's run.env); reads only, runs nothing")
+        set_enabled(self.view_btn, "select a model (resistivity_block_iter<N>.dat) in the list first",
+                    "3D view of the selected model on its mesh.dat (viewer3d.py; reads only, runs nothing)")
         self.choose_mesh_btn.clicked.connect(self._choose_mesh)
         self.view_btn.clicked.connect(lambda: open_viewer(self, self.mesh_path, self.block_path, self._stations()))
         return w

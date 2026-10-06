@@ -35,7 +35,8 @@ missing without importing it (2.6), and marks the R5 mask as a runbook fix (find
 - **Thin shell, KISS.** Every action is one existing command typed as a student would (3); no checksum, manifest,
   ledger, run database, auto-refresh or git step is added (STATUS.md:16-21).
 
-## 0. Findings that change the brief (G1, G3, G4 and G6 need Ben before or during M1; G2 and G5 settled)
+## 0. Findings that change the brief (G1, G3 and G6 need Ben before or during M1; G2, G4 and G5 settled)
+<!-- fixes 2026-10-07: was "G1, G3, G4 and G6 ...; G2 and G5 settled"; G4 closed by abbee8a (finding 8). -->
 <!-- review 2026-10-06 (second pass): G5 settled by finding 9. -->
 <!-- review 2026-10-06: was "G1-G5"; the review settled G2 and added findings 12-14 and G6. -->
 1. **ruamel round trip does not keep these configs' layout.** Comments survive, but a load and dump changes 35-36
@@ -56,6 +57,8 @@ missing without importing it (2.6), and marks the R5 mask as a runbook fix (find
    Another workflow is adding `make_run.sh RunNN --job mesh
    --files DIR` and hpc/phoenix_plan/mesh_chain.sh (uncommitted, seen 23:07): once that passes the gate (STATUS.md:207-214),
    "Build" is just that New-run job (2.4), run on Phoenix like any other run.
+   <!-- fixes 2026-10-07: `make_run.sh --job mesh --files DIR [--seeds ...]` is in the committed make_run.sh
+   (abbee8a) and the New-run form now offers it (2.4). -->
 6. **No predicted mesh counts:** the estimator is not in the repo (PIPE:994) and was off 1.3x in tets, 2.7x in cells
    (PIPE:782-783, 793-794); the Mesh tab shows measured counts.
 7. **prep has no --check-config** (PREP:2093-2105): the GUI calls PREP.load_config (PREP:232-434) on a temp file next
@@ -66,6 +69,9 @@ missing without importing it (2.6), and marks the R5 mask as a runbook fix (find
    <!-- review 2026-10-06: confirmed (RUNBOOK.md:78 masks resistivity_block_iter*.dat). This is a runbook fix for the
    workflow that owns RUNBOOK.md; this review does not edit it. Until it lands, the model view can open only MAIN's
    iter0 models, which is why M3's demo uses the v1 half-space fixture. -->
+   **G4 closed (fixes 2026-10-07):** R5's mask now skips only resistivity_block_iter0.dat, so the iteration models
+   resistivity_block_iter<N>.dat (N >= 1) come back (RUNBOOK.md:74 at abbee8a). A model view of an iteration
+   above 0 is still untested (no such file on the PC).
 9. **FEMTIC's source is on the PC after all.** A FEMTIC clone that holds 26c8606, the build in use, is in this session's
    scratchpad (port_study/femtic, HEAD 9feced9). 2.3 cites src/AnalysisControl.cpp at 26c8606 (AC) for the five keys
    that rested on the femticPy writer. **G5 closed.** The scratchpad is not kept, so the GUI cites by commit, file and
@@ -90,6 +96,8 @@ missing without importing it (2.6), and marks the R5 mask as a runbook fix (find
    the Results text and data groups cut (2.5). If Ben did not ask for Results in phase 1, drop 2.5, T8, T9 and M3.
    <!-- review 2026-10-06 (second pass): the main session's notice (23:08) states the Never list, the Results tab and
    readers.py are Ben's decisions, so they stay; only Ben can withdraw them. -->
+   **Confirmed by Ben in chat on 2026-10-06 (fixes 2026-10-07):** the Results tab is in phase 1, and no network,
+   ever. Finding 14 is closed.
 
 ## 1. Purpose and users
 The GUI takes a student from the EDIs to a Phoenix-ready run folder, and from a copied-back run to plots, without
@@ -199,6 +207,11 @@ default without the key is binary (AC:107), which is why FEMTIC's example wrote 
   stale already, finding 10) and repeats make_run.sh's own output. Tooltips come from make_run.sh's header so a
   student does R1 without reading code; R2 is WinSCP, outside the GUI. Build the form against the committed
   make_run.sh at M2: the working copy adds --job mesh with --files and --seeds (finding 5), uncommitted. -->
+  <!-- fixes 2026-10-07: --job mesh is committed (abbee8a), and the form has it: --files (a folder picker, filled
+  relative to the repository) and --seeds, shown only for --job mesh; --mesh, --data and --niv hidden for it
+  (make_run.sh refuses them); an empty --layout or --time is left out (make_run.sh's 1x8 and 04:00:00), so the
+  form types make_run.sh's header example character for character. After a made run the form clears --purpose and
+  the job-specific fields (--start-rho, --iter-step, --iter-max, --files, --seeds). -->
 
 ### 2.5 Results (phase 1: reads and plots, launches nothing)
 "Open folder..." (default runs/) and "Open file..." fill one list, grouped; selecting an entry opens it. EnSight files
@@ -390,12 +403,13 @@ With Qt:
   needed: QtPy 2.4.3 uses an already-imported binding (qtpy/__init__.py), and the GUI imports PySide6 first. -->
 - **Moving targets** (review 2026-10-06): make_run.sh (--job mesh) and src/femtic_mesh are being changed by other
   sessions, uncommitted today. Build the Runs form and viewer3d against their committed versions.
+  <!-- fixes 2026-10-07: both are committed in abbee8a; the form offers --job mesh. -->
 - **2.4-3.1 M tetrahedra**: 6.2 s and 683 MB on v2 (v3 has 1.25x the tets); worker thread, surfaces and slices only.
 - **mesh.dat in Python**: pandas' C parser, usecols, int32 connectivity suffice (measured); no chunking. **prep's
   functions are an internal API**: prep_api.py is the only importer; T4, T5 and T7 exercise it.
 - **Line references drift** while several sessions edit this tree (STATUS.md:279).
 
-## 8. Built (phase 1, 2026-10-07, build agent; uncommitted in this worktree)
+## 8. Built (phase 1, 2026-10-07, build agent; committed in 2067eb0; fixes below, 2026-10-07)
 Everything in 2-7 is built as amended by both review passes, including Results (Ben's decision, finding 14) and
 readers.py's mesh functions (2.6). Nothing heavy ran: no FEMTIC, mesh tool, mpirun or WSL; prep_vulcan.py ran in
 full only inside T4 (about 3 s, temporary --out) and make_run.sh only inside T12 (temporary RUNS).
@@ -421,10 +435,28 @@ full only inside T4 (about 3 s, temporary --out) and make_run.sh only inside T12
   src/femtic_mesh (another workflow's, untracked): commit it with the GUI, or the 3D buttons stay disabled with
   "femtic_mesh not installed". (c) Save as also refuses a target whose paths.root would resolve to another root
   (save next to the open config); its default name uses the login name, not initials. (d) The New-run form offers
-  the committed jobs (gate, forward, t4, inversion); the tooltips are read from the working copy's header.
+  the committed jobs (gate, forward, t4, inversion, and mesh since the fixes below); the tooltips are read from
+  make_run.sh's header.
   (e) T11/T12 live in tests/gui/; the b1 csv fixture is tests/gui/fixtures/b1/b1_result_0_iter0.csv because
   .gitignore drops result_*_iter*.csv (PROVENANCE.txt; gui_smoke.py copies it back to its FEMTIC name).
 - **Not verified**: rendering on a real screen and over Remote Desktop (M5; offscreen Qt has no OpenGL, so the 3D
   test checks actors, not pixels, and the 2D tabs were seen only as font-less offscreen grabs); the M1 demo with
   real prep jobs through the GUI (the smoke test intercepts every job); a Results model view of an iteration > 0 (no
-  such file on the PC, finding 8/G4). Open with Ben: G1, G4, G6, finding 10.
+  such file on the PC, finding 8/G4). Open with Ben: G1, G6, finding 10 (G4 and finding 14 closed).
+- **Fixes 2026-10-07** (six of the verifier's nine items; src/femtic_gui and tests/gui only): (1) jobs.py's
+  CHILD_ENV adds PYTHONIOENCODING=utf-8 to PYTHONUNBUFFERED=1, so a Python job's non-ASCII output reaches the
+  console intact. PYTHONUTF8 is deliberately not set: it would also change the child's open() default, and
+  femticPy's MTtools.read opens EDIs without an encoding, so a cp1252 byte in an EDI would stop a GUI-launched prep
+  but not a typed one (Vulcan's 131 prep inputs are all ASCII today). (2) Runs: --job mesh (above, 2.4); a made run
+  clears --purpose and the job-specific fields; `_mine` is set before run() starts the job. (3) gui_smoke.py (277
+  lines) runs gui_smoke_steps.py (285) on the same window. (4) tabs/__init__.py has the future import and lists
+  results; Results' 'Choose mesh.dat...' and 'Open 3D viewer' have tooltips (the latter says to select a model
+  first). (5) plots.SiteMap labels only the selected site, the hovered one, and every site in view once the view
+  holds 20 or fewer (LABEL_ALL_AT_MOST); all markers stay. Tests: 44 -> 49 PASS, 0 FAIL, 0 NOT RUN: test_jobs +1
+  (non-ASCII line: phase-1 environment shows U+FFFD, fixed shows the line; the job's file encoding equals a plain
+  python's), gui_smoke 14 -> 18 (every push button has a tooltip; at most 1 map label at the default view, 120
+  markers, all 10 sites labelled when zoomed; two makes cannot repeat --purpose or --start-rho; the mesh job types
+  make_run.sh's header line for Run05 and Run04's line rebuilt from its RUN.md, --files through the picker).
+  make_run.sh itself accepted both mesh lines (exit 0, scratch RUNS). Not in this round: Save as only inside
+  config/, launching from MAIN while the editable install points elsewhere, the smoke step reading RUNBOOK's Run06
+  line, and the KISS list (journal 2026-10-06).

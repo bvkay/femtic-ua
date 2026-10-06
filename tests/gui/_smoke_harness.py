@@ -124,14 +124,17 @@ def runbook_line(run: str) -> str:
 
 
 def fill_form(form, line: str) -> None:
+    """Type a make_run.sh command line into the New-run form, field by field (a mesh build has no --mesh)."""
     a = shlex.split(line)[2:]
     form.name.setText(a[0])
     opts = dict(zip(a[1::2], a[2::2]))
-    form.mesh.setCurrentText(opts["--mesh"])
+    if "--mesh" in opts:
+        form.mesh.setCurrentText(opts["--mesh"])
     form.job.setCurrentText(opts["--job"])
     for opt, w in (("--data", form.data), ("--start-rho", form.start_rho), ("--layout", form.layout_),
                    ("--time", form.time), ("--purpose", form.purpose), ("--iter-step", form.iter_step),
-                   ("--iter-max", form.iter_max), ("--niv", form.niv), ("--mail", form.mail)):
+                   ("--iter-max", form.iter_max), ("--niv", form.niv), ("--mail", form.mail),
+                   ("--files", form.files), ("--seeds", form.seeds)):
         w.setText(opts.get(opt, ""))
 
 
