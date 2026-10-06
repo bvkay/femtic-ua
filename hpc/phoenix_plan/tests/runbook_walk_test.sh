@@ -4,17 +4,21 @@
 # the student path in a sandbox, running the runbook's own commands, with the kit's fakes (the fake sbatch, sacct,
 # mpirun and femtic of tests/run_sh_test.sh; nothing heavy runs):
 #   PC       git clone the repository into WORK, copy the working tree's kit, scripts, runs/ and the runbook archive
-#            (docs/dev/phoenix_runbook_2026-09-28) over it, commit there (never in the repository itself), then
+#            (docs/dev/phoenix_runbook_2026-09-28) over it, commit there (never in the repository itself; with
+#            --allow-empty, as the copies may equal HEAD), then
 #            scripts/make_phoenix_kit.sh (S2) and the runbook's make_run.sh lines
 #   Phoenix  a fake VF: S1's command, export/kit copied to $VF/kit (S3), stand-in meshes in $VF/shared (S4), the run
 #            folders copied to $VF/runs (R2), run.sh (R3; the fake sbatch runs the job script there and then),
 #            status.sh (R4), F2's grep, and S5's mv lines on a separate tree with the old folders. S1's link
 #            $VF/bin points at the fake femtic/bin, and run.sh and the jobs take BIN from it (no BIN is passed).
+#          F3, the mesh builds: C16 holds its counts against the real WSL meshes under MESH (the kit's mesh_chain.sh
+#          --counts), C17 submits the repository's Run04 and Run05 and runs Run04's chain on the fake mesh tools.
+#          R5's WinSCP file mask: C18 applies it to the names a run folder holds.
 # Every check prints "fails if ...", then runs its failing case (a mutant RUNBOOK, a mutant kit, or the state before
 # the step) and must see at least one assertion fail there, then runs the real case, where every assertion must pass.
 #   bash runbook_walk_test.sh [REPO]      REPO default: the repository that holds this script
 #   env: WORK=<dir> (default mktemp -d); MESH=<dir> (default /d/BEN/FEMTIC_2026/mesh: the real meshes whose paths,
-#        sizes and F2 memory figures RUNBOOK.md quotes; read only, by wc and awk); PYTHON=<python 3>
+#        sizes, F2 memory figures and F3 counts RUNBOOK.md quotes; read only, by wc and awk); PYTHON=<python 3>
 # Windows MAX_PATH: the clone is made with core.longpaths=true, because a long WORK plus the deepest tracked path
 # (validation/wsl_2026-09-25/..., 84 characters) passes 260 characters and git then stops with "Filename too long".
 # Exit 0 only if every case passes.
@@ -56,12 +60,13 @@ rbspanx() { grep -o '`[^`]*`' "$1" | tr -d '`' | grep -xF -- "$2" | head -1; }
 rbblock() { awk -v want="$2" '/^```bash$/ {on = 1; b = ""; next} /^```$/ && on {on = 0; if (index(b, want)) {printf "%s", b; exit}} on {b = b $0 "\n"}' "$1"; }
 # rbmakerun FILE: the make_run.sh lines of FILE's ```bash blocks
 rbmakerun() { awk '/^```bash$/ {on = 1; next} /^```$/ {on = 0} on && /^bash scripts\/make_run\.sh Run[0-9]/' "$1"; }
-# prb VFDIR RUN CMD [VAR=VALUE ...]: run a runbook command as on Phoenix, with $VF = VFDIR, Ben's femtic/bin = the
-# fake BIN (S1 links $VF/bin to it) and RunNN = RUN. Sets RC, OUT (its output) and NSB (sbatch calls it made).
+# prb VFDIR RUN CMD [VAR=VALUE ...]: run a runbook command as on Phoenix, with $VF = VFDIR, the build S1 links
+# (/hpcfs/users/$USER/femtic/bin: Ben's, or a student's from 01) = the fake BIN (S1 links $VF/bin to it) and
+# RunNN = RUN. Sets RC, OUT (its output) and NSB (sbatch calls it made).
 NP=0
 prb() {
   local v=$1 r=$2 cmd=$3 n0; shift 3
-  cmd=${cmd//'/hpcfs/users/a1690074/femtic/bin'/$BIN}; cmd=${cmd//RunNN/$r}
+  cmd=${cmd//'/hpcfs/users/$USER/femtic/bin'/$BIN}; cmd=${cmd//RunNN/$r}
   NP=$((NP + 1)); OUT=$WORK/prb_$NP.out; n0=$(wc -l < "$WORK/sbatch_calls.txt")
   ( env -u BIN "PATH=$BIN:$PATH" WORK="$WORK" VF="$v" MSYS=winsymlinks:native WATCH_S=1 PYTHON="${PYTHON:-python3}" "$@" \
       timeout 300 bash -c "$cmd" > "$OUT" 2>&1 ); RC=$?
@@ -109,7 +114,7 @@ mkvf() {
   cp -r "$VF/kit" "$d/kit"; ( cd "$d/kit" && eval "$2" )
   if diff -rq "$VF/kit" "$d/kit" > /dev/null; then echo "harness: kit mutant $1 did not apply"; exit 2; fi
   cp -r "$C/runs/Run01" "$C/runs/Run02" "$C/runs/Run03" "$d/runs/"
-  [ -d "$C/runs/Run04" ] && cp -r "$C/runs/Run04" "$d/runs/"
+  [ -d "$C/runs/Run06" ] && cp -r "$C/runs/Run06" "$d/runs/"
   [ "${3:-}" = standin ] && standin "$d"
 }
 VF=$WORK/vf; rm -rf "$VF"
@@ -138,11 +143,11 @@ c_export() {
 echo probe > "$C/hpc/phoenix_plan/walk_probe.txt"
 failcase "the overlaid working tree before the commit, plus an untracked file in hpc/phoenix_plan" c_export
 rm -f "$C/hpc/phoenix_plan/walk_probe.txt"
-gitc add -A > /dev/null && gitc commit -q -m "runbook_walk_test: working tree" > /dev/null || { echo "commit in the clone failed"; exit 2; }
+gitc add -A > /dev/null && gitc commit -q --allow-empty -m "runbook_walk_test: working tree" > /dev/null || { echo "commit in the clone failed"; exit 2; }
 HEADS=$(git -C "$C" rev-parse --short HEAD)
 passcase "export of the committed clone (HEAD $HEADS)" c_export
 
-crit C2 "a make_run.sh line of RUNBOOK.md's code blocks is refused (run from the repository root, as R1 says), or the run.env it writes lacks the line's --mesh, --job, --layout, --time and --start-rho, or there are not 3 such lines (Run04, Run05, Run06)"
+crit C2 "a make_run.sh line of RUNBOOK.md's code blocks is refused (run from the repository root, as R1 says), or the run.env it writes lacks the line's --mesh, --job, --layout, --time and --start-rho, or there are not 3 such lines (Run06, Run07, Run08)"
 c_makerun() {   # c_makerun RUNBOOK RUNSDIR
   local f=$1 rd=$2 line n=0 rc r mesh job lay tm rho
   mkdir -p "$rd"
@@ -157,14 +162,14 @@ c_makerun() {   # c_makerun RUNBOOK RUNSDIR
   eq "make_run.sh lines" "$n" 3
 }
 mutrb layout 's/--layout 2x36 --time 04:00:00 --purpose "Half-space gate at 100/--layout 2x37 --time 04:00:00 --purpose "Half-space gate at 100/'
-failcase "RUNBOOK with Run04's layout 2x37 (74 cpus)" c_makerun "$WORK/RUNBOOK_layout.md" "$WORK/runs_mutant"
+failcase "RUNBOOK with Run06's layout 2x37 (74 cpus)" c_makerun "$WORK/RUNBOOK_layout.md" "$WORK/runs_mutant"
 passcase "RUNBOOK.md, into the clone's runs/" c_makerun "$RB" "$C/runs"
 
 # ================================================================ Phoenix: S1, S3, R2
-crit C3 "RUNBOOK S1's command exits 0 when Ben's femtic/bin has no femtic, or with femtic does not make \$VF/shared/mesh_v2, mesh_v3, runs and the link \$VF/bin through which \$VF/bin/femtic is found"
+crit C3 "RUNBOOK S1's command exits 0 when the femtic/bin it links (/hpcfs/users/\$USER/femtic/bin) has no femtic, or with femtic does not make \$VF/shared/mesh_v2, mesh_v3, runs and the link \$VF/bin through which \$VF/bin/femtic is found"
 c_s1() {
   local d
-  prb "$1" Run01 "$(rbspan "$RB" 'ln -s /hpcfs/users/a1690074/femtic/bin $VF/bin')"
+  prb "$1" Run01 "$(rbspan "$RB" 'ln -s /hpcfs/users/$USER/femtic/bin $VF/bin')"
   eq "exit" "$RC" 0
   for d in shared/mesh_v2 shared/mesh_v3 runs; do eq "made $d" "$(yn -d "$1/$d")" yes; done
   eq "\$VF/bin/femtic through the link" "$(yn -L "$1/bin" -a -x "$1/bin/femtic")" yes
@@ -185,11 +190,11 @@ c_s3() {
 mkvf nover m_nover standin
 failcase "a kit copied without VERSION" c_s3 "$WORK/vf_nover"
 passcase "export/kit copied to \$VF/kit" c_s3 "$VF"
-cp -r "$C/runs/Run01" "$C/runs/Run02" "$C/runs/Run03" "$C/runs/Run04" "$VF/runs/"    # R2: WinSCP of the run folders
+cp -r "$C/runs/Run01" "$C/runs/Run02" "$C/runs/Run03" "$C/runs/Run06" "$VF/runs/"    # R2: WinSCP of the run folders
 
 # ================================================================ Phoenix: R3 refusals, S4
 R3CMD=$(rbspanx "$RB" 'bash $VF/kit/run.sh RunNN'); R4CMD=$(rbspanx "$RB" 'bash $VF/kit/status.sh RunNN')
-echo; echo "runbook commands: S1 '$(rbspan "$RB" 'ln -s /hpcfs/users/a1690074/femtic/bin $VF/bin')'  R3 '$R3CMD'  R4 '$R4CMD'"
+echo; echo "runbook commands: S1 '$(rbspan "$RB" 'ln -s /hpcfs/users/$USER/femtic/bin $VF/bin')'  R3 '$R3CMD'  R4 '$R4CMD'"
 crit C5 "run.sh Run01 (R3) before S4 (\$VF/shared/mesh_v2 empty) reaches sbatch, links a mesh.dat, or does not name the missing shared file"
 c_nomesh() {
   prb "$1" Run01 "$R3CMD"
@@ -227,7 +232,7 @@ crit C8 "run.sh Run01 (R3) does not reach the fake sbatch exactly once with RUNB
 W01='--parsable -J Run01 -p icelake --ntasks-per-node=3 --cpus-per-task=24 --time=02:00:00 --mail-type=NONE --export=ALL,KIT=%s/kit,BIN=%s/bin,START_RHO=100 %s/kit/06_forward_only.slurm'
 W02='--parsable -J Run02 -p icelake --ntasks-per-node=3 --cpus-per-task=24 --time=02:00:00 --mail-type=NONE --export=ALL,KIT=%s/kit,BIN=%s/bin,START_RHO=3 %s/kit/06_forward_only.slurm'
 W03='--parsable -J Run03 -p icelake --ntasks-per-node=3 --cpus-per-task=24 --time=12:00:00 --mail-type=NONE --export=ALL,KIT=%s/kit,BIN=%s/bin,WATCH_S=10 %s/kit/04_inversion.slurm'
-W04='--parsable -J Run04 -p icelake --ntasks-per-node=2 --cpus-per-task=36 --time=04:00:00 --mail-type=NONE --export=ALL,KIT=%s/kit,BIN=%s/bin,START_RHO=100 %s/kit/06_forward_only.slurm'
+W06='--parsable -J Run06 -p icelake --ntasks-per-node=2 --cpus-per-task=36 --time=04:00:00 --mail-type=NONE --export=ALL,KIT=%s/kit,BIN=%s/bin,START_RHO=100 %s/kit/06_forward_only.slurm'
 c_submit() {   # c_submit VFDIR RUN WANT_FORMAT [MOCK]
   local w; w=$(printf -- "$3" "$1" "$1" "$1")
   prb "$1" "$2" "$R3CMD" MOCK_SBATCH_RUN="${4:-0}"
@@ -256,10 +261,10 @@ mkvf prev m_prev standin; prb "$WORK/vf_prev" Run01 "$R3CMD"
 failcase "kit whose run.sh lacks the earlier-job check (Run01 submitted once)" c_again "$WORK/vf_prev"
 passcase "the exported kit (Run01 submitted once)" c_again "$VF"
 
-crit C10 "run.sh (R3) does not submit Run02 (3x24, 2 h, 3 ohm-m, 06), Run03 (3x24, 12 h, 04 with WATCH_S=10) and Run04 (the runbook's v3 gate line: 2x36, 04:00:00, 100 ohm-m, 06) with exactly these flags, or RUNBOOK F1 and F2 no longer state '3x24, 2 h' and '3x24, 12 h'"
+crit C10 "run.sh (R3) does not submit Run02 (3x24, 2 h, 3 ohm-m, 06), Run03 (3x24, 12 h, 04 with WATCH_S=10) and Run06 (the runbook's v3 gate line: 2x36, 04:00:00, 100 ohm-m, 06) with exactly these flags, or RUNBOOK F1 and F2 no longer state '3x24, 2 h' and '3x24, 12 h'"
 c_first() {
   has "F1 layout" "$RB" "3x24, 2 h"; has "F2 layout" "$RB" "3x24, 12 h"
-  c_submit "$1" Run02 "$W02"; c_submit "$1" Run03 "$W03" 1; c_submit "$1" Run04 "$W04"
+  c_submit "$1" Run02 "$W02"; c_submit "$1" Run03 "$W03" 1; c_submit "$1" Run06 "$W06"
 }
 failcase "kit whose run.sh passes --cpus-per-task=36" c_first "$WORK/vf_threads"
 passcase "the exported kit" c_first "$VF"
@@ -317,7 +322,7 @@ failcase "RUNBOOK with one digit of v2's mesh.dat size changed" c_sizes "$WORK/R
 passcase "RUNBOOK.md against $MESH" c_sizes "$RB"
 
 # ================================================================ every path the runbook names, after the walk
-crit C14 "a file or folder that RUNBOOK.md names does not exist after the walk (\$VF/... in the fake Phoenix tree, Ben's /hpcfs/users/a1690074/femtic/bin in the fake BIN, D:\BEN\FEMTIC_2026\mesh\... under MESH, every other PC path in the clone), or fewer than 25 paths were checked. Not checked: names with a <placeholder> (destinations the student creates) and S5's old folders (C12)"
+crit C14 "a file or folder that RUNBOOK.md names does not exist after the walk (\$VF/... in the fake Phoenix tree, S1's /hpcfs/users/\$USER/femtic/bin in the fake BIN, D:\BEN\FEMTIC_2026\mesh\... under MESH, every other PC path in the clone), or fewer than 25 paths were checked. Not checked: names with a <placeholder> (destinations the student creates) and S5's old folders (C12)"
 # rbpaths RUNBOOK: the tokens that name a path: $VF/..., /hpcfs/..., /d/..., D:\..., and repo-relative scripts/ runs/
 # export/ hpc/ mesh/ docs/ (with / or \)
 rbpaths() {
@@ -331,7 +336,7 @@ mappath() {
     *'<'*|*'>'*|'$VF/inputs/'*|'$VF/inversion/'*) echo SKIP ;;
     '$VF'*) echo "$VF${t#\$VF}" ;;
     '/hpcfs/users/$USER/vulcan_femtic'*) echo "$VF${t#/hpcfs/users/\$USER/vulcan_femtic}" ;;
-    '/hpcfs/users/a1690074/femtic/bin'*) echo "$BIN${t#/hpcfs/users/a1690074/femtic/bin}" ;;
+    '/hpcfs/users/$USER/femtic/bin'*) echo "$BIN${t#/hpcfs/users/\$USER/femtic/bin}" ;;
     D:/BEN/FEMTIC_2026/mesh/*) echo "$MESH/${t#D:/BEN/FEMTIC_2026/mesh/}" ;;
     D:/BEN/FEMTIC_2026*) echo "$C${t#D:/BEN/FEMTIC_2026}" ;;
     /d/BEN/FEMTIC_2026*) echo "$C${t#/d/BEN/FEMTIC_2026}" ;;
@@ -358,7 +363,7 @@ failcase "RUNBOOK naming \$VF/shared/v2/ (a folder, written with its trailing sl
 passcase "RUNBOOK.md" c_paths "$RB"
 
 # ================================================================ F2's memory figures against the real meshes
-crit C15 "RUNBOOK F2's 'N forward + N sensitivity-step = N MiB' figures for v2 and v3 differ from what the kit's layout rule computes for the PC's runs/Run03 with the real mesh.dat and resistivity_block_iter0.dat under MESH (femtic_mem_model: no log yet, so 11,000 MiB per 10^6 equations, and N_iv = 4 x the MT stations), i.e. from the line 04 prints in Run03 (v2) or Run06 (v3)"
+crit C15 "RUNBOOK F2's 'N forward + N sensitivity-step = N MiB' figures for v2 and v3 differ from what the kit's layout rule computes for the PC's runs/Run03 with the real mesh.dat and resistivity_block_iter0.dat under MESH (femtic_mem_model: no log yet, so 11,000 MiB per 10^6 equations, and N_iv = 4 x the MT stations), i.e. from the line 04 prints in Run03 (v2) or Run08 (v3)"
 f2fig() {   # f2fig MESHDIR -> the figure 04's 'predicted per rank (layout rule):' line would show
   ( . "$VF/kit/femtic_lib.sh"; unset NIV NEQ FWD_MB NONPARDISO_MB
     femtic_mem_model "$C/runs/Run03" "$1" > /dev/null 2>&1 && echo "$FM_FWD_MB forward + $FM_NONP_MB sensitivity-step = $(( FM_FWD_MB + FM_NONP_MB )) MiB" )
@@ -372,6 +377,78 @@ c_f2mem() {   # c_f2mem RUNBOOK
 mutrb f2 's/= 74469 MiB/= 70754 MiB/'
 failcase "RUNBOOK quoting v2's 70,754 MiB (the README's WSL-based figure)" c_f2mem "$WORK/RUNBOOK_f2.md"
 passcase "RUNBOOK.md against $MESH" c_f2mem "$RB"
+
+
+# ================================================================ F3: the mesh builds (Run04, Run05)
+crit C16 "RUNBOOK F3's node and tet counts differ from what the kit's 'mesh_chain.sh --counts' reads from the WSL meshes under MESH (chain_proof/ for Run04, vulcan_v2/inversion/ for Run05), or F3 lacks the 'MESH CHAIN DONE: OK' criterion, the '; intermediates/' mask or the files that matter; or F3 has a Fails-if other than 'Fails if: status.sh has no \`MESH CHAIN DONE: OK\` line.' (a count or md5 difference from WSL is recorded, not failed: Phoenix becomes the reference), does not say so, or does not name R2 (the upload) and R6 (the record)"
+commas() { echo "$1" | sed ':a;s/\B[0-9]\{3\}\>/,&/;ta'; }
+F3A=$(bash "$VF/kit/mesh_chain.sh" --counts "$MESH/chain_proof" 2>/dev/null | awk '{print $2, $4}')
+F3B=$(bash "$VF/kit/mesh_chain.sh" --counts "$MESH/vulcan_v2/inversion" 2>/dev/null | awk '{print $2, $4}')
+c_f3() {   # c_f3 RUNBOOK
+  eq "chain_proof counted" "$(yn -n "$F3A")" yes; eq "v2 counted" "$(yn -n "$F3B")" yes
+  has "F3 quotes Run04's counts" "$1" "Run04 $(commas "${F3A% *}") nodes, $(commas "${F3A#* }") tets"
+  has "F3 quotes Run05's counts" "$1" "Run05 $(commas "${F3B% *}") nodes, $(commas "${F3B#* }") tets"
+  has "F3 criterion" "$1" "has no \`MESH CHAIN DONE: OK\` line"
+  has "F3 mask" "$1" "add \`; intermediates/\` to the mask"
+  has "F3 files that matter" "$1" "\`intermediates/output.6.{node,ele,face,neigh}\`"
+  local f3p; f3p=$(awk '/^\*\*F3\./ {on = 1} on && /^$/ {exit} on {printf "%s ", $0}' "$1")
+  eq "F3 has one Fails-if" "$(echo "$f3p" | grep -o 'Fails if:' | wc -l | tr -d ' ')" 1
+  eq "F3's Fails-if sentence (up to the first '. ')" "$(echo "$f3p" | sed -n 's/.*\(Fails if: \)/\1/p' | sed 's/\. .*/./')" "Fails if: status.sh has no \`MESH CHAIN DONE: OK\` line."
+  eq "F3: a difference from WSL is not a failure" "$(echo "$f3p" | grep -c 'A difference is not a failure')" 1
+  eq "F3 names R2 (upload)" "$(echo "$f3p" | grep -c 'R2 (upload')" 1
+  eq "F3 names R6 (record)" "$(echo "$f3p" | grep -c "R6[.;]\|R6's verdict")" 1
+}
+mutrb f3 's/2,446,095 tets/2,446,096 tets/'
+failcase "RUNBOOK quoting v2 with one tet more" c_f3 "$WORK/RUNBOOK_f3.md"
+mutrb f3fail 's/Fails if: status.sh has no `MESH CHAIN DONE: OK` line\./Fails if: status.sh has no `MESH CHAIN DONE: OK` line, or the counts differ from WSL'"'"'s./'
+failcase "RUNBOOK whose F3 fails a count difference from WSL (the 2026-10-06 wording)" c_f3 "$WORK/RUNBOOK_f3fail.md"
+mutrb f3r2 's/R2 (upload the folder), R3, R4;/R3, R4;/'
+failcase "RUNBOOK whose F3 omits R2" c_f3 "$WORK/RUNBOOK_f3r2.md"
+passcase "RUNBOOK.md against $MESH" c_f3 "$RB"
+
+crit C17 "run.sh (R3) submits Run04 without files/region_seeds.dat; or does not submit the repository's Run04 and Run05 as mesh builds (-J RunNN -p icelake --ntasks-per-node=1 --cpus-per-task=8 --time=04:00:00 --mem=27G --mail-type=NONE ... BIN=\$VF/bin,FILES=files .../mesh_chain.sh); or Run04's job (run by the fake sbatch with the fake mesh tools on its real chain_proof inputs) does not end with status.sh (R4) showing 'mesh:    MESH CHAIN DONE: OK' and the counts line"
+WM='--parsable -J %s -p icelake --ntasks-per-node=1 --cpus-per-task=8 --time=04:00:00 --mem=27G --mail-type=NONE --export=ALL,KIT=%s/kit,BIN=%s/bin,FILES=files %s/kit/mesh_chain.sh'
+c_mesh() {   # c_mesh VFDIR [noseeds]
+  local r
+  rm -rf "$1/runs/Run04" "$1/runs/Run05"; cp -r "$C/runs/Run04" "$C/runs/Run05" "$1/runs/"
+  [ "${2:-}" = noseeds ] && rm -f "$1/runs/Run04/files/region_seeds.dat"
+  for r in Run04 Run05; do
+    prb "$1" "$r" "$R3CMD" MOCK_SBATCH_RUN="$([ "$r" = Run04 ] && echo 1 || echo 0)"
+    eq "$r exit" "$RC" 0; eq "$r sbatch calls" "$NSB" 1
+    eq "$r sbatch arguments" "$(tail -1 "$WORK/sbatch_calls.txt")" "$(printf -- "$WM" "$r" "$1" "$1" "$1")"
+  done
+  prb "$1" Run04 "$R4CMD"
+  has "Run04 status: DONE OK" "$OUT" "mesh:    MESH CHAIN DONE: OK, exit 0"
+  has "Run04 status: counts" "$OUT" "mesh:    MESH COUNTS: nodes 12  tets 12  cells 7"
+}
+failcase "Run04 copied without files/region_seeds.dat" c_mesh "$VF" noseeds
+passcase "the repository's Run04 and Run05" c_mesh "$VF"
+
+# ================================================================ R5's file mask
+crit C18 "RUNBOOK R5's WinSCP file mask ('| a; b/': copy everything but the files a and the folders b; read here as shell globs) does not start with '| ', lets through mesh.dat, resistivity_block_iter0.dat, a fwd0_*/ folder, a VTK file or FEMTIC's EnSight files (Mesh.geo, Resistivity.iter2, Sensitivity.iter1, BlockIDs, result.case), or keeps out RUN.md, logs/, the job output, mesh_summary.txt or an inversion's models (resistivity_block_iter1.dat, iter12.dat: the GUI's Results view opens them)"
+c_mask() {   # c_mask RUNBOOK
+  local m f p x want
+  m=$(rbspan "$1" '| mesh.dat;')
+  eq "R5 mask found" "$(yn -n "$m")" yes; eq "R5 mask starts with '| '" "${m:0:2}" "| "
+  for f in mesh.dat resistivity_block_iter0.dat fwd0_3/ output.6.femtic.vtk Mesh.geo Resistivity.iter2 Sensitivity.iter1 BlockIDs \
+           result.case RUN.md logs/ slurm-Run03-7001.out mesh_summary.txt resistivity_block_iter1.dat resistivity_block_iter12.dat; do
+    x=copied
+    while IFS= read -r p; do
+      p=$(echo "$p" | sed 's/^ *//; s/ *$//'); [ -n "$p" ] || continue
+      case "$f" in
+        */) [[ "$p" == */ && "${f%/}" == ${p%/} ]] && x=left ;;
+        *)  [[ "$p" != */ && "$f" == $p ]] && x=left ;;
+      esac
+    done < <(printf '%s\n' "${m#|}" | tr ';' '\n')
+    case "$f" in RUN.md|logs/|slurm-*|mesh_summary.txt|resistivity_block_iter1*.dat) want=copied ;; *) want=left ;; esac
+    eq "R5 mask: $f" "$x" "$want"
+  done
+}
+mutrb mask 's/| mesh.dat; resistivity_block_iter0.dat;/| mesh.dat; resistivity_block_iter*.dat;/'
+failcase "RUNBOOK whose mask leaves out every model (the 2026-10-06 mask)" c_mask "$WORK/RUNBOOK_mask.md"
+mutrb mask2 's/; Mesh.geo; \*.iter\*; BlockIDs; result.case`/`/'
+failcase "RUNBOOK whose mask lets FEMTIC's EnSight files through" c_mask "$WORK/RUNBOOK_mask2.md"
+passcase "RUNBOOK.md" c_mask "$RB"
 
 echo; echo "SUMMARY: $npass passed, $nfail failed (cases; $NA assertions)   (REPO=$REPO, clone HEAD $HEADS)"
 [ "$nfail" = 0 ]

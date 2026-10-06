@@ -29,7 +29,7 @@ git archive --format=tar HEAD hpc/phoenix_plan | tar -x --force-local -C "$OUT" 
 # what export-ignore should have left out (if it is there, HEAD's .gitattributes lacks the lines)
 LEFT=$(cd "$OUT" && ls -d tests README_phoenix.md RUNBOOK* UPLOAD_LIST* build_*.log discovery 2>/dev/null | tr '\n' ' ')
 [ -z "$LEFT" ] || fail "export-ignore did not apply to: $LEFT(HEAD's .gitattributes)"
-for f in femtic_lib.sh run.sh status.sh 04_inversion.slurm 06_forward_only.slurm tools/halfspace_eval.py; do
+for f in femtic_lib.sh run.sh status.sh 04_inversion.slurm 06_forward_only.slurm mesh_chain.sh tools/halfspace_eval.py; do
   [ -s "$OUT/$f" ] || fail "$f is not in HEAD's hpc/phoenix_plan"
 done
 # CR bytes counted with tr: Git Bash's grep drops a CR pattern in some contexts and then matches every file

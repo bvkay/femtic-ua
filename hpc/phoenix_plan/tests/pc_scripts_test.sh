@@ -3,11 +3,13 @@
 # pc_scripts_test.sh -- developer test (PC, Git Bash) of the two PC-side scripts of the student workflow:
 #   scripts/make_phoenix_kit.sh  K: refuses a dirty hpc/phoenix_plan; exports exactly HEAD's kit files minus the
 #                                   export-ignore ones, byte for byte, plus a 4-line VERSION naming HEAD
-#   scripts/make_run.sh          M: refusals; the run folder's files, run.env, RUN.md and INDEX.md line; --niv, --mail
-#   both, then the kit's run.sh  E: the exported kit accepts a made run folder and the repo's own runs/Run01-03 and
+#   scripts/make_run.sh          M: refusals; the run folder's files, run.env, RUN.md and INDEX.md line; --niv, --mail;
+#                                   --job mesh with --files and --seeds (M6)
+#   both, then the kit's run.sh  E: the exported kit accepts a made run folder and the repo's own runs/Run01-05 and
 #                                   submits them (fake sbatch) with the flags each run intends
 # It never commits in the repository it tests: it clones it (git clone -q) into WORK, copies the working-tree versions
-# of hpc/phoenix_plan, scripts/make_*.sh, .gitattributes and .gitignore over the clone, and commits there.
+# of hpc/phoenix_plan, scripts/make_*.sh, .gitattributes and .gitignore over the clone, and commits there
+# (--allow-empty: on a committed tree the copies equal the clone's HEAD, and a plain commit would fail).
 #   bash pc_scripts_test.sh [REPO]      REPO default: the repository that holds this script
 #   env: WORK=<dir> (default mktemp -d)
 # Every check prints its failure criterion ("fails if ...") first; refusals come before the passing cases.
@@ -34,7 +36,7 @@ cp "$REPO/scripts/make_phoenix_kit.sh" "$REPO/scripts/make_run.sh" "$C/scripts/"
 cp "$REPO/.gitattributes" "$REPO/.gitignore" "$C/"
 [ -d "$REPO/runs" ] && { rm -rf "$C/runs"; cp -r "$REPO/runs" "$C/runs"; }
 gitc() { git -C "$C" -c user.name=kit-test -c user.email=kit-test@localhost "$@"; }
-gitc add -A >/dev/null && gitc commit -q -m "pc_scripts_test: working tree" >/dev/null || { echo "commit in the clone failed"; exit 2; }
+gitc add -A >/dev/null && gitc commit -q --allow-empty -m "pc_scripts_test: working tree" >/dev/null || { echo "commit in the clone failed"; exit 2; }
 HEADS=$(git -C "$C" rev-parse --short HEAD); BRANCH=$(git -C "$C" rev-parse --abbrev-ref HEAD)
 echo "clone HEAD $HEADS on $BRANCH"
 mk() { NK=$((NK + 1)); OUT=$WORK/kit_$NK.out; ( bash "$C/scripts/make_phoenix_kit.sh" > "$OUT" 2>&1 ); RC=$?; }
@@ -75,7 +77,7 @@ git -C "$C" ls-tree -r --name-only HEAD hpc/phoenix_plan | sed 's|^hpc/phoenix_p
 eq "K3 file list = HEAD minus export-ignore ($(wc -l < "$WORK/want_files.txt" | tr -d ' ') files)" "$(diff "$WORK/want_files.txt" "$WORK/got_files.txt" | grep -c '^[<>]')" 0
 nd=0; while read -r f; do git -C "$C" show "HEAD:hpc/phoenix_plan/$f" | cmp -s - "$KO/$f" || { nd=$((nd + 1)); echo "  differs: $f"; }; done < "$WORK/got_files.txt"
 eq "K3 files differing from HEAD" "$nd" 0
-for f in run.sh status.sh femtic_lib.sh 04_inversion.slurm 05_chain.sh 06_forward_only.slurm tools/halfspace_eval.py; do
+for f in run.sh status.sh femtic_lib.sh 04_inversion.slurm 05_chain.sh 06_forward_only.slurm mesh_chain.sh tools/halfspace_eval.py; do
   eq "K3 has $f" "$([ -s "$KO/$f" ] && echo yes || echo no)" yes
 done
 eq "K3 CR bytes in the kit (tr count)" "$(find "$KO" -type f -exec cat {} + | tr -cd '\r' | wc -c | tr -d ' ')" 0
@@ -138,6 +140,27 @@ mr Run05 --mesh v2 --data "$DATA" --job t4 --layout 3x24 --time 12:00:00 --purpo
 eq "M5 exit" "$RC" 0
 eq "M5 run.env NIV and MAIL" "$(grep -E '^(NIV|MAIL)=' "$MR/Run05/run.env" | tr '\n' ' ')" "NIV=840 MAIL=a.student@example.edu "
 has "M5 RUN.md layout line" "$MR/Run05/RUN.md" "- layout: 3 ranks x 24 threads per node, --time=12:00:00, partition icelake, NIV=840"
+crit M6 "make_run.sh --job mesh accepts no --files, a --files folder without region_seeds.dat and no --seeds, --seeds with one seed or with 4 numbers, --mesh with --job mesh, or --files with --job gate (each: exit 1, no folder); or for --files mesh/vulcan_v2/files does not copy the 10 files byte for byte into files/ (and nothing else: no control.dat), write run.env as the eleven lines with MESH=none JOB=mesh 1 x 8 04:00:00 plus FILES=files, and RUN.md / INDEX.md lines naming the files and mesh 'none'; or with --seeds on mesh/chain_proof/inputs does not write those seeds as files/region_seeds.dat"
+MV=mesh/vulcan_v2/files; MC=mesh/chain_proof/inputs
+mr Run12 --job mesh --purpose p; eq "M6 no --files: exit" "$RC" 1; has "M6 no --files" "$OUT" "--job mesh needs --files DIR"
+mr Run12 --job mesh --files "$MC" --purpose p; eq "M6 no seeds: exit" "$RC" 1; has "M6 no seeds" "$OUT" "region_seeds.dat is missing or empty"
+mr Run12 --job mesh --files "$MC" --seeds "0 0 -40 10 1e9" --purpose p; eq "M6 one seed: exit" "$RC" 1; has "M6 one seed" "$OUT" "at least 2 seeds (air, earth) of 5 numbers each"
+mr Run12 --job mesh --files "$MC" --seeds "0 0 -40 10; 0 0 10 20" --purpose p; eq "M6 4 numbers: exit" "$RC" 1
+mr Run12 --job mesh --mesh v2 --files "$MV" --purpose p; eq "M6 --mesh: exit" "$RC" 1; has "M6 --mesh" "$OUT" "--mesh is for FEMTIC runs"
+mr Run12 "${G[@]}" --files "$MV"; eq "M6 --files on a gate: exit" "$RC" 1; has "M6 --files on a gate" "$OUT" "--files and --seeds are for --job mesh only"
+eq "M6 no run folder made" "$([ -e "$MR/Run12" ] && echo made || echo none)" none
+mr Run12 --job mesh --files "$MV" --purpose "v2 | mesh build"
+eq "M6 exit" "$RC" 0
+eq "M6 files/ = the 10 files of $MV" "$(ls "$MR/Run12/files" | tr '\n' ' ')" "analysis_domain.dat bathymetry.dat coast_line.dat control.dat makeMtr.param obs_site.dat observing_site.dat region_seeds.dat resistivity_attr.dat topography.dat "
+eq "M6 files/ byte for byte" "$(for f in "$C/$MV"/*; do cmp -s "$f" "$MR/Run12/files/${f##*/}" || echo "${f##*/} differs"; done)" ""
+eq "M6 run folder: files/, run.env, RUN.md only" "$(ls "$MR/Run12" | tr '\n' ' ')" "RUN.md files run.env "
+eq "M6 run.env" "$(grep -v '^#' "$MR/Run12/run.env" | tr '\n' ' ')" "MESH=none JOB=mesh START_RHO=none RANKS=1 THREADS=8 TIME=04:00:00 PARTITION=icelake ITER_STEP=none ITER_MAX=none NIV=none MAIL=none FILES=files "
+has "M6 RUN.md files line" "$MR/Run12/RUN.md" "- files: $MV (copied into files/)"
+has "M6 INDEX.md line" "$MR/INDEX.md" "| Run12 | none | v2 / mesh build | 1x8 | - | - |"
+mr Run13 --job mesh --files "$MC" --seeds "0.0 0.0 -40.0 10 1e9; 0.0 0.0 10.0 20 1e9" --purpose "chain_proof"
+eq "M6 --seeds: exit" "$RC" 0
+eq "M6 --seeds: region_seeds.dat" "$(grep -v '^#' "$MR/Run13/files/region_seeds.dat" | tr '\n' ';')" "0.0 0.0 -40.0 10 1e9;0.0 0.0 10.0 20 1e9;"
+eq "M6 --seeds: 10 files" "$(ls "$MR/Run13/files" | wc -l | tr -d ' ')" 10
 
 # ================================================================ E: exported kit + run folders -> run.sh -> sbatch
 VF=$WORK/vf; rm -rf "$VF"; mkdir -p "$VF/shared/mesh_v2" "$VF/runs" "$VF/bin" "$WORK/fbin"
@@ -176,6 +199,18 @@ if [ -d "$C/runs/Run01" ] && [ -d "$C/runs/Run02" ] && [ -d "$C/runs/Run03" ]; t
 else
   bad "E2 runs/Run01, Run02 and Run03 are not all in $REPO/runs"
 fi
+
+crit E4 "the exported kit's run.sh refuses the mesh folders (M6's Run12, the repository's Run04 and Run05), or does not submit each as a mesh build: -J RunNN -p icelake --ntasks-per-node=1 --cpus-per-task=8 --time=04:00:00 --mem=27G --mail-type=NONE --export=ALL,KIT=<kit>,BIN=<bin>,FILES=files <kit>/mesh_chain.sh"
+for t in makeTetraMesh tetgen makeMtr TetGen2Femtic; do printf '#!/bin/bash\nexit 0\n' > "$VF/bin/$t"; chmod +x "$VF/bin/$t"; done   # S1's build has the mesh tools
+rm -rf "$VF/runs/Run12" "$VF/runs/Run04" "$VF/runs/Run05"; cp -r "$MR/Run12" "$VF/runs/"
+[ -d "$C/runs/Run04" ] && cp -r "$C/runs/Run04" "$VF/runs/"; [ -d "$C/runs/Run05" ] && cp -r "$C/runs/Run05" "$VF/runs/"
+for r in Run12 Run04 Run05; do
+  rs "$r"; eq "E4 $r exit" "$RC" 0
+  eq "E4 $r sbatch arguments" "$(tail -1 "$WORK/sbatch_calls.txt")" "--parsable -J $r -p icelake --ntasks-per-node=1 --cpus-per-task=8 --time=04:00:00 --mem=27G --mail-type=NONE --export=ALL,KIT=$VF/kit,BIN=$VF/bin,FILES=files $VF/kit/mesh_chain.sh"
+done
+for r in 04 05; do eq "E4 Run$r files/ = the 10 inputs" "$(ls "$C/runs/Run$r/files" 2>/dev/null | wc -l | tr -d ' ')" 10; done
+eq "E4 Run05 files/ = mesh/vulcan_v2/files byte for byte" "$(for f in "$C/mesh/vulcan_v2/files"/*; do cmp -s "$f" "$C/runs/Run05/files/${f##*/}" || echo "${f##*/} differs"; done)" ""
+eq "E4 Run04 files/ = mesh/chain_proof/inputs byte for byte (9 files)" "$(for f in "$C/mesh/chain_proof/inputs"/*; do cmp -s "$f" "$C/runs/Run04/files/${f##*/}" || echo "${f##*/} differs"; done)" ""
 
 echo; echo "SUMMARY: $npass passed, $nfail failed   (REPO=$REPO)"
 [ "$nfail" = 0 ]

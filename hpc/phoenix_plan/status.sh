@@ -4,7 +4,8 @@
 # Prints, for the run folder $RUNS/RunNN (RUNS default /hpcfs/users/$USER/vulcan_femtic/runs):
 #   jobs:     Slurm state, exit code and elapsed time of every job RUN.md lists (sacct; squeue if sacct is silent)
 #   report:   the last T6 / GATE / RESULT lines of the newest logs/fwd0_report_<jobid>.txt (06: gate and forward)
-#   outcome:  the last row of job_outcomes.tsv (04 and 06), and the last femtic.cnv row (t4 and inversion progress)
+#   outcome:  the last row of job_outcomes.tsv (04, 06 and mesh_chain.sh), and the last femtic.cnv row (t4 and inversion)
+#   mesh:     a JOB=mesh run: its mesh_summary.txt, the counts (nodes, tets, cells, surface faces) and the DONE line
 #   index:    the run's line in runs/INDEX.md
 # Reads only; changes nothing. GNU bash 4.4; no python.
 # =============================================================================
@@ -32,5 +33,7 @@ O=$(awk -F'\t' '$1 != "job_id" && NF >= 9 {r = "job " $1 " (" $2 "): " $6 ", exi
 [ -n "$O" ] && echo "outcome: $O"
 C=$(awk '$1 ~ /^[0-9]+$/ {r = $0} END {print r}' "$RD/femtic.cnv" 2>/dev/null)
 [ -n "$C" ] && echo "cnv:     $(echo "$C" | awk '{print "iteration " $1 ", retrial " $2 ", misfit " $6 ", RMS " $7}')"
+M=$(cat "$RD/mesh_summary.txt" 2>/dev/null)
+[ -n "$M" ] && echo "$M" | sed "s/^/mesh:    /"
 L=$(grep "^| $RUN |" "$RUNS/INDEX.md" 2>/dev/null)
 echo "index:   ${L:-no line for $RUN in $RUNS/INDEX.md}"

@@ -8,7 +8,10 @@
 # version-2 femtic_lib.sh (as Phoenix's femtic/bin does), so the end-to-end checks also show that the KIT's copy is
 # the one that runs. Since 2026-10-07 it also checks that a refused layout leaves no link in the run folder (R4,
 # R8), the optional run.env keys NIV and MAIL (R7, R8, P6, P4b), --mail-type=NONE by default (P1), no fixed
-# --mail-user in 03/04/06 (M1), and BIN's default $VF/bin in run.sh and in 03/04/05/06 (B1, B2).
+# --mail-user in 03/04/06 (M1), and BIN's default $VF/bin in run.sh and in 03/04/05/06 (B1, B2). JOB=mesh (2026-10-06):
+# run.sh's mesh refusals and submission (R9, R10, P7), and mesh_chain.sh run on fake makeTetraMesh, tetgen, makeMtr,
+# TetGen2Femtic and GNU time (a 12-tet mesh of the box): its failing chains (X1, X2), a full chain (P8), status.sh
+# (S2), the login-node mode (L1) and --counts (C1). The real meshes' counts are checked by runbook_walk_test.sh C16.
 #   bash run_sh_test.sh [PLAN_DIR]     PLAN_DIR = the kit to test (default: the directory above this script)
 #   env: WORK=<dir> (default mktemp -d), PYTHON=<python 3> (default: the first of python3, python that runs)
 # Every check prints its failure criterion ("fails if ...") before its result; refusals come before the passing
@@ -58,6 +61,21 @@ mkrun() {
   { echo "# $n (test)"; for k in MESH JOB START_RHO RANKS THREADS TIME PARTITION ITER_STEP ITER_MAX; do [ "${V[$k]}" = DROP ] || echo "$k=${V[$k]}"; done
     for k in NIV MAIL; do [ -z "${V[$k]:-}" ] || echo "$k=${V[$k]}"; done; } > "$RUNS/$n/run.env"
   printf '# %s\n\n- purpose: test %s run\n\n## Jobs\n' "$n" "$job" > "$RUNS/$n/RUN.md"
+}
+# mkmesh NAME [KEY=VALUE ...] -> runs/NAME as scripts/make_run.sh --job mesh writes it: run.env (MESH=none JOB=mesh 1 x 8
+# 04:00:00 FILES=files unless overridden; DROP leaves a key out), RUN.md, and files/ with the 10 inputs of a land-only
+# +-300 km box (air 10 above, earth 20 below, seeds at z = -40 and +10 km)
+MF=$WORK/meshfiles; rm -rf "$MF"; mkdir -p "$MF"
+printf 'ALTITUDE\ntopography.dat\n0\n1e10\nEND\n' > "$MF/control.dat"; printf -- '-300 300\n-300 300\n-300 300\n' > "$MF/analysis_domain.dat"
+for f in observing_site.dat coast_line.dat obs_site.dat makeMtr.param topography.dat bathymetry.dat; do echo 0 > "$MF/$f"; done
+printf '2\n10 1e9 -1 1\n20 100 9 0\n' > "$MF/resistivity_attr.dat"; printf '# x y z attr maxvol\n0 0 -40 10 1e9\n0 0 10 20 1e9\n' > "$MF/region_seeds.dat"
+mkmesh() {
+  local n=$1 kv k; shift
+  rm -rf "${RUNS:?}/$n"; mkdir -p "$RUNS/$n/files"; cp "$MF"/* "$RUNS/$n/files/"
+  declare -A V=([MESH]=none [JOB]=mesh [START_RHO]=none [RANKS]=1 [THREADS]=8 [TIME]=04:00:00 [PARTITION]=icelake [ITER_STEP]=none [ITER_MAX]=none [FILES]=files)
+  for kv in "$@"; do V[${kv%%=*}]=${kv#*=}; done
+  { echo "# $n (test)"; for k in MESH JOB START_RHO RANKS THREADS TIME PARTITION ITER_STEP ITER_MAX FILES; do [ "${V[$k]}" = DROP ] || echo "$k=${V[$k]}"; done; } > "$RUNS/$n/run.env"
+  printf '# %s\n\n- purpose: test mesh run\n\n## Jobs\n' "$n" > "$RUNS/$n/RUN.md"
 }
 
 # ---------------------------------------------------------------- fake bin (Phoenix's femtic/bin plus Slurm)
@@ -124,6 +142,110 @@ printf '%10d%10d%15e%15e%15e%15e%15e%15e\n' "$A" 0 3 0.5 1 1000 12.5 1 >> femtic
 for ((it = A + 1; it <= B; it++)); do cat resistivity_block_iter0.dat > "resistivity_block_iter$it.dat"; done
 echo "# Reach maximum iteration number." >> femtic_0.log
 FAKE
+# fake mesh tools (mesh_chain.sh, JOB=mesh). makeTetraMesh -stp N: needs control.dat and analysis_domain.dat, rewrites
+# makeTetraMesh.log every step (FAKE_MTM_ERROR=N logs an error line at step N), -stp 1-3 write fake.stpN, -stp 4 writes
+# output.poly ending "# Part 4" / "0" as the real one does
+cat > "$BIN/makeTetraMesh" <<'FAKE'
+#!/bin/bash
+[ "$1" = -stp ] || exit 2
+[ -s control.dat ] && [ -s analysis_domain.dat ] || { echo "cannot open control.dat" > makeTetraMesh.log; exit 1; }
+echo "fake makeTetraMesh -stp $2" > makeTetraMesh.log
+[ "${FAKE_MTM_ERROR:-0}" = "$2" ] && echo "Error : fake failure at step $2" >> makeTetraMesh.log
+case $2 in
+  1|2|3) echo "fake step $2" > "fake.stp$2" ;;
+  4) printf '# Part 1 - node list\n0 3 0 0\n# Part 2 - facet list\n0 0\n# Part 3 - hole list\n0\n# Part 4\n0\n' > output.poly ;;
+esac
+FAKE
+# fake tetgen SWITCHES BASE. BASE output.poly: the analysis_domain.dat box cut at z = 0 into two hexahedra of 6 tets each
+# (12 nodes, 12 tets): the upper one takes the attribute of the region seed with z < 0, the lower one that of the seed
+# with z > 0 (an unseeded one gets max + 1, as tetgen does) -> output.1.{node,ele,face,neigh}. BASE output.i (-r):
+# reads output.i.node, .ele (and .mtr with -m), writes output.(i+1).{node,ele,face,neigh,mtr}, the same mesh with the
+# sizes interpolated (so output.(i+1).mtr exists before makeMtr runs). FAKE_TETGEN_SLEEP=S sleeps S s first.
+cat > "$BIN/tetgen" <<'FAKE'
+#!/bin/bash
+sleep "${FAKE_TETGEN_SLEEP:-0}"
+b=${*: -1}; sw=$1
+if [ "$b" = output.poly ]; then
+  read -r x0 x1 < <(sed -n 1p analysis_domain.dat); read -r y0 y1 < <(sed -n 2p analysis_domain.dat); read -r z0 z1 < <(sed -n 3p analysis_domain.dat)
+  read -r up lo < <(awk '$0 == "# Part 4" {p = 1; getline; next} p && NF >= 5 {if ($4 < 0) u = $5 + 0; else l = $5 + 0}
+                         END {m = (u > l ? u : l); if (u == "") u = ++m; if (l == "") l = ++m; print u, l}' output.poly)
+  awk -v x0="$x0" -v x1="$x1" -v y0="$y0" -v y1="$y1" -v z0="$z0" -v z1="$z1" 'BEGIN { print "12 3 0 0"
+    for (iz = 0; iz < 3; iz++) for (iy = 0; iy < 2; iy++) for (ix = 0; ix < 2; ix++)
+      printf "%d %s %s %s\n", ix + 2 * iy + 4 * iz, (ix ? x1 : x0), (iy ? y1 : y0), (iz == 0 ? z0 : (iz == 1 ? 0 : z1))
+    print "# Generated by tetgen (fake)" }' > output.1.node
+  awk -v up="$up" -v lo="$lo" 'BEGIN { split("012 021 102 120 201 210", P, " "); print "12 4 1"; n = 0
+    for (k = 0; k < 2; k++) for (p = 1; p <= 6; p++) { c[0] = 0; c[1] = 0; c[2] = 0; id[0] = 4 * k
+      for (s = 1; s <= 3; s++) { a = substr(P[p], s, 1); c[a] = 1; id[s] = c[0] + 2 * c[1] + 4 * (c[2] + k) }
+      printf "%d %d %d %d %d %d\n", n++, id[0], id[1], id[2], id[3], (k ? lo : up) }
+    print "# Generated by tetgen (fake)" }' > output.1.ele
+  printf '0 1\n# Generated by tetgen (fake)\n' > output.1.face; printf '12 4\n# Generated by tetgen (fake)\n' > output.1.neigh
+  echo "  Found 2 subdomains."
+  exit 0
+fi
+i=${b#output.}; j=$((i + 1))
+[ -s "$b.node" ] && [ -s "$b.ele" ] || { echo "Out of memory."; exit 1; }
+case "$sw" in *m*) [ -s "$b.mtr" ] || { echo "no $b.mtr"; exit 1; } ;; esac
+for e in node ele face neigh; do cp "$b.$e" "output.$j.$e"; done
+awk 'NR == 1 {printf "%10d%10d\n", $1, 1; n = $1; for (k = 0; k < n; k++) printf "%15.6e\n", 1.5; exit}' "$b.node" > "output.$j.mtr"
+echo "fake refinement $b -> output.$j"
+FAKE
+# fake makeMtr output.i: needs obs_site.dat, makeMtr.param, output.i.node and .ele; writes output.i.mtr ("%10d%10d" node
+# count and 1, then one size per node). FAKE_MTR_SKIP=i: exits 0 in round i without writing; FAKE_MTR_SHORT=i: one
+# value too few in round i
+cat > "$BIN/makeMtr" <<'FAKE'
+#!/bin/bash
+b=$1; i=${b#output.}
+for f in obs_site.dat makeMtr.param "$b.node" "$b.ele"; do [ -s "$f" ] || { echo "cannot open $f"; exit 1; }; done
+[ "${FAKE_MTR_SKIP:-0}" = "$i" ] && { echo "fake makeMtr: round $i writes nothing"; exit 0; }
+awk -v short="$([ "${FAKE_MTR_SHORT:-0}" = "$i" ] && echo 1 || echo 0)" 'NR == 1 {n = $1 - short; printf "%10d%10d\n", n, 1
+  for (k = 0; k < n; k++) printf "%15.6e\n", 2.0; exit}' "$b.node" > "$b.mtr"
+echo "fake makeMtr: $b.mtr"
+FAKE
+# fake TetGen2Femtic output.N: reads output.N.node, .ele and resistivity_attr.dat (its first attribute is the air);
+# an element attribute missing from resistivity_attr.dat: exit 1, as the real one. Writes mesh.dat (TETRA, nodes,
+# elements, then 7 face lists: the planes x0, x1, y0, y1, z0, z1 of the box and the Earth surface z = 0 seen from the
+# earth side), resistivity_block_iter0.dat (air elements in cell 0, each earth element a cell) and output.N.femtic.vtk.
+cat > "$BIN/TetGen2Femtic" <<'FAKE'
+#!/bin/bash
+b=$1
+for f in "$b.node" "$b.ele" resistivity_attr.dat; do [ -s "$f" ] || { echo "cannot open $f"; exit 1; }; done
+awk 'FNR == 1 {f++}
+  f == 1 && FNR == 1 {na = $1; next} f == 1 && FNR <= na + 1 {ok[$1 + 0] = 1; if (FNR == 2) air = $1 + 0; next} f == 1 {next}
+  f == 2 && FNR > 1 && !/^#/ {x[$1] = $2; y[$1] = $3; z[$1] = $4; nn++; if (nn == 1 || $2 < x0) x0 = $2; if (nn == 1 || $2 > x1) x1 = $2
+    if (nn == 1 || $3 < y0) y0 = $3; if (nn == 1 || $3 > y1) y1 = $3; if (nn == 1 || $4 < z0) z0 = $4; if (nn == 1 || $4 > z1) z1 = $4; next}
+  f == 3 && FNR > 1 && !/^#/ {e = ne++; for (k = 0; k < 4; k++) v[e, k] = $(k + 2); at[e] = $6 + 0
+    if (!(at[e] in ok)) {printf "Region attiribute << %d of element %d cannot be found !!\n", at[e], e; bad = 1}}
+  END { if (bad) exit 1
+    print "TETRA" > "mesh.dat"; printf "%10d\n", nn > "mesh.dat"
+    for (i = 0; i < nn; i++) printf "%10d %20.9e %20.9e %20.9e\n", i, x[i] * 1000, y[i] * 1000, z[i] * 1000 > "mesh.dat"
+    printf "%10d\n", ne > "mesh.dat"
+    for (e = 0; e < ne; e++) printf "%10d %9d %9d %9d %9d %9d %9d %9d %9d\n", e, -1, -1, -1, -1, v[e, 0], v[e, 1], v[e, 2], v[e, 3] > "mesh.dat"
+    for (L = 1; L <= 7; L++) { n = 0
+      for (e = 0; e < ne; e++) for (fc = 0; fc < 4; fc++) { m = 0
+        for (k = 0; k < 4; k++) if (k != fc) { q = v[e, k]
+          if (L == 1 && x[q] == x0 || L == 2 && x[q] == x1 || L == 3 && y[q] == y0 || L == 4 && y[q] == y1 || \
+              L == 5 && z[q] == z0 || L == 6 && z[q] == z1 || L == 7 && z[q] == 0 && at[e] != air) m++ }
+        if (m == 3) lst[n++] = e " " fc }
+      printf "%10d\n", n > "mesh.dat"; for (k = 0; k < n; k++) print lst[k] > "mesh.dat" }
+    nc = 1; for (e = 0; e < ne; e++) cell[e] = (at[e] == air ? 0 : nc++)
+    printf "%10d%10d\n", ne, nc > "resistivity_block_iter0.dat"
+    for (e = 0; e < ne; e++) printf "%10d%10d\n", e, cell[e] > "resistivity_block_iter0.dat"
+    for (c = 0; c < nc; c++) printf "%10d   %.6e   %.6e   %.6e   %.6e%10d\n", c, (c ? 100 : 1e9), 1e-20, 1e20, 1, (c ? 0 : 1) > "resistivity_block_iter0.dat"
+    print "fake TetGen2Femtic: " nn " nodes, " ne " elements, " nc " cells" }' resistivity_attr.dat "$b.node" "$b.ele" || exit 1
+printf '# vtk DataFile Version 3.0\nfake TetGen2Femtic\nASCII\n' > "$b.femtic.vtk"
+FAKE
+# fake GNU time (mesh_chain.sh's TIME_BIN): gnutime -v -o FILE CMD...: runs CMD, writes FILE with the -v lines the chain
+# reads, exits as CMD did
+cat > "$BIN/gnutime" <<'FAKE'
+#!/bin/bash
+[ "$1" = -v ] && [ "$2" = -o ] || exit 2
+f=$3; shift 3
+"$@"; rc=$?
+{ [ "$rc" -eq 0 ] || echo "Command exited with non-zero status $rc"
+  printf '\tCommand being timed: "%s"\n\tMaximum resident set size (kbytes): 4242\n\tExit status: %d\n' "$*" "$rc"; } > "$f"
+exit "$rc"
+FAKE
+export TIME_BIN=$BIN/gnutime
 chmod +x "$BIN"/*
 mkdir -p "$WORK/tmp"
 # runsh [VAR=VALUE ...] ARGS... -> RC, OUT (stdout+stderr of run.sh), NSB (sbatch calls made by this call)
@@ -183,6 +305,24 @@ crit R8 "NIV=840 in run.env does not reach the layout rule: a t4 run at v3's N_e
 runsh NEQ=3571112 Run08
 eq "R8 exit" "$RC" 1; has "R8 refused with N_iv 840" "$OUT" "2 ranks/node x (39283 forward + 91545 sensitivity-step MiB)"; eq "R8 sbatch calls" "$NSB" 0
 eq "R8 no mesh link left" "$( { [ -e "$RUNS/Run08/mesh.dat" ] || [ -L "$RUNS/Run08/mesh.dat" ] || [ -L "$RUNS/Run08/resistivity_block_iter0.dat" ]; } && echo made || echo none)" none
+crit R9 "run.sh submits a JOB=mesh run whose files/ lacks region_seeds.dat or has an empty topography.dat, whose run.env says MESH=v2 or has no FILES, a gate run with a FILES key, or a mesh run whose folder already holds a build (intermediates/), or links a mesh into such a folder (each: exit 1, sbatch 0 times)"
+mkmesh Run12; rm "$RUNS/Run12/files/region_seeds.dat"; runsh Run12
+eq "R9 no region_seeds.dat: exit" "$RC" 1; has "R9 no region_seeds.dat" "$OUT" "files lacks region_seeds.dat (missing or empty"; eq "R9 no region_seeds.dat: sbatch calls" "$NSB" 0
+mkmesh Run12; : > "$RUNS/Run12/files/topography.dat"; runsh Run12
+eq "R9 empty topography.dat: exit" "$RC" 1; has "R9 empty topography.dat" "$OUT" "files lacks topography.dat"; eq "R9 empty topography.dat: sbatch calls" "$NSB" 0
+mkmesh Run12 MESH=v2; runsh Run12
+eq "R9 MESH=v2: exit" "$RC" 1; has "R9 MESH=v2" "$OUT" "JOB=mesh builds a mesh, so MESH=none (got MESH=v2)"; eq "R9 MESH=v2: sbatch calls" "$NSB" 0
+mkmesh Run12 FILES=DROP; runsh Run12
+eq "R9 no FILES: exit" "$RC" 1; has "R9 no FILES" "$OUT" "JOB=mesh needs FILES=<the run's folder of mesh inputs>"; eq "R9 no FILES: sbatch calls" "$NSB" 0
+mkrun Run12 gate; echo "FILES=files" >> "$RUNS/Run12/run.env"; runsh Run12
+eq "R9 gate with FILES: exit" "$RC" 1; has "R9 gate with FILES" "$OUT" "FILES=files is for JOB=mesh only"; eq "R9 gate with FILES: sbatch calls" "$NSB" 0
+mkmesh Run12; mkdir "$RUNS/Run12/intermediates"; runsh Run12 --again
+eq "R9 earlier build: exit" "$RC" 1; has "R9 earlier build" "$OUT" "intermediates exists: an earlier mesh build is in this run folder"; eq "R9 earlier build: sbatch calls" "$NSB" 0
+eq "R9 no mesh link in the mesh run folder" "$( { [ -e "$RUNS/Run12/mesh.dat" ] || [ -L "$RUNS/Run12/mesh.dat" ]; } && echo made || echo none)" none
+crit R10 "run.sh submits a JOB=mesh run when BIN holds FEMTIC but no tetgen (it must check the four mesh tools, not femtic: exit 1 naming tetgen, sbatch 0 times)"
+NB=$WORK/bin_notetgen; rm -rf "$NB"; cp -r "$BIN" "$NB"; rm -f "$NB/tetgen"
+mkmesh Run12; runsh BIN="$NB" Run12
+eq "R10 exit" "$RC" 1; has "R10 message" "$OUT" "no mesh tools at $NB (tetgen missing)"; eq "R10 sbatch calls" "$NSB" 0
 
 # ================================================================ submissions
 crit P1 "a v2 gate run (100 ohm-m, 3 x 24, 02:00:00, no MAIL in run.env) does not reach sbatch exactly once with -J Run01 -p icelake --ntasks-per-node=3 --cpus-per-task=24 --time=02:00:00 --mail-type=NONE --export=ALL,KIT=<kit>,BIN=<bin>,START_RHO=100 and 06_forward_only.slurm, or the links, RUN.md, INDEX.md or the printed id are wrong"
@@ -262,10 +402,87 @@ mkrun Run11 inversion ITER_STEP=5 ITER_MAX=12 TIME=3-00:00:00 NIV=840 MAIL=stude
 eq "P4b exit" "$RC" 0; eq "P4b sbatch calls" "$NSB" 3
 eq "P4b calls with the mail options" "$(tail -3 "$WORK/sbatch_calls.txt" | grep -c -- "--time=3-00:00:00 --mail-type=END,FAIL --mail-user=student@example.edu $KIT/04_inversion.slurm")" 3
 eq "P4b calls exporting NIV=840" "$(tail -3 "$WORK/sbatch_calls.txt" | grep -c -- "INV_DIR=$RUNS/Run11,BIN=$BIN,KIT=$KIT,NIV=840 ")" 3
+# chainrun RUN [VAR=VALUE ...]: mesh_chain.sh (MC, default the kit's) run in runs/RUN as a Slurm job would run it, with
+# the fake tools and VAR=VALUE in its environment; sets RC and OUT (its output)
+NC=0
+chainrun() {
+  local n=$1; shift; NC=$((NC + 1)); OUT=$WORK/chain_$NC.out
+  ( cd "$RUNS/$n" && env "PATH=$BIN:$PATH" VF="$VF" KIT="$KIT" BIN="$BIN" SLURM_JOB_ID=$((9000 + NC)) SLURM_SUBMIT_DIR="$RUNS/$n" "$@" \
+      timeout 300 bash "${MC:-$KIT/mesh_chain.sh}" > "$OUT" 2>&1 ); RC=$?
+}
+nobuild() { { [ -e "$RUNS/$1/mesh.dat" ] || [ -e "$RUNS/$1/resistivity_block_iter0.dat" ]; } && echo "products left" || echo none; }
+crit X1 "mesh_chain.sh finishes when makeMtr exits 0 without writing in round 2 (FAKE_MTR_SKIP=2), or writes a round-1 .mtr with one value too few (FAKE_MTR_SHORT=1), or the region seeds are swapped (air attribute 10 below the surface), or makeTetraMesh logs an error at step 3: each must exit 1 with 'MESH CHAIN DONE: FAILED, exit 1 at <step>: <reason>' in the output and mesh_summary.txt, a mesh_failed row, and no product in the run folder"
+mkmesh Run13; chainrun Run13 FAKE_MTR_SKIP=2
+eq "X1 makeMtr writes nothing in round 2: exit" "$RC" 1; has "X1 round 2" "$OUT" "MESH CHAIN DONE: FAILED, exit 1 at makeMtr_2: makeMtr produced no output.2.mtr"
+eq "X1 round 2: no product" "$(nobuild Run13)" none; has "X1 round 2: mesh_summary.txt" "$RUNS/Run13/mesh_summary.txt" "MESH CHAIN DONE: FAILED, exit 1 at makeMtr_2"
+eq "X1 round 2: outcome row" "$(awk -F'\t' 'NR > 1 {print $2, $6, $9}' "$RUNS/Run13/job_outcomes.tsv")" "mesh_chain mesh_failed 1"
+mkmesh Run13; chainrun Run13 FAKE_MTR_SHORT=1
+eq "X1 short .mtr: exit" "$RC" 1; has "X1 short .mtr" "$OUT" "at makeMtr_1: output.1.mtr lists 11 values, output.1.node has 12 nodes"; eq "X1 short .mtr: no product" "$(nobuild Run13)" none
+mkmesh Run13; printf '0 0 -40 20 1e9\n0 0 10 10 1e9\n' > "$RUNS/Run13/files/region_seeds.dat"; chainrun Run13
+eq "X1 swapped seeds: exit" "$RC" 1; has "X1 swapped seeds" "$OUT" "at tetgen_1: air attribute 10 is not the region at the top of the domain"; eq "X1 swapped seeds: no product" "$(nobuild Run13)" none
+mkmesh Run13; chainrun Run13 FAKE_MTM_ERROR=3
+eq "X1 makeTetraMesh error: exit" "$RC" 1; has "X1 makeTetraMesh error" "$OUT" "at stp3: makeTetraMesh -stp 3 logged an error"; eq "X1 makeTetraMesh error: no product" "$(nobuild Run13)" none
+crit X2 "(control: the WSL check could not fail) a mesh_chain.sh without the line that keeps tetgen's output.i.mtr apart does not finish OK on FAKE_MTR_SKIP=2, i.e. the round-2 refusal of X1 is not owed to that line"
+MC=$WORK/mesh_chain_nokeep.sh; grep -v 'output.$i.tetgen.mtr' "$KIT/mesh_chain.sh" > "$MC"
+eq "X2 mutant differs by one line" "$(diff "$KIT/mesh_chain.sh" "$MC" | grep -c '^<')" 1
+mkmesh Run13; chainrun Run13 FAKE_MTR_SKIP=2; MC=""
+eq "X2 mutant exit" "$RC" 0; has "X2 mutant DONE OK" "$OUT" "MESH CHAIN DONE: OK, exit 0"
+
+# ================================================================ JOB=mesh: submission, the chain (fake tools), status
+crit P7 "a mesh run (MESH=none, 1 x 8, 04:00:00, FILES=files) does not reach sbatch exactly once with -J Run12 -p icelake --ntasks-per-node=1 --cpus-per-task=8 --time=04:00:00 --mem=27G --mail-type=NONE --export=ALL,KIT=<kit>,BIN=<bin>,FILES=files and mesh_chain.sh, links a mesh.dat, or RUN.md, INDEX.md or run.sh's 2 printed lines miss the job"
+mkmesh Run12; runsh Run12
+J12=$(( 7000 + $(wc -l < "$WORK/sbatch_calls.txt") ))
+eq "P7 exit" "$RC" 0; eq "P7 sbatch calls" "$NSB" 1
+eq "P7 sbatch arguments" "$(lastcall)" "--parsable -J Run12 -p icelake --ntasks-per-node=1 --cpus-per-task=8 --time=04:00:00 --mem=27G --mail-type=NONE --export=ALL,KIT=$KIT,BIN=$BIN,FILES=files $KIT/mesh_chain.sh"
+eq "P7 no mesh.dat link" "$( { [ -e "$RUNS/Run12/mesh.dat" ] || [ -L "$RUNS/Run12/mesh.dat" ]; } && echo made || echo none)" none
+has "P7 RUN.md" "$RUNS/Run12/RUN.md" "job $J12 submitted"
+has "P7 INDEX.md line" "$RUNS/INDEX.md" "| Run12 | none | test mesh run | 1x8 | $J12 | - |"
+has "P7 printed id" "$OUT" "Run12: submitted job $J12 (JOB=mesh, inputs files/, 1x8, --time=04:00:00)"
+eq "P7 run.sh prints 2 lines" "$(wc -l < "$OUT" | tr -d ' ')" 2
+crit P8 "the mesh job, run by the fake sbatch with the fake tools (two hexahedra of 6 tets in the +-300 km box: 12 nodes, 12 tets, 1 air + 6 earth cells, 2 Earth-surface and 20 box faces), does not leave mesh.dat, resistivity_block_iter0.dat and output.6.femtic.vtk in the run folder, intermediates/ without output.poly (seeded), output.1-6.{node,ele,face,neigh}, makeMtr's .mtr of rounds 1-5 and tetgen's of rounds 2-5 kept apart, 16 timings rows with rc 0 and a .timev per step, mesh_summary.txt without those counts and 'MESH CHAIN DONE: OK', a job_outcomes.tsv row mesh_ok with the kit, the KIT VERSION banner; or it changes files/"
+FS0=$(cat "$RUNS/Run12/files"/* | cksum)
+runsh MOCK_SBATCH_RUN=1 Run12 --again
+J=$(( 7000 + $(wc -l < "$WORK/sbatch_calls.txt") )); I=$RUNS/Run12/intermediates
+eq "P8 exit" "$RC" 0; eq "P8 sbatch calls" "$NSB" 1
+for f in mesh.dat resistivity_block_iter0.dat output.6.femtic.vtk; do eq "P8 product $f in the run folder" "$([ -s "$RUNS/Run12/$f" ] && echo yes || echo no)" yes; done
+eq "P8 output.poly + output.1-6.{node,ele,face,neigh}" "$(cd "$I" && ls output.poly output.[1-6].node output.[1-6].ele output.[1-6].face output.[1-6].neigh 2>/dev/null | wc -l | tr -d ' ')" 25
+eq "P8 .mtr: makeMtr's 1-5, tetgen's 2-5 apart" "$(cd "$I" && ls output.[1-5].mtr output.[2-5].tetgen.mtr 2>/dev/null | wc -l | tr -d ' ')" 9
+has "P8 output.poly seeded" "$I/output.poly" "2 0 0 10 20 1e9"
+eq "P8 timings.tsv: 16 steps, all rc 0" "$(awk -F'\t' 'NR > 1 && $2 == 0' "$I/timings.tsv" | wc -l | tr -d ' ') of $(( $(wc -l < "$I/timings.tsv") - 1 ))" "16 of 16"
+eq "P8 a .timev with the max RSS per step" "$(grep -l 'Maximum resident set size (kbytes): 4242' "$I"/logs/*.timev | wc -l | tr -d ' ')" 16
+has "P8 counts" "$RUNS/Run12/mesh_summary.txt" "MESH COUNTS: nodes 12  tets 12  cells 7  surface_faces 2  outer_faces 20"
+has "P8 DONE line" "$RUNS/Run12/mesh_summary.txt" "MESH CHAIN DONE: OK, exit 0 (stp1 0, stp2 0, stp3 0, stp4 0, tetgen_1 0, makeMtr_1 0, tetgen_r1 0, makeMtr_2 0, tetgen_r2 0, makeMtr_3 0, tetgen_r3 0, makeMtr_4 0, tetgen_r4 0, makeMtr_5 0, tetgen_r5 0, t2f 0)"
+eq "P8 job_outcomes.tsv row: job, script, outcome, exit, kit" "$(awk -F'\t' -v j="$J" '$1 == j {print $1, $2, $6, $9, $NF}' "$RUNS/Run12/job_outcomes.tsv")" "$J mesh_chain mesh_ok 0 abc1234"
+eq "P8 job log: kit banner in its first 5 lines" "$(head -5 "$RUNS/Run12/slurm-Run12-$J.out" | grep -c 'KIT VERSION: abc1234 (2026-10-06 12:00)')" 1
+eq "P8 files/ unchanged" "$(cat "$RUNS/Run12/files"/* | cksum)" "$FS0"
+crit S2 "status.sh for the mesh run does not show the counts and DONE lines of mesh_summary.txt and the mesh_ok outcome"
+( env "PATH=$BIN:$PATH" VF="$VF" bash "$KIT/status.sh" Run12 > "$WORK/s2.out" 2>&1 ); rc=$?
+eq "S2 exit" "$rc" 0
+has "S2 counts" "$WORK/s2.out" "mesh:    MESH COUNTS: nodes 12  tets 12  cells 7  surface_faces 2  outer_faces 20"
+has "S2 DONE" "$WORK/s2.out" "mesh:    MESH CHAIN DONE: OK, exit 0"
+has "S2 outcome" "$WORK/s2.out" "outcome: job $J (mesh_chain): mesh_ok, exit 0"
+crit L1 "mesh_chain.sh outside Slurm runs without LOGIN=1 (must refuse and write nothing), LOGIN=1 with LOGIN_MAX_S=2 and a tetgen that sleeps 6 s does not stop with exit 124 and a 'DONE: FAILED, exit 124 at the login-node cap' line, or LOGIN=1 on a fresh folder does not finish OK with a job_outcomes.tsv row for job 'login'"
+mkmesh Run14; ( cd "$RUNS/Run14" && env -u SLURM_JOB_ID "PATH=$BIN:$PATH" KIT="$KIT" BIN="$BIN" bash "$KIT/mesh_chain.sh" "$RUNS/Run14" > "$WORK/l1.out" 2>&1 ); rc=$?
+eq "L1 no LOGIN: exit" "$rc" 1; has "L1 no LOGIN" "$WORK/l1.out" "REFUSED: not inside a Slurm job"; eq "L1 no LOGIN: nothing written" "$(ls "$RUNS/Run14" | tr '\n' ' ')" "RUN.md files run.env "
+( cd "$RUNS/Run14" && env -u SLURM_JOB_ID "PATH=$BIN:$PATH" KIT="$KIT" BIN="$BIN" LOGIN=1 LOGIN_MAX_S=2 FAKE_TETGEN_SLEEP=6 bash "$KIT/mesh_chain.sh" "$RUNS/Run14" > "$WORK/l2.out" 2>&1 ); rc=$?
+eq "L1 cap: exit" "$rc" 124; has "L1 cap" "$WORK/l2.out" "MESH CHAIN DONE: FAILED, exit 124 at the login-node cap: LOGIN_MAX_S=2 s reached"; eq "L1 cap: no product" "$(nobuild Run14)" none
+mkmesh Run14; ( cd "$RUNS/Run14" && env -u SLURM_JOB_ID "PATH=$BIN:$PATH" KIT="$KIT" BIN="$BIN" LOGIN=1 bash "$KIT/mesh_chain.sh" "$RUNS/Run14" > "$WORK/l3.out" 2>&1 ); rc=$?
+eq "L1 LOGIN=1: exit" "$rc" 0; has "L1 LOGIN=1: DONE" "$WORK/l3.out" "MESH CHAIN DONE: OK, exit 0"
+eq "L1 LOGIN=1: outcome row" "$(awk -F'\t' 'NR > 1 {print $1, $6}' "$RUNS/Run14/job_outcomes.tsv")" "login mesh_ok"
+crit C1 "mesh_chain.sh --counts prints a line (instead of exit 1) for a mesh.dat without its last line, with one line too many, for a block file whose element count is 13, or a folder without mesh.dat; or, for the fake build of P8, does not print 'nodes 12  tets 12  cells 7  surface_faces 2  outer_faces 20'"
+cnt() { local d=$WORK/cnt_$1; rm -rf "$d"; mkdir -p "$d"; cp "$RUNS/Run12/mesh.dat" "$RUNS/Run12/resistivity_block_iter0.dat" "$d/"; echo "$d"; }
+d=$(cnt short); sed -i '$d' "$d/mesh.dat"; o=$(bash "$KIT/mesh_chain.sh" --counts "$d" 2>&1); rc=$?
+eq "C1 last line missing: exit" "$rc" 1; eq "C1 last line missing: message" "$(echo "$o" | grep -c 'mesh.dat ends at line')" 1
+d=$(cnt long); echo "         0         1" >> "$d/mesh.dat"; o=$(bash "$KIT/mesh_chain.sh" --counts "$d" 2>&1); rc=$?
+eq "C1 extra line: exit" "$rc" 1; eq "C1 extra line: no count line" "$(echo "$o" | grep -c '^nodes ')" 0
+d=$(cnt blk); sed -i '1s/.*/        13         7/' "$d/resistivity_block_iter0.dat"; o=$(bash "$KIT/mesh_chain.sh" --counts "$d" 2>&1); rc=$?
+eq "C1 block says 13 elements: exit" "$rc" 1; eq "C1 block: message" "$(echo "$o" | grep -c 'lists 13 elements, mesh.dat 12')" 1
+d=$(cnt none); rm "$d/mesh.dat"; bash "$KIT/mesh_chain.sh" --counts "$d" > /dev/null 2>&1; eq "C1 no mesh.dat: exit" "$?" 1
+eq "C1 the fake build" "$(bash "$KIT/mesh_chain.sh" --counts "$RUNS/Run12")" "nodes 12  tets 12  cells 7  surface_faces 2  outer_faces 20"
 
 # ================================================================ mail and BIN defaults
-crit M1 "03, 04 or 06 still has an #SBATCH --mail-type or --mail-user line (a job submitted by hand, not by run.sh, would email that address)"
-for s in 03_mesh.slurm 04_inversion.slurm 06_forward_only.slurm; do eq "M1 $s: #SBATCH --mail lines" "$(grep -c '^#SBATCH --mail' "$KIT/$s")" 0; done
+crit M1 "03, 04, 06 or mesh_chain.sh still has an #SBATCH --mail-type or --mail-user line (a job submitted by hand, not by run.sh, would email that address)"
+for s in 03_mesh.slurm 04_inversion.slurm 06_forward_only.slurm mesh_chain.sh; do eq "M1 $s: #SBATCH --mail lines" "$(grep -c '^#SBATCH --mail' "$KIT/$s")" 0; done
 crit B1 "run.sh without BIN submits when \$VF/bin holds no FEMTIC, or with \$VF/bin linked to a FEMTIC build (RUNBOOK S1) does not export BIN=\$VF/bin and run the gate with it"
 mkrun Run10 gate; runsh BIN= Run10
 eq "B1 no \$VF/bin: exit" "$RC" 1; has "B1 no \$VF/bin: message" "$OUT" "no FEMTIC at $VF/bin"; eq "B1 no \$VF/bin: sbatch calls" "$NSB" 0
@@ -276,8 +493,8 @@ eq "B1 exit" "$RC" 0; eq "B1 sbatch calls" "$NSB" 1
 eq "B1 sbatch arguments" "$(lastcall)" "--parsable -J Run10 -p icelake --ntasks-per-node=3 --cpus-per-task=24 --time=02:00:00 --mail-type=NONE --export=ALL,KIT=$KIT,BIN=$VF/bin,START_RHO=100 $KIT/06_forward_only.slurm"
 has "B1 the job launched \$VF/bin/femtic" "$RUNS/Run10/slurm-Run10-$J10.out" "$VF/bin/femtic"
 has "B1 the gate ran with \$VF/bin" "$RUNS/Run10/logs/fwd0_report_$J10.txt" "GATE (half-space, START_RHO=100): PASS"
-crit B2 "03, 04, 05 or 06, started without BIN, do not take \$VF/bin (VF set: \$VF/bin; VF unset: /hpcfs/users/\$USER/vulcan_femtic/bin)"
-for s in 03_mesh.slurm 04_inversion.slurm 05_chain.sh 06_forward_only.slurm; do
+crit B2 "03, 04, 05, 06 or mesh_chain.sh, started without BIN, do not take \$VF/bin (VF set: \$VF/bin; VF unset: /hpcfs/users/\$USER/vulcan_femtic/bin)"
+for s in 03_mesh.slurm 04_inversion.slurm 05_chain.sh 06_forward_only.slurm mesh_chain.sh; do
   L=$(grep -E '^(VF|BIN)=' "$KIT/$s")
   eq "B2 $s, VF set" "$(env -u BIN VF=/x/vf USER=u bash -c "$L"$'\n''echo "$BIN"')" /x/vf/bin
   eq "B2 $s, VF unset" "$(env -u BIN -u VF USER=u bash -c "$L"$'\n''echo "$BIN"')" /hpcfs/users/u/vulcan_femtic/bin

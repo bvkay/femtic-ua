@@ -191,6 +191,8 @@ inversion; fix the cell count (D3) before the regularisation study (docs/mesh_te
   library version 6) only if the inversion layout needs a tighter number.
 
 ### D8 (new, blocks student use). Whose femtic/bin and $VF?
+**DECIDED (Ben, 2026-10-06): students build FEMTIC once under their own account with 01_build_femtic.sh (README_phoenix.md section 3) and link it as $VF/bin (RUNBOOK S1).**
+
 - FEMTIC is built only under Ben's account. BIN defaults to /hpcfs/users/$USER/femtic/bin (03:55, 04:100, 05:62,
   06:91) and VF to /hpcfs/users/$USER/vulcan_femtic, so a student logging in as themselves fails S1 (as designed:
   "ask Ben"), and each student would upload 703 MB of meshes. run.sh does not set BIN and nothing documents an override.

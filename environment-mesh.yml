@@ -1,0 +1,14 @@
+# conda env for femtic_mesh (src/femtic_mesh): the Python side of the FEMTIC mesh chain.
+#   conda env create -f environment-mesh.yml && conda activate femtic-mesh
+#   pip install -e .        (once pyproject.toml carries the femtic_mesh entry; until then: set PYTHONPATH=src)
+#   python tests/mesh/run_all.py
+# numpy is the only hard dependency. pandas, scipy and numba are not used by this slice (P1); numba would be
+# needed only for a makeTetraMesh port, which the study rejects (docs/dev/mesh_port_feasibility_2026-10-06.md s4).
+# The tests are plain scripts (no pytest). psutil is optional: the tests use it to report peak RSS.
+name: femtic-mesh
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10
+  - numpy>=1.23        # np.loadtxt's C parser (exact float parsing) arrived in 1.23
+  - psutil             # optional: peak-RSS figures in the tests
