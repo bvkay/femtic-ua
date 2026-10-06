@@ -3,7 +3,8 @@
 # portability_test.sh -- checks the Phoenix kit against Phoenix's own interpreters. The login and compute nodes run
 # RHEL 8.4 (discovery txt:12): GNU bash 4.4.19, gawk 4.2.1, and the system python3 3.6.8 (discovery txt:805).
 # Nothing on the PC has those versions, so most checks are static:
-#   B  bash: no feature newer than bash 4.4 (or gawk 4.2) in femtic_lib.sh, 0*.sh, 0*.slurm and tests/*.sh.
+#   B  bash: no feature newer than bash 4.4 (or gawk 4.2) in the kit's *.sh (femtic_lib.sh, 0*.sh, run.sh, status.sh),
+#      0*.slurm and tests/*.sh.
 #      bash 4.4 already has ${var@Q} (and @E @P @A @a), mapfile/readarray -d, 'local -', wait -n, namerefs, so
 #      those are only listed. Newer: ${var@U/@u/@L/@K} (5.1), @k (5.2), EPOCHSECONDS, EPOCHREALTIME, BASH_ARGV0
 #      (5.0), SRANDOM (5.1), wait -p (5.1) / -f (5.0), the bash 5 shopt options, and '&' in a ${var/pat/rep}
@@ -38,7 +39,7 @@ eq()   { if [ "$2" = "$3" ]; then ok "$1 ($2)"; else bad "$1: got '$2', want '$3
 
 # ---------------------------------------------------------------- B: bash > 4.4, gawk > 4.2
 SELF=$(basename "${BASH_SOURCE[0]}")
-FILES=(); for f in "$PLAN"/femtic_lib.sh "$PLAN"/0*.sh "$PLAN"/0*.slurm "$PLAN"/tests/*.sh; do
+FILES=(); for f in "$PLAN"/*.sh "$PLAN"/0*.slurm "$PLAN"/tests/*.sh; do
   [ -f "$f" ] && [ "$(basename "$f")" != "$SELF" ] && FILES+=("$f"); done
 NEWER=(
   '\$\{[#!]?[A-Za-z_][A-Za-z0-9_]*(\[[^]]*\])?@[UuLKk]\}=${var@U/@u/@L/@K} (bash 5.1), @k (5.2)'

@@ -1,0 +1,4 @@
+PLC earth-surface tris: 1563 PLC total tris: 2441
+exe toy.1.face: n=2441 marker100=1563
+exe toy.4.face: n=2441 marker100=1563
+toy.4.neigh (31321, 5) boundary(-1) entries 878

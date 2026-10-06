@@ -1,0 +1,47 @@
+# Transcribed verbatim from this session's command output (2026-10-06, before the network dropped).
+# Re-running pypi.py / conda search later failed with getaddrinfo errors (see out/pypi.log, out/conda_search.log).
+
+## pypi.py (PyPI JSON API, latest release, wheel files by platform)
+gmsh       4.15.2     uploaded ['2026-03-24'] files {'mac': 2, 'linux': 1, 'win': 1} license=GPLv2+ n_releases=25
+tetgen     0.8.4      uploaded ['2026-05-04'] files {'mac': 6, 'linux': 6, 'win': 3, 'sdist': 1} license=MIT n_releases=35
+    ['cp310', 'cp311', 'cp312']
+meshpy     2026.1.1   uploaded ['2026-09-02'] files {'mac': 12, 'linux': 24, 'win': 6, 'sdist': 1} license= n_releases=20
+    ['cp310', 'cp311', 'cp312', 'cp313', 'cp314', 'cp315']
+pygimli    1.6.1      uploaded ['2026-09-18'] files {'any': 1} license=Apache-2.0 n_releases=23
+pgcore     1.6.0      uploaded ['2026-05-11'] files {'linux': 5, 'mac': 2, 'win': 3} license=Apache 2.0 n_releases=18
+    ['cp310', 'cp311', 'cp312', 'cp313', 'cp314']
+discretize 0.12.0     uploaded ['2025-10-09'] files {'mac': 12, 'linux': 24, 'win': 12, 'sdist': 1} license=The MIT License (MIT) n_releases=78
+
+## conda search -c conda-forge --override-channels <pkg> --platform <p>  (last line shown)
+tetgen win-64     : tetgen 1.6.0 hac47afa_2 conda-forge
+tetgen linux-64   : tetgen 1.6.0 hecca717_2 conda-forge
+tetgen osx-64     : tetgen 1.6.0 hcc62823_2 conda-forge
+tetgen osx-arm64  : tetgen 1.6.0 hf6b4638_2 conda-forge
+tetgen win-64 info: size 454 KB, license AGPL-3.0-or-later, deps ucrt, vc, vc14_runtime
+gmsh win-64       : gmsh 4.15.2 hfa83a43_llvm_10 conda-forge
+gmsh osx-arm64    : gmsh 4.15.2 haf060c4_11 conda-forge
+python-gmsh       : 4.15.2 pyhce30654_11 (win-64, osx-arm64)
+meshpy win-64     : meshpy 2026.1.1 py315h74b5a60_2 conda-forge
+meshpy osx-arm64  : meshpy 2026.1.1 py315h204736f_2 conda-forge
+pygimli           : "No match found for: pygimli" (win-64 and osx-arm64; pyGIMLi publishes on its own 'gimli' channel and PyPI)
+discretize win-64 : discretize 0.12.0 np2py314h6884c64_1 conda-forge
+discretize osx-arm64: discretize 0.12.0 np2py314hf011131_1 conda-forge
+
+## Installed wheel tags in S/env (from *.dist-info/WHEEL)
+tetgen-0.8.4      cp312-abi3-win_amd64   (MIT wrapper; bundled src/tetgen-license = AGPL-3 dual licence)
+meshpy-2026.1.1   cp312-cp312-win_amd64  (LICENSE starts with the Triangle licence: no-compensation clause)
+discretize-0.12.0 cp312-cp312-win_amd64  MIT
+gmsh-4.15.2       py3-none-win_amd64     GPLv2+ (share/doc/gmsh/LICENSE.txt)
+pgcore-1.6.0      cp312-cp312-win_amd64  Apache 2.0 ; pygimli-1.6.1 py3-none-any Apache-2.0
+
+## Bundled TetGen banners (strings in the binaries)
+meshpy/_internals.pyd : "Version 1.6.1", "August, 2026"
+tetgen/_tetgen.pyd    : "Version 1.6",   "August, 2020"
+Library/bin/tetgen.exe: "Version 1.6",   "August, 2020"   (conda-forge 1.6.0)
+
+## Installed footprint (du -sh)
+gmsh: Lib/gmsh-4.15.dll 86M + Lib/gmsh.dll.lib 40M + share/doc/gmsh 15M (+ gmsh.py 432K); wheel download 42.2 MB
+tetgen.exe 512K ; meshpy 2.0M ; tetgen (pyvista) 685K ; pgcore 43M + pygimli 5.0M ; discretize 4.2M
+
+## gmsh General.BuildOptions (gmsh 4.15.2 wheel)
+... Hxt ... Mmg ... Netgen ... OpenCASCADE ... OpenMP ... TetGen/BR ...

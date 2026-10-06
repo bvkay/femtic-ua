@@ -1,12 +1,13 @@
 # shellcheck shell=bash
 # =============================================================================
 # femtic_lib.sh -- helpers shared by 01_build_femtic.sh (smoke/restart test), 03_mesh.slurm,
-# 04_inversion.slurm, 05_chain.sh and 06_forward_only.slurm; femtic_env.sh also calls femtic_apps_remap.
-# 01_build_femtic.sh installs it to $BIN and $BIN/femtic_env.sh sources it, so the restart logic
-# that the smoke test exercises is the SAME code the 3-day chain runs.
-# After editing this file on Phoenix, re-install it:   install -m 644 femtic_lib.sh "$BIN"/
-# (01 SMOKE_ONLY=1, 03, 04, 05 and 06 all refuse to run with a copy older than FEMTIC_LIB_VERSION 4; version 3
-# loses N_iv behind FEMTIC's DIV_NUM_RHS_FWD warning, see Versions below.)
+# 04_inversion.slurm, 05_chain.sh, 06_forward_only.slurm, run.sh and status.sh; femtic_env.sh also calls
+# femtic_apps_remap.
+# Since version 5 every script sources the KIT's own copy, $KIT/femtic_lib.sh (KIT default
+# /hpcfs/users/$USER/vulcan_femtic/kit), after $BIN/femtic_env.sh. So uploading a new kit is all it takes: the copy
+# that 01_build_femtic.sh installed in $BIN is read by femtic_env.sh first and then replaced, function by function.
+# The restart logic that 01's smoke test exercises is the SAME code the 3-day chain runs, because both read $KIT.
+# (01 SMOKE_ONLY=1, 03, 04, 05, 06 and run.sh refuse to run with a kit older than FEMTIC_LIB_VERSION 5.)
 # Versions: 2 = the copy installed on Phoenix on 2026-09-25 (commit fa58604, 18,193 B).
 #           3 = 2026-09-28: femtic_pardiso_kb reads FEMTIC's %g numbers (1.23456e+06, 1.5e+08; version 2
 #               turned them into 12345606 and 1508 KB); sensitivity-step memory model with both dense
@@ -15,6 +16,9 @@
 #           4 = 2026-09-28, later: femtic_niv_measured keeps counting across the two "Warning : Division number
 #               of right-hand sides ..." lines FEMTIC writes when DIV_NUM_RHS_FWD > N_iv (Forward3D.cpp:183-186);
 #               version 3 lost the count there and 04 printed "?".
+#           5 = 2026-10-06: the kit layout VF=/hpcfs/users/$USER/vulcan_femtic with kit/, shared/, runs/ (run.sh);
+#               scripts source $KIT/femtic_lib.sh instead of $BIN's; femtic_kit_version / femtic_kit_banner read
+#               $KIT/VERSION (written by scripts/make_phoenix_kit.sh) and job_outcomes.tsv gets a "kit" column.
 #
 # control.dat format (verified in femtic/src/AnalysisControl.cpp::inputControlData):
 #   a keyword line (matched by prefix, "line.substr(0,N)") followed by its value(s),
@@ -24,7 +28,23 @@
 #   HOLD_FWD_MEM is a bare keyword with NO value line (use femtic_ctl_has, not femtic_ctl_get).
 # =============================================================================
 # shellcheck disable=SC2034  # read by the scripts that source this file
-FEMTIC_LIB_VERSION=4
+FEMTIC_LIB_VERSION=5
+
+# femtic_kit_version [KIT] -> line 1 of KIT/VERSION (default $KIT), the git short sha of the commit the kit was
+#   exported from by scripts/make_phoenix_kit.sh on the PC; "unknown" if there is no VERSION file (e.g. the repo's
+#   hpc/phoenix_plan itself). VERSION lines: sha, commit date, branch, export date.
+femtic_kit_version() {
+  local k=${1:-${KIT:-.}} v=""
+  [ -r "$k/VERSION" ] && v=$(head -1 "$k/VERSION" | tr -d '[:space:]')
+  echo "${v:-unknown}"
+}
+
+# femtic_kit_banner [KIT] -> "KIT VERSION: <sha> (<commit date>)", the line every job prints at its start
+femtic_kit_banner() {
+  local k=${1:-${KIT:-.}} d=""
+  [ -r "$k/VERSION" ] && d=$(sed -n '2{s/\r$//;p;q;}' "$k/VERSION")
+  echo "KIT VERSION: $(femtic_kit_version "$k") (${d:-no VERSION file in $k})"
+}
 
 # femtic_ctl_get FILE KEY  -> prints the (first) value line after KEY, empty if absent
 femtic_ctl_get() {
@@ -364,10 +384,12 @@ femtic_fwd_mb_auto() {
   echo "${FEMTIC_FWD_MB_FALLBACK:-33000} fallback_no_log_yet"
 }
 
-# femtic_mem_model DIR -> sets the variables of the layout rule (README section 6) and prints two summary lines:
+# femtic_mem_model DIR [MESHDIR] -> sets the variables of the layout rule (README section 6) and prints two summary
+#   lines. MESHDIR (default DIR) holds mesh.dat and resistivity_block_iter0.dat: run.sh passes the shared mesh
+#   folder, so that the rule runs before it links them into the run folder.
 #   FM_NMT FM_ND   MT stations and real data of DIR/observe.dat (femtic_obs_counts)
 #   FM_NEQ   N_eq: knob NEQ if a number; else the largest logged value in DIR's femtic logs (femtic_*.log,
-#            fwd0_*/, logs/run_*/); else nodes + elements of DIR/mesh.dat. For a tetrahedral mesh of a ball the
+#            fwd0_*/, logs/run_*/); else nodes + elements of MESHDIR/mesh.dat. For a tetrahedral mesh of a ball the
 #            edge count is nodes + elements + (boundary faces / 2) - 1; on Vulcan v1-v3 nodes + elements is
 #            2,557 above the logged N_eq (0.07-0.14 %).
 #   FM_NIV   N_iv: knob NIV if a number; else 4 x FM_NMT. With OWNER_ELEMENT -1 prep adds a VTF block of 120 dummy
@@ -375,14 +397,14 @@ femtic_fwd_mb_auto() {
 #            without data at a frequency adds no right-hand side and the MT station's own Hx, Hy are not
 #            requested, so N_iv stays 4 x 120 = 480 (not 480 + 3 x 120 = 840). That is a reading of the source,
 #            not a measurement: T4 measures it (femtic_niv_measured); until then NIV=840 is the pessimistic case.
-#   FM_M     free parameters (block types 0/3) of DIR/resistivity_block_iter0.dat (distortion parameters,
+#   FM_M     free parameters (block types 0/3) of MESHDIR/resistivity_block_iter0.dat (distortion parameters,
 #            DISTORTION != 0, are not added)
 #   FM_NDF   8 x FM_NMT
 #   FM_NONP_MB  knob NONPARDISO_MB if a number, else femtic_sens_mem_mb FM_NEQ FM_NIV FM_M FM_NDF
 #   FM_FWD_MB   knob FWD_MB if a number, else femtic_fwd_mb_auto DIR FM_NEQ
 #   Returns 1 (message on stderr) if a quantity cannot be derived; the knob named in the message fixes it.
 femtic_mem_model() {
-  local d=${1:-.} vt
+  local d=${1:-.} md=${2:-${1:-.}} vt
   FM_NMT=""; FM_ND=""; FM_NEQ=""; FM_NEQ_SRC=""; FM_NIV=""; FM_NIV_SRC=""; FM_M=""; FM_NDF=""
   FM_NONP_MB=""; FM_NONP_SRC=""; FM_FWD_MB=""; FM_FWD_SRC=""
   read -r FM_NMT FM_ND < <(femtic_obs_counts "$d/observe.dat")
@@ -398,7 +420,7 @@ femtic_mem_model() {
       if [ -n "$FM_NEQ" ]; then
         FM_NEQ_SRC="largest 'Number of equation after degeneration' in the femtic logs of $d"
       else
-        vt=$(femtic_mesh_counts "$d/mesh.dat")
+        vt=$(femtic_mesh_counts "$md/mesh.dat")
         if [ -n "$vt" ]; then
           FM_NEQ=$(( ${vt% *} + ${vt#* } ))
           FM_NEQ_SRC="mesh.dat nodes + elements (${vt% *} + ${vt#* }; no femtic log yet)"
@@ -407,7 +429,7 @@ femtic_mem_model() {
     *[!0-9]*) echo "femtic_mem_model: NEQ='$NEQ' is not a whole number" >&2; return 1 ;;
     *) FM_NEQ=$NEQ; FM_NEQ_SRC="NEQ=$NEQ (set)" ;;
   esac
-  [ -f "$d/resistivity_block_iter0.dat" ] && FM_M=$(femtic_block_stats "$d/resistivity_block_iter0.dat" | awk '$4 > 0 {print $4}')
+  [ -f "$md/resistivity_block_iter0.dat" ] && FM_M=$(femtic_block_stats "$md/resistivity_block_iter0.dat" | awk '$4 > 0 {print $4}')
   case "${NONPARDISO_MB:-auto}" in
     auto)
       if [ -z "$FM_NEQ" ] || [ -z "$FM_NIV" ] || [ -z "$FM_M" ] || [ -z "$FM_NDF" ]; then
@@ -566,11 +588,12 @@ femtic_watch() {
 }
 
 # femtic_outcome_row FILE COL... -> appends one tab-separated row to FILE, header written once:
-#   job_id script host start end outcome iter_start iter_end exit detail
+#   job_id script host start end outcome iter_start iter_end exit detail kit
+#   The last column, kit, is added here: femtic_kit_version of $KIT.
 femtic_outcome_row() {
   local f=$1; shift
-  [ -s "$f" ] || printf 'job_id\tscript\thost\tstart\tend\toutcome\titer_start\titer_end\texit\tdetail\n' > "$f"
-  ( IFS=$'\t'; printf '%s\n' "$*" ) >> "$f"
+  [ -s "$f" ] || printf 'job_id\tscript\thost\tstart\tend\toutcome\titer_start\titer_end\texit\tdetail\tkit\n' > "$f"
+  ( IFS=$'\t'; printf '%s\n' "$*"$'\t'"$(femtic_kit_version)" ) >> "$f"
 }
 
 # femtic_apps_remap -> for nodes WITHOUT /apps but WITH /gpfs/apps. Phoenix's interactive-partition

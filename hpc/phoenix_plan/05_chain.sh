@@ -3,8 +3,11 @@
 # 05_chain.sh -- submit K chained FEMTIC inversion jobs (each <= 3 days, the icelake/highmem MaxTime)
 #
 #   bash -l 05_chain.sh <inversion_dir> [K=3] [ITER_STEP=5] [ITER_MAX]
-#   e.g. bash -l 05_chain.sh /hpcfs/users/$USER/vulcan_femtic/work/v2/inv01 3 8 30
+#   Normally run by the kit's run.sh for a run folder whose run.env says JOB=inversion:  bash $VF/kit/run.sh Run04
+#   (it passes K, ITER_STEP, ITER_MAX and the layout). By hand, e.g.
+#   SBATCH_EXTRA='--ntasks-per-node=3 --cpus-per-task=24' bash -l $VF/kit/05_chain.sh $VF/runs/Run04 3 8 30
 #   Run on the login node, where sbatch is available. Nothing here needs internet or git.
+#   KIT (default: this script's folder) is the kit whose femtic_lib.sh and 04_inversion.slurm are used.
 #
 # Layout (ranks x threads, partition, --mem). The chain REFUSES to start without one. The 04 header's 2 x 36 is
 # the v3 layout; v2 runs 3 x 24, and a v2 chain on the header would silently get 2 ranks for 21 frequencies
@@ -52,14 +55,16 @@ K=${2:-3}
 ITER_STEP=${3:-5}
 ITER_MAX=${4:-}
 DEP_TYPE=${DEP_TYPE:-afterok}
-JOB_SCRIPT=${JOB_SCRIPT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/04_inversion.slurm}
+KIT=${KIT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}
+JOB_SCRIPT=${JOB_SCRIPT:-$KIT/04_inversion.slurm}
 SBATCH_EXTRA=${SBATCH_EXTRA:-}
 SBATCH_EXPORT_EXTRA=${SBATCH_EXPORT_EXTRA:-}
-BIN=${BIN:-/hpcfs/users/$USER/femtic/bin}
+BIN=${BIN:-${VF:-/hpcfs/users/$USER/vulcan_femtic}/bin}   # FEMTIC: $VF/bin links to a build (RUNBOOK S1)
 
 # shellcheck disable=SC1091
-source "$BIN/femtic_lib.sh" 2>/dev/null || { echo "ERROR: $BIN/femtic_lib.sh missing -- run 01_build_femtic.sh"; exit 1; }
-[ "${FEMTIC_LIB_VERSION:-0}" -ge 4 ] || { echo "ERROR: $BIN/femtic_lib.sh is version ${FEMTIC_LIB_VERSION:-unset}; this script needs FEMTIC_LIB_VERSION >= 4 (version 2, installed 2026-09-25, misreads PARDISO memory and has no layout rule; version 3 loses N_iv when DIV_NUM_RHS_FWD > N_iv) -- install -m 644 <phoenix_plan>/femtic_lib.sh $BIN/"; exit 1; }
+source "$KIT/femtic_lib.sh" 2>/dev/null || { echo "ERROR: no kit at $KIT (femtic_lib.sh missing): upload export/kit there, or pass KIT=<kit folder>"; exit 1; }
+[ "${FEMTIC_LIB_VERSION:-0}" -ge 5 ] || { echo "ERROR: $KIT/femtic_lib.sh is version ${FEMTIC_LIB_VERSION:-unset}; this script needs FEMTIC_LIB_VERSION >= 5 (an older kit: upload the current one, made by scripts/make_phoenix_kit.sh)"; exit 1; }
+femtic_kit_banner
 INV_DIR=$(cd "$INV_DIR" 2>/dev/null && pwd) || { echo "ERROR: $1 is not a directory"; exit 1; }
 case "$INV_DIR" in /home/*) echo "ERROR: jobs must run from /hpcfs, not /home"; exit 1 ;; esac
 cd "$INV_DIR" || exit 1
@@ -75,7 +80,7 @@ grep -q 'YOUR_EMAIL@' "$JOB_SCRIPT" && { echo "ERROR: set --mail-user in $JOB_SC
 [ -f STALLED ]   && { echo "STALLED marker exists in $INV_DIR -- inspect femtic.cnv / logs, then rm STALLED"; exit 1; }
 DIST=$(femtic_ctl_get control.dat DISTORTION | awk '{print $1}')
 HIGHEST=$(femtic_last_iter .)
-[ -n "$HIGHEST" ] || { echo "ERROR: no resistivity_block_iter<N>.dat in $INV_DIR (copy the gated mesh first: README section 3, step 7)"; exit 1; }
+[ -n "$HIGHEST" ] || { echo "ERROR: no resistivity_block_iter<N>.dat in $INV_DIR (run.sh links resistivity_block_iter0.dat from \$VF/shared/mesh_<v>)"; exit 1; }
 LAST=$(femtic_restart_pick . "${DIST:-0}" 0) || { echo "ERROR: no valid restart model in $INV_DIR (messages above; DISTORTION=${DIST:-0})"; exit 1; }
 [ "$LAST" = "$HIGHEST" ] || echo "note: model $HIGHEST fails the integrity check; the first job will rename it and restart from $LAST"
 if [ -n "$ITER_MAX" ] && [ "$LAST" -ge "$ITER_MAX" ]; then echo "already at iteration $LAST >= ITER_MAX=$ITER_MAX"; exit 0; fi
@@ -130,7 +135,7 @@ echo "layout: ${LAYOUT_SBATCH:+$LAYOUT_SBATCH }$SBATCH_EXTRA${LAYOUT_EXPORT:+  -
 
 # ---------------------------------------------------------------- submit
 echo "chain of $K jobs in $INV_DIR: from iteration $LAST, +$ITER_STEP per job, cap ${ITER_MAX:-none}, dependency=$DEP_TYPE"
-EXPORTS="ALL,AUTO_RESTART=1,ITER_STEP=$ITER_STEP,ITER_MAX=$ITER_MAX,INV_DIR=$INV_DIR,BIN=$BIN${LAYOUT_EXPORT:+,$LAYOUT_EXPORT}${SBATCH_EXPORT_EXTRA:+,$SBATCH_EXPORT_EXTRA}"
+EXPORTS="ALL,AUTO_RESTART=1,ITER_STEP=$ITER_STEP,ITER_MAX=$ITER_MAX,INV_DIR=$INV_DIR,BIN=$BIN,KIT=$KIT${LAYOUT_EXPORT:+,$LAYOUT_EXPORT}${SBATCH_EXPORT_EXTRA:+,$SBATCH_EXPORT_EXTRA}"
 PREV=""
 IDS=()
 for i in $(seq 1 "$K"); do
@@ -146,7 +151,7 @@ for i in $(seq 1 "$K"); do
   IDS+=("$JID")
   PREV=$JID
 done
-printf '%s %s\n' "$(date +%F_%T)" "${IDS[*]}" >> "$INV_DIR/chain_jobs.txt"
+printf '%s %s kit=%s\n' "$(date +%F_%T)" "${IDS[*]}" "$(femtic_kit_version)" >> "$INV_DIR/chain_jobs.txt"
 echo "submitted: ${IDS[*]}   (also appended to $INV_DIR/chain_jobs.txt)"
 echo "monitor:   squeue -u $USER -o '%.10i %.14j %.8T %.10M %.6D %R'"
 echo "progress:  tail -3 $INV_DIR/femtic.cnv ; column -t -s \$'\\t' $INV_DIR/job_outcomes.tsv"

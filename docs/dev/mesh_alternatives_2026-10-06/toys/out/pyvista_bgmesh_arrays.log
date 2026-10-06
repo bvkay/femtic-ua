@@ -1,0 +1,8 @@
+parsing switches
+success
+bg (2167, 3) (11537, 4) 0 2166
+loaded
+parsing switches
+success
+/usr/bin/bash: line 1:  1653 Segmentation fault      ./env/python.exe pv_bg.py pYAq1.4nQ pYAq1.4nQm 1
+exit=139

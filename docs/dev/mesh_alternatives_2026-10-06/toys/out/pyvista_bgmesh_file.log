@@ -1,0 +1,4 @@
+parsing switches
+success
+/usr/bin/bash: line 1:  1638 Segmentation fault      ./env/python.exe pv_bgf.py
+exit=139

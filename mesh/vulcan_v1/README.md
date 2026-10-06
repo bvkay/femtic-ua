@@ -292,7 +292,7 @@ Hand-edited 2026-09-28: the three steps prep generated on 2026-09-25 are done or
 
 1. Done on 2026-09-25: the gated mesh chain ran on these inputs, and the half-space accuracy gate ran on the mesh (uniform 3 and 100 ohm-m, OWNER_ELEMENT -1): see mesh_logs/, halfspace/ and validation/mesh_2026-09-25/halfspace_accuracy.md. mesh.dat and resistivity_block_iter0.dat are gitignored (inversion/ of the D:/BEN/FEMTIC_2026 checkout); their md5 is in mesh_logs/products.md5.
 2. Gate result: FAIL at 20, 62.9 and 200 Hz in 3 ohm-m; every band of 6.3 Hz and below in 3 ohm-m and every band in 100 ohm-m passes. v1 is not a candidate for the inversion (docs/STATUS.md decision D1 is between v2 and v3), and nothing further is planned for it.
-3. The chosen mesh (v2 or v3) goes to Phoenix as in hpc/phoenix_plan/RUNBOOK_first_inversion.md; nothing runs on the Windows PC or in WSL any more (Ben, 2026-09-28). hpc/phoenix_plan/03_mesh.slurm is a different, ungated chain: do not use it for these inputs.
+3. The chosen mesh (v2 or v3) goes to Phoenix as in hpc/phoenix_plan/RUNBOOK.md; nothing runs on the Windows PC or in WSL any more (Ben, 2026-09-28). hpc/phoenix_plan/03_mesh.slurm is a different, ungated chain: do not use it for these inputs.
 
 ## Sites
 

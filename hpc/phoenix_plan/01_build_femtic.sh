@@ -12,14 +12,16 @@
 #     TOOLCHAIN=foss  bash -l 01_build_femtic.sh     # GCC 12.3 + OpenMPI 4.1.5 + Intel MKL 2023.1 (default, primary)
 #     TOOLCHAIN=intel bash -l 01_build_femtic.sh     # intel-compilers 2023.1 + Intel MPI 2021.9 + MKL 2023.1 (untested fallback)
 #   Outside a Slurm allocation T2/T5 are skipped (SMOKE=auto); run them with step C.
-# Step C, smoke tests T1 + T2 + T5 of the INSTALLED build, as a batch job (submit from /hpcfs/users/$USER/FEMTIC_2026):
+# Step C, smoke tests T1 + T2 + T5 of the INSTALLED build with the uploaded kit, as a batch job
+# (submit from /hpcfs/users/$USER/vulcan_femtic, the folder that holds kit/):
 #     sbatch -p icelake -N 1 -n 4 --mem=8G --time=00:30:00 -J femtic_smoke -o slurm-%x-%j.out \
-#            --wrap 'TOOLCHAIN=foss SMOKE_ONLY=1 bash -l hpc/phoenix_plan/01_build_femtic.sh'
+#            --wrap 'TOOLCHAIN=foss SMOKE_ONLY=1 bash -l kit/01_build_femtic.sh'
 #   icelake is where 04/06 run; at most 2.4 SU (4 cpus x 0.5 h x 1.2 SU per cpu-hour). '-p interactive' (free
 #   according to the wiki) also works, but only with a femtic_env.sh written by THIS version of the script:
 #   its nodes have no /apps, and femtic_env.sh now remaps /apps to /gpfs/apps there (femtic_apps_remap).
 #   SMOKE_ONLY=1 skips sections 1-4 (sources, module and compiler checks, build, femtic_env.sh): it sources
-#   $BIN/femtic_env.sh, runs T1 (ldd) on $BIN/femtic and T2/T5 as section 6 does, and logs to
+#   $BIN/femtic_env.sh and then the kit's femtic_lib.sh (KIT, default: this script's folder), as 03-06 do, runs
+#   T1 (ldd) on $BIN/femtic and T2/T5 as section 6 does, and logs to
 #   $SRC/smoke_<toolchain>_<date>.log (work files in $SRC/smoke_<toolchain>_<date>/). It needs no git, no
 #   make, no compiler and no MKL headers, only the runtime libraries that ldd resolves.
 #   SMOKE=1 (build, then T2/T5 in the same run) still works, but only where make exists: the login node.
@@ -32,8 +34,7 @@
 # Before running:
 #   1. the ported Makefiles must be in $PORTED (default $SRC/ported/; same tree:
 #      ported/femtic/Makefile.gcc_openmpi_mkl, ported/makeTetraMesh/Makefile.gcc_mkl, ...).
-#      Ben's WinSCP copy of the project puts them in /hpcfs/users/$USER/FEMTIC_2026/hpc/ported:
-#      pass PORTED=/hpcfs/users/$USER/FEMTIC_2026/hpc/ported, or copy that directory to $SRC/ported
+#      The exported kit does not carry them: WinSCP the repo's hpc/ported to $SRC/ported, or pass PORTED=<that copy>
 #   2. keep femtic_lib.sh next to this script (it is installed to $BIN)
 #   3. the module names below were verified by 00_discover.sh on the login node p2-log-2 on
 #      2026-09-25 (phoenix_plan/discovery/phoenix_discovery_p2-log-2_2026-09-25.txt); no MODS needed
@@ -103,6 +104,7 @@ if [ -z "${PORTED:-}" ] && [ -d "$_KIT_PORTED" ]; then PORTED="$_KIT_PORTED"; fi
 PORTED="${PORTED:-$SRC/ported}"
 TARBALLS="${TARBALLS:-$SRC/tarballs}"
 PLAN_DIR="${PLAN_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+KIT="${KIT:-$PLAN_DIR}"                 # the kit whose femtic_lib.sh the smoke test (section 6) and 03-06 use
 JOBS="${JOBS:-8}"
 PIN="${PIN:-1}"
 SMOKE="${SMOKE:-auto}"
@@ -151,12 +153,12 @@ if [ "$SMOKE_ONLY" = 1 ]; then
   done
   # shellcheck disable=SC1091
   source "$BIN/femtic_env.sh" || die "SMOKE_ONLY: sourcing $BIN/femtic_env.sh failed"
-  [ "${FEMTIC_LIB_VERSION:-0}" -ge 4 ] || die "SMOKE_ONLY: $BIN/femtic_lib.sh is version ${FEMTIC_LIB_VERSION:-unset}; this script needs FEMTIC_LIB_VERSION >= 4 (version 2, installed 2026-09-25, misreads PARDISO memory and has no layout rule; version 3 loses N_iv when DIV_NUM_RHS_FWD > N_iv) -- rebuild on the login node (step B, installs it), or install -m 644 $PLAN_DIR/femtic_lib.sh $BIN/"
+  # shellcheck disable=SC1091
+  source "$KIT/femtic_lib.sh" || die "SMOKE_ONLY: no kit at $KIT (femtic_lib.sh missing): pass KIT=<kit folder>"
+  [ "${FEMTIC_LIB_VERSION:-0}" -ge 5 ] || die "SMOKE_ONLY: $KIT/femtic_lib.sh is version ${FEMTIC_LIB_VERSION:-unset}; this script needs FEMTIC_LIB_VERSION >= 5 (an older kit: upload the current one, made by scripts/make_phoenix_kit.sh)"
+  femtic_kit_banner
   [ "${FEMTIC_TOOLCHAIN:-$TOOLCHAIN}" = "$TOOLCHAIN" ] \
     || die "SMOKE_ONLY: $BIN/femtic_env.sh belongs to a TOOLCHAIN=$FEMTIC_TOOLCHAIN build; rerun with TOOLCHAIN=$FEMTIC_TOOLCHAIN"
-  if [ -f "$PLAN_DIR/femtic_lib.sh" ] && ! cmp -s "$PLAN_DIR/femtic_lib.sh" "$BIN/femtic_lib.sh"; then
-    echo "NOTE: $BIN/femtic_lib.sh differs from $PLAN_DIR/femtic_lib.sh; the test uses the installed copy, as 03/04/06 do"
-  fi
   if [ ! -d /apps ] && [ -d /gpfs/apps ] && ! grep -q femtic_apps_remap "$BIN/femtic_env.sh"; then
     echo "NOTE: /apps is absent on $(hostname) and $BIN/femtic_env.sh predates the /apps -> /gpfs/apps remap, so T1 will"
     echo "      find the MKL libraries missing. Re-run the build on the login node (step B) to regenerate it, or use -p icelake."
@@ -468,7 +470,7 @@ fi
 T2=SKIPPED; T5=SKIPPED
 if [ "$SMOKE" = 1 ]; then
   # shellcheck disable=SC1091
-  . "$BIN/femtic_lib.sh"
+  . "$KIT/femtic_lib.sh" || die "no kit at $KIT (femtic_lib.sh missing)"
   EX="$SRC/femtic/examples/INV_MT_01/Tetra"
   W="$SRC/smoke_${TOOLCHAIN}_$STAMP"
   mkdir -p "$W/straight" "$W/restart" || die "cannot create $W"
@@ -526,9 +528,8 @@ else
 fi
 
 echo; echo "== $(date)  $([ "$SMOKE_ONLY" = 1 ] && echo SMOKE_ONLY || echo BUILD) DONE  T1=$T1  T2=$T2  T5=$T5   log: $LOG"
-echo "   next: copy the gated WSL mesh (mesh.dat, resistivity_block_iter0.dat, control.dat, observe.dat, station_map.csv)"
-echo "         into vulcan_femtic/inputs/vulcan_v2 and vulcan_v3 and check it (RUNBOOK B3; not 03_mesh.slurm: ungated);"
-echo "         then 06_forward_only.slurm, one job per work directory vulcan_femtic/work/<mesh>/gate100 and gate3 (RUNBOOK B4a)"
+echo "   next: copy the gated WSL mesh (mesh.dat, resistivity_block_iter0.dat) to vulcan_femtic/shared/mesh_v2 (v3: mesh_v3); control.dat, observe.dat, station_map.csv come in each run folder"
+echo "         (scripts/make_run.sh on the PC; not 03_mesh.slurm: ungated); then, per run folder: bash $KIT/run.sh RunNN"
 [ "$T1" = PASS ] && [ "$T2" != FAIL ] && [ "$T5" != FAIL ] || exit 3
 exit 0
 

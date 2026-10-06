@@ -14,6 +14,21 @@ committed kit 55bbf44. The smoke job on icelake reported T1, T2 and T5 PASS on 2
 step 5); the two attempts of 2026-09-25 had stopped before FEMTIC ran. What is still unverified is
 listed at the end of section 10; VERIFY tags remain only on those items.
 
+**How to use this file (2026-10-06).** To run anything on Phoenix, follow **`RUNBOOK.md`** next to this file: the
+student runbook, one command per step (setup once: the kit and the shared meshes; then per run: `scripts/make_run.sh`
+on the PC, WinSCP, `run.sh`, `status.sh`, WinSCP back). This README is the developer reference: Phoenix facts
+(sections 1 and 12), the build (3 and 4), SU costs (5), the memory model and the layout rule (6), restarts and exit
+codes (7), and what was verified and how (9 and 10).
+
+The KISS layout (femtic_lib.sh version 5): on Phoenix everything lives under `VF=/hpcfs/users/$USER/vulcan_femtic`
+(section 2): `kit/` (exported on the PC by `scripts/make_phoenix_kit.sh` from the last commit and copied as one
+folder; its `VERSION` file names the commit, and every job prints it as `KIT VERSION:`), `shared/mesh_v2/` and
+`shared/mesh_v3/` (uploaded once), one folder per run `runs/RunNN/` (made on the PC by `scripts/make_run.sh`) and
+`runs/INDEX.md`. Every script reads `femtic_lib.sh` from the kit (`$KIT`), so a kit change installs nothing into
+`$BIN`, and no step checks an md5. Developer tests stay on the PC (`tests/`, not in the kit). The long 2026-09-28
+runbook (steps B1-B6) and its checker are archived unchanged in `docs/dev/phoenix_runbook_2026-09-28/`: where this
+README cites "RUNBOOK B<n>", it means that archived file.
+
 ## 0. Files
 
 | File | Where it runs | Purpose |
@@ -21,7 +36,10 @@ listed at the end of section 10; VERIFY tags remain only on those items.
 | `00_discover.sh` | login node | Read-only survey: toolchain modules (`module avail foss imkl intel GCC OpenMPI impi`, `module spider imkl`), load tests, per-partition memory caps, billing weights, git/curl/internet, micromamba. Validates the planned requests with `sbatch --test-only`, which submits nothing. **Ran 2026-09-25 on p2-log-2**; re-run only to re-check after a Phoenix change. |
 | `discovery/phoenix_discovery_p2-log-2_2026-09-25.txt` | - | The full output of that run: the evidence for every "verified 2026-09-25" statement in this README and the scripts. |
 | `01_build_femtic.sh` | login node only (`FETCH_ONLY=1`, then the build); `SMOKE_ONLY=1` as a batch job | Gets the 7 sources pinned to audited commits (git clone, pre-copied git-free trees, or GitHub tarballs; never inside a compute job), builds them with the ported Makefiles, installs to `$BIN`, writes `femtic_env.sh`, runs test T1. `SMOKE_ONLY=1` runs T1, T2 and T5 on the installed build in a batch job, with no git, make or compiler. |
-| `femtic_lib.sh` | sourced | Shared helpers: control.dat edits, restart-model integrity check and fallback, the wall-limit watcher, launch command, log parsing. Installed to `$BIN`. |
+| `femtic_lib.sh` | sourced | Shared helpers: control.dat edits, restart-model integrity check and fallback, the wall-limit watcher, launch command, log parsing, the kit version. Every script reads it from `$KIT` (version 5); 01 also installs a copy to `$BIN` for `femtic_env.sh`. |
+| `run.sh`, `status.sh` | login node | The student's two commands: `run.sh RunNN` checks the run folder's `run.env` and the shared mesh, links the mesh, checks the memory layout rule (silent unless it refuses) and submits 06, 04 or 05 with the run's layout; `status.sh RunNN` prints the jobs' Slurm state, the newest gate/T6 lines, the last outcome and the run's INDEX line. |
+| `RUNBOOK.md` | read on the PC | **How to operate on Phoenix** (students): setup once (FEMTIC check, kit, shared meshes), each run (make_run.sh, WinSCP, run.sh, status.sh, WinSCP back, INDEX.md line), the first runs Run01-03, what-if notes. Not in the kit. |
+| `tests/run_sh_test.sh`, `tests/pc_scripts_test.sh`, `tests/runbook_walk_test.sh` | PC (Git Bash) | Developer tests of `run.sh`/`status.sh` (fake Slurm and femtic, end to end), of `scripts/make_phoenix_kit.sh` and `scripts/make_run.sh` (in a scratch clone), and of `RUNBOOK.md` (its own commands walked in a sandbox with the same fakes; every path it names, its mesh sizes, its run.sh refusals). Not in the kit. |
 | `02_env_femticpy.sh` | login node or interactive job | Reuses the micromamba 2.9.0 already under `/hpcfs/users/$USER/micromamba` (envs base, gjoint) and adds only the env `femticpy` from `environment_femticpy.yml` (written next to the script). Self-test includes a UTM 53S check. **Not used for Vulcan:** it sets up an unpatched upstream femticPy copy (`FEMTICPY_SRC`); the Vulcan inputs come from `scripts/prep_vulcan.py` with the vendored, patched copy (section 3, step 6). <!-- src: hpc/phoenix_plan/02_env_femticpy.sh:49 --> |
 | `03_mesh.slurm` | icelake (8 cpus) or interactive | The 7-step meshGen, then test T3 (mesh consistency) and sizing inputs. **Not used for Vulcan:** a different, ungated chain (section 3, step 7). |
 | `06_forward_only.slurm` | icelake, 1 node, 4 h (header; section 5) | **First Phoenix job on the real mesh (T6).** One forward solve (`ITERATION 0 0`) in the production layout: forward time per frequency, PARDISO memory per rank, peak node RSS, and a short report. Refuses a layout that breaks the memory rule (section 6). With `START_RHO=<ohm-m>` it is also the half-space accuracy gate. |
@@ -114,16 +132,18 @@ in the discovery output (p2-log-2, 2026-09-25), plus Ben's earlier node census f
 
 Ben's established Phoenix workflow, which these scripts follow:
 
-* Files go to `/hpcfs/users/a1690074/<project>` by **WinSCP**; this project is at
-  `/hpcfs/users/a1690074/FEMTIC_2026`. There is **no git** on the Phoenix tree, and every script tolerates
+* Files go to Phoenix by **WinSCP**: the kit, the shared meshes and one folder per run, all under
+  `/hpcfs/users/$USER/vulcan_femtic` (RUNBOOK.md). The September copy of the whole project at
+  `/hpcfs/users/a1690074/FEMTIC_2026` is obsolete except for its `hpc/ported/` (the Makefiles a rebuild needs,
+  section 3 step 4); no script defaults to it. There is **no git** on the Phoenix tree, and every script tolerates
   a git-free tree (01 reads `COMMIT_SHA.txt` or GitHub tarballs instead). The login node does have git 2.27,
   so `FETCH_ONLY=1` clones the upstream sources and records each checked-out commit in `<repo>/COMMIT_SHA.txt`.
   On a node without git, `01` reads a checkout's commit from `.git/HEAD` (and `.git/refs/` or `.git/packed-refs`).
 * **LF line endings.** All files here are LF. If a copied script fails at the shebang (`bad interpreter: ^M`),
   run `dos2unix *.sh *.slurm`. `05` refuses a CRLF job script.
 * **Python via micromamba** under `/hpcfs/users/$USER/micromamba` (not the Anaconda module).
-* **Job conventions** (03, 04, 06): `#SBATCH -o slurm-%x-%j.out`; `--mail-type=END,FAIL` to
-  `ben.kay@adelaide.edu.au`; `--signal=B:USR1@600` with a trap that writes `logs/WALLTIME_<jobid>` and a
+* **Job conventions** (03, 04, 06): `#SBATCH -o slurm-%x-%j.out`; no `#SBATCH` mail lines (run.sh passes
+  `--mail-type=NONE`, or `--mail-type=END,FAIL --mail-user=<MAIL>` from run.env); `--signal=B:USR1@600` with a trap that writes `logs/WALLTIME_<jobid>` and a
   `job_outcomes.tsv` row; knobs such as `THREADS` and `RANKS` through `--export=ALL,...`; a
   `logs/COMPLETED_<jobid>` marker only on a verified normal end, so a silent exit-0 death counts as FAIL;
   and `rcstat <jobid>` at the end of every job.
@@ -131,10 +151,8 @@ Ben's established Phoenix workflow, which these scripts follow:
 ```
 /home/$USER/                          10 GB cap (NFS): nothing from this plan (EasyBuild's defaults point here)
 /hpcfs/users/$USER/                   = /scratchdata1/users/$USER (gpfs-2-1): all builds and all jobs
-  FEMTIC_2026/                        Ben's WinSCP copy of this project (00_discover.sh ran here)
-    hpc/phoenix_plan/                 $PLAN: these scripts (00..06, femtic_lib.sh, environment_femticpy.yml)
-      discovery/                      phoenix_discovery_p2-log-2_2026-09-25.txt
-    hpc/ported/<tool>/Makefile.*      the ported Makefiles (PORTED=... for 01, or copy to femtic_src/ported)
+  FEMTIC_2026/                        Ben's September WinSCP copy of the project (00_discover.sh ran here); obsolete
+    hpc/ported/<tool>/Makefile.*      except the ported Makefiles (PORTED=... for 01, or copy to femtic_src/ported)
   micromamba/                         MAMBA_ROOT_PREFIX: micromamba 2.9.0, envs base and gjoint; 02 adds femticpy
   femticPy/                           femticPy tree (WinSCP copy or clone; notebooks and prep scripts)
   femtic_src/                         $SRC: the 7 upstream sources (build objects land here)
@@ -142,32 +160,39 @@ Ben's established Phoenix workflow, which these scripts follow:
     tarballs/                         optional GitHub archives <repo>-<sha>.tar.gz (git-free route)
     build_<toolchain>_<date>.log      build logs (fetch_<date>.log for FETCH_ONLY=1)
     smoke_<toolchain>_<date>.log      SMOKE_ONLY=1 logs; smoke_<toolchain>_<date>/ holds that run's T2/T5 files
-  femtic/bin/                         $BIN: femtic makeTetraMesh tetgen makeMtr TetGen2Femtic
+  femtic/bin/                         the build (01): femtic makeTetraMesh tetgen makeMtr TetGen2Femtic
                                       makeDHexaMesh mergeResultOfFEMTIC femtic_env.sh femtic_lib.sh
   easybuild/                          EASYBUILD_PREFIX, only if the fallback (section 8) is ever needed (absent now)
-  vulcan_femtic/                      $VF (RUNBOOK_first_inversion.md section 0), with jobs_ledger.txt
-    inputs/vulcan_v{2,3}/             $IN: the gated inputs (RUNBOOK B3), never written afterwards; no job runs here:
-                                      control.dat observe.dat station_map.csv mesh.dat resistivity_block_iter0.dat
-                                      products.md5 [observe_unrotated.dat station_map_unrotated.csv] (B3.2)
-    work/v{2,3}/<name>/               $WK: one directory per job: gate100, gate3 (06, B4a), t4 (04, B5), inv01 (05);
-                                      each: a copy of control.dat, links ../../../inputs/vulcan_<mesh>/<file>, logs/
-                                      fwd0_<jobid>/ LAYOUT job_outcomes.tsv [chain_jobs.txt in inv01]
+  vulcan_femtic/                      $VF: everything a run needs (RUNBOOK.md)
+    bin                               $BIN (default $VF/bin, BIN=<folder> overrides): a link to a femtic/bin build,
+                                      e.g. /hpcfs/users/a1690074/femtic/bin (RUNBOOK S1); run.sh exports it to the jobs
+    kit/                              $KIT: the PC's export/kit (scripts/make_phoenix_kit.sh): 00..06, femtic_lib.sh,
+                                      run.sh, status.sh, tools/, VERSION; replaced as a whole when the kit changes
+    shared/mesh_v{2,3}/               mesh.dat resistivity_block_iter0.dat, uploaded once; run folders link them
+    runs/RunNN/                       one folder per run (scripts/make_run.sh): control.dat observe.dat
+                                      station_map.csv run.env RUN.md; run.sh adds the links mesh.dat and
+                                      resistivity_block_iter0.dat -> ../../shared/mesh_vN/; jobs add slurm-RunNN-<id>.out,
+                                      logs/, job_outcomes.tsv, fwd0_<jobid>/ and LAYOUT (06), chain_jobs.txt (05)
+    runs/INDEX.md                     one line per run: run, mesh, purpose, layout, job id(s), verdict
     input_data/                       topography.dat bathymetry.dat coast_line.dat ... (03_mesh.slurm only)
     meshGen/files/                    control.dat analysis_domain.dat observing_site.dat obs_site.dat
                                       makeMtr.param resistivity_attr.dat [regions.txt]; logs/ job_outcomes.tsv
-                                      (03 copies its mesh to work/meshgen/inv01; not used for Vulcan)
+                                      (03 copies its mesh to meshGen/inversion; not used for Vulcan)
     scratch/                          shared sensitivity scratch, multi-node jobs only
 ```
 
 ## 3. Order of work
 
-In every step, `PLAN=/hpcfs/users/$USER/FEMTIC_2026/hpc/phoenix_plan`.
+Steps 1-6 are developer steps: Phoenix discovery, the build and the smoke test (all done), and the inputs. Runs
+(steps 7-10) are operated with **`RUNBOOK.md`**; the notes there say what each job type does and how it is sized.
+In every step, `PLAN=/hpcfs/users/$USER/vulcan_femtic/kit`, the uploaded kit (before 2026-10-06 the scripts sat in
+`/hpcfs/users/$USER/FEMTIC_2026/hpc/phoenix_plan`).
 
 1. **Done:** the project is at `/hpcfs/users/a1690074/FEMTIC_2026` (WinSCP). `01` needs the ported Makefiles in
    `$PORTED`: either pass `PORTED=/hpcfs/users/$USER/FEMTIC_2026/hpc/ported` to every `01` call, or once
    `mkdir -p /hpcfs/users/$USER/femtic_src && cp -r /hpcfs/users/$USER/FEMTIC_2026/hpc/ported /hpcfs/users/$USER/femtic_src/`.
    Run `dos2unix` only if a shebang fails.
-2. **Done:** `00_discover.sh` ran on p2-log-2 on 2026-09-25 (output in `$PLAN/discovery/`). The module names
+2. **Done:** `00_discover.sh` ran on p2-log-2 on 2026-09-25 (output in this folder's `discovery/`). The module names
    in `01_build_femtic.sh` match it, so no `MODS=` is needed.
 3. **Done** (2026-09-25): sources, on the **login node**: `cd $PLAN && FETCH_ONLY=1 bash -l 01_build_femtic.sh`.
    git 2.27 is there, so it clones and checks out the pinned commits (and now also writes `<repo>/COMMIT_SHA.txt`).
@@ -179,14 +204,13 @@ In every step, `PLAN=/hpcfs/users/$USER/FEMTIC_2026/hpc/phoenix_plan`.
    **Done; no rebuild is needed.** Ben rebuilt on 2026-09-28 21:10-21:11 with the committed kit 55bbf44
    (`BUILD DONE  T1=PASS  T2=SKIPPED  T5=SKIPPED`; `validation/phoenix_2026-09-28/build_foss_20260928_211021.log`).
    `$BIN` now holds femtic 26c8606 (1,494,008 B), a 732 B `femtic_env.sh` with the `/apps` remap, and
-   `femtic_lib.sh` version 2 (19,992 B). The version-4 kit needs only its library:
-   `install -m 644 $PLAN/femtic_lib.sh $BIN/`, with the version and `cmp` checks of RUNBOOK B1.5. A rebuild is
-   optional (about 2 minutes). If you rebuild, record `md5sum $BIN/femtic $BIN/femtic_env.sh` before and after.
-   The first line of `femtic_env.sh` holds the build date, so its md5 always changes; a changed `femtic` md5 means
-   repeating step 5.
-5. Smoke tests T1 + T2 + T5 on the installed build, as a batch job submitted from `/hpcfs/users/$USER/FEMTIC_2026`:
+   `femtic_lib.sh` version 2 (19,992 B). That old library stays: since version 5 every job reads `femtic_lib.sh`
+   from the kit (`$KIT`) after `femtic_env.sh`, so nothing is installed into `$BIN` when the kit changes, and no
+   rebuild is needed. A rebuild (about 2 minutes) is followed by step 5 again.
+5. Smoke tests T1 + T2 + T5 on the installed build, as a batch job submitted from `/hpcfs/users/$USER/vulcan_femtic`
+   (01 then reads `femtic_lib.sh` from `kit/`, its own folder):
    ```
-   sbatch -p icelake -N 1 -n 4 --mem=8G --time=00:30:00 -J femtic_smoke -o slurm-%x-%j.out --wrap 'TOOLCHAIN=foss SMOKE_ONLY=1 bash -l hpc/phoenix_plan/01_build_femtic.sh'
+   sbatch -p icelake -N 1 -n 4 --mem=8G --time=00:30:00 -J femtic_smoke -o slurm-%x-%j.out --wrap 'TOOLCHAIN=foss SMOKE_ONLY=1 bash -l kit/01_build_femtic.sh'
    ```
    At most 2.4 SU. `SMOKE_ONLY=1` fetches, compiles and installs nothing: it sources `$BIN/femtic_env.sh`, runs
    T1 (`ldd`; fails on any "not found") and T2/T5 on FEMTIC's example, and logs to
@@ -198,51 +222,41 @@ In every step, `PLAN=/hpcfs/users/$USER/FEMTIC_2026/hpc/phoenix_plan`.
    no `/apps`, so no `libmkl_core` under `MKLROOT`) and on `icelake` ("make: command not found").
    **Passed on 2026-09-28** with the committed kit 55bbf44: job 16153670 on icelake p2-cpu-14 ended with
    `SMOKE_ONLY DONE  T1=PASS  T2=PASS  T5=PASS`, and the example's iterations 0-2 equal both WSL builds to all 7
-   printed digits (`validation/phoenix_2026-09-28/README.md`). Its sacct ExitCode was not copied back, so RUNBOOK
-   B2's criterion 2 is still open. Repeat this step only after a rebuild that changes `$BIN/femtic`: on this path
-   the version-4 library changes only the version gate (RUNBOOK B2).
+   printed digits (`validation/phoenix_2026-09-28/README.md`); sacct State COMPLETED, ExitCode 0:0
+   (`validation/phoenix_2026-09-28/sacct_16153670.txt`, copied back 2026-09-30). Repeat this step after a rebuild.
 6. **Inputs: not 02 and the notebooks.** observe.dat, control.dat and the mesh-chain inputs come from
    `scripts/prep_vulcan.py` with the vendored femticPy (`external/femticPy/`, 9 patches). prep is light (text
    files only; no mesh tool and no FEMTIC) and runs on the PC. `02_env_femticpy.sh` sets up an env for an
    unpatched upstream femticPy copy (`FEMTICPY_SRC`, 02:49), so Vulcan does not need it.
    Site coordinates come only from `Vulcan/site_coords_femticpy.txt` (section 11).
 7. **Mesh: copy the gated mesh; do not run 03.** v1-v3 were built on 2026-09-25, in WSL, by
-   `scripts/run_mesh_chain.sh`, and put through the half-space test. WinSCP `mesh.dat`, `resistivity_block_iter0.dat`,
-   `control.dat`, `observe.dat` and `station_map.csv` of `D:/BEN/FEMTIC_2026/mesh/vulcan_v{2,3}/inversion/`, and
-   `mesh_logs/products.md5`, into the input folders `vulcan_femtic/inputs/vulcan_v2` and `.../inputs/vulcan_v3`. They
-   are never written after RUNBOOK B3, which checks them. v2's data is the rotated pair of `mesh/vulcan_v2_rot/inversion/`
-   (STATUS D2); the unrotated pair stays there as `observe_unrotated.dat` and `station_map_unrotated.csv`. Jobs run in
-   `vulcan_femtic/work/v{2,3}/<gate100|gate3|t4|inv01>`, set up by `cp ../../../inputs/vulcan_v2/control.dat .` and
-   `ln -sfn ../../../inputs/vulcan_v2/$f $f` for mesh.dat, observe.dat, resistivity_block_iter0.dat and station_map.csv
-   (site names in the gate report). 03 is another, ungated chain (03:31-33); no Phoenix mesh route is tested yet.
-8. **Forward-only job (T6), the first thing to run on Phoenix after the build and the mesh**, from a work directory
-   (step 7), never from `inputs/`: `cd /hpcfs/users/$USER/vulcan_femtic/work/<mesh>/<name> && sbatch $PLAN/06_forward_only.slurm`.
-   The header asks for 2 ranks x 36 threads (v3) and 4 h: one rank solves 11 of the 21 frequencies, up to
-   11 x 755 s = 2.3 h at WSL speed. For v2 add `--ntasks-per-node=3 --cpus-per-task=24 --time=02:00:00`
-   (7 x 418 s). Walltime rule: `--time` >= ceil(21 / ranks) x slowest frequency + 6 min (06 header). Cost at
-   full walltime: SU = nodes x 72 cpus x hours x rate (section 5): 345.6 SU for the header, 172.8 for v2 at 2 h.
-   The job refuses, before femtic starts, a layout that breaks the memory rule. Read `logs/fwd0_report_<jobid>.txt`:
-   forward time per frequency, PARDISO per rank, peak node RSS, and the predicted sensitivity-step and rank-0
-   memory. It also writes the measured forward memory per rank to `logs/fwd_rank_mb`, which 04 uses, and, when
-   T6 passes under the full memory rule, its own layout to `LAYOUT`, which 05 uses. Change the layout (ranks x
-   threads, partition) here, before any inversion is submitted.
-   **The same job is the half-space accuracy gate**, one job per directory (RUNBOOK B4a): in `work/v2/gate100`,
-   `sbatch --export=ALL,START_RHO=100 $PLAN/06_forward_only.slurm`, and in `work/v2/gate3` the same with `START_RHO=3`.
-   It runs a uniform model, written to `fwd0_<jobid>/`, at all 21 observe.dat bands.
-   `tools/halfspace_eval.py` then judges it against the analytic half-space and prints PASS/FAIL per limit with
-   the worst site and band. Exit 4 means T6 passed but the gate failed.
-9. **Test inversion (T4), in its own work directory `vulcan_femtic/work/<mesh>/t4`, never in the production
-   directory** (RUNBOOK B5): set it up like a gate directory (step 7), copy `logs/fwd_rank_mb` from
-   `work/<mesh>/gate100/logs/`, set `ITERATION` to `0 1` in its own `control.dat` and run
-   `sbatch --time=12:00:00 $PLAN/04_inversion.slurm` there in the gate's layout (at most 1,036.8 SU). Nothing
-   continues from `t4`. Read the sizing report (measured N_iv, predicted per-rank memory), `sacct` MaxRSS and
+   `scripts/run_mesh_chain.sh`, and put through the half-space test. `mesh.dat` and `resistivity_block_iter0.dat` of
+   `D:/BEN/FEMTIC_2026/mesh/vulcan_v{2,3}/inversion/` go once to `$VF/shared/mesh_v2` and `mesh_v3` (RUNBOOK S4);
+   `run.sh` links them into each run folder. The run's own control.dat, observe.dat and station_map.csv come from
+   `scripts/make_run.sh --data`: for v2 and v3 the rotated data of `mesh/vulcan_v2_rot/inversion/` (STATUS D2; v3's
+   unrotated files are byte-identical to v2's, so the same rotated pair serves both). 03 is another, ungated chain
+   (03:31-33); no Phoenix mesh route is tested yet.
+8. **Forward-only job (T6) and the half-space gate: 06, run.env `JOB=forward` or `JOB=gate`** (RUNBOOK F1). The
+   06 header asks for 2 ranks x 36 threads (v3) and 4 h: one rank solves 11 of the 21 frequencies, up to
+   11 x 755 s = 2.3 h at WSL speed; v2 runs 3 x 24 with `--time=02:00:00` (7 x 418 s). Walltime rule: `--time` >=
+   ceil(21 / ranks) x slowest frequency + 6 min (06 header). Cost at full walltime: SU = nodes x 72 cpus x hours x
+   rate (section 5): 345.6 SU for the header, 172.8 for v2 at 2 h. The job refuses, before femtic starts, a layout
+   that breaks the memory rule (run.sh checks the same rule before it submits). `logs/fwd0_report_<jobid>.txt` holds
+   the forward time per frequency, PARDISO per rank, peak node RSS, and the predicted sensitivity-step and rank-0
+   memory; 06 also writes the measured forward memory per rank to `logs/fwd_rank_mb` (04 in the same folder reads
+   it) and, when T6 passes under the full memory rule, its layout to `LAYOUT`. With `START_RHO` (`JOB=gate`) it
+   runs a uniform model, written to `fwd0_<jobid>/`, at all 21 observe.dat bands, and `tools/halfspace_eval.py`
+   judges it against the analytic half-space (PASS/FAIL per limit, worst site and band). Exit 4 means T6 passed but
+   the gate failed.
+9. **Test inversion (T4): 04 with ITERATION 0 1, run.env `JOB=t4`** (RUNBOOK F2; make_run.sh sets the ITERATION
+   line). It runs in its own run folder, so it reads no gate's `logs/fwd_rank_mb`: its layout rule uses the
+   estimate of 11,000 MiB per million equations (31,322 MiB on v2, against about 28,629 expected from WSL). Nothing
+   continues from it. Read the sizing report (measured N_iv, predicted per-rank memory, peak node RSS), `sacct` and
    `rcstat`, then choose ranks, threads and ITER_STEP (section 6).
-10. Production, in `vulcan_femtic/work/<mesh>/inv01`, set up like a gate directory (step 7):
-    `bash -l $PLAN/05_chain.sh $PWD 3 <ITER_STEP> <ITER_MAX>`. It takes the layout from `LAYOUT`
-    (step 8), or from `SBATCH_EXTRA='--ntasks-per-node=3 --cpus-per-task=24'` (v2; both options), and refuses to
-    start without one: the 04 header's 2 x 36 would silently run v2 at 2 ranks. 06 ran in another directory
-    on the same mesh (`work/<mesh>/gate100`), so copy its `LAYOUT` into the production directory (RUNBOOK B4b).
-    If T4 measured N_iv 840, use `SBATCH_EXTRA` with one rank fewer per node and `NIV=840` instead (RUNBOOK B5).
+10. **Production: run.env `JOB=inversion`** with `ITER_STEP` and `ITER_MAX`. `run.sh` calls `05_chain.sh` with the
+    run's layout as `SBATCH_EXTRA` (so 05 needs no `LAYOUT` file) and ceil((ITER_MAX - last model) / ITER_STEP)
+    chained 04 jobs; `run.sh RunNN --again` continues from the last complete model. If T4 measured N_iv 840, the
+    later jobs need `NIV=840` and one rank fewer per node; run.env has no NIV key yet, so that needs a kit change.
 
 After every job: `rcstat <jobid>` (also printed at the end of `slurm-<jobname>-<jobid>.out`).
 
@@ -451,13 +465,13 @@ stations : 240", "Number of impedance tensor stations : 120", "Number of VTF sta
 sensitivity step needs 93,742 MiB per rank instead of 53,783, and v3 fits only 1 rank per icelake node (table
 below).
 
-**B5 (T4) must rule out 840.** The 04 sizing report prints the logged count, `femtic_niv_measured`: the "Solve
+**Run03 (T4, RUNBOOK.md F2) must rule out 840.** The 04 sizing report prints the logged count, `femtic_niv_measured`: the "Solve
 phase is performed simultaneously for N right-hand sides" lines after each interpolator solve, summed over the
 `DIV_NUM_RHS_FWD` calls. The two "Warning : Division number of right-hand sides ..." lines that FEMTIC writes
 there when `DIV_NUM_RHS_FWD` > N_iv (Forward3D.cpp:183-186) do not break the count (FEMTIC_LIB_VERSION 4).
-* B5 confirms the expectation if every rank logs 480.
+* Run03 confirms the expectation if every rank logs 480.
 * If it logs 840 (or anything above 480), the source reading is wrong: pass `NIV=<measured>` to every later
-  04 job and re-size (v3: 1 x 72, or highmem). 04 warns when the count differs from the N_iv its layout rule used.
+  04 job (run.env `NIV`, `make_run.sh --niv`) and re-size (v3: 1 x 72, or highmem). 04 warns when the count differs from the N_iv its layout rule used.
 * Until then `NIV=auto` sizes for 480; `NIV=840` gives the pessimistic sizing, and 06's report shows both cases.
 
 **Predicted per rank** (Vulcan, F = 21, 120 sites). Forward phase = the WSL peak RSS; sensitivity step from the
@@ -468,7 +482,7 @@ formula. MiB; nothing here has been measured on Phoenix yet:
 | v2 | 2,844,872 | 65,341 | 27,645 | 43,109 | **70,754** (74.2 GB) | 102,727 |
 | v3 | 3,568,555 | 68,654 | 32,869 | 53,783 | **86,652** (90.9 GB) | 126,611 |
 
-T4 records `sacct` MaxRSS. The prediction is wrong if MaxRSS per rank is more than 20 % off (STATUS B5).
+T4 records `sacct` MaxRSS. The prediction is wrong if MaxRSS per rank is more than 20 % off (Run03; Ben reads it, RUNBOOK.md no longer checks it).
 
 **The layout rule.** `04` and `06` check it with `femtic_layout_check` before femtic starts:
 
@@ -673,7 +687,7 @@ run on the login node or in an interactive job (internet); otherwise pre-place t
 | PARDISO parser, two-array memory model, layout rule, FEMTIC_LIB_VERSION 3 gates, 06 half-space gate (2026-09-28) | `tests/c1c2_test.sh` (Git Bash 5.2, gawk 5.0; fake femtic, mpirun and Slurm) on a v3-sized inversion directory: 71/71 on the edited kit. Against a copy of the pre-change kit (commit 55bbf44) it fails 53 of 71 checks, as it should, including: `1.23456e+06` KB read as 11.8 GiB and `1.5e+08` as 0.0; the one-array sum of 28.99 GB; 8 x 9 launched; the fa58604 library (version 2, 18,193 B) accepted by 03/04/05/06 and 01 `SMOKE_ONLY`. The 18 it passes are the cases the old code got right, e.g. `2.74856e+07` and plain integers. A mutant with a fixed 33,000 MiB forward fallback fails 3 (the small-mesh check). The 09-25 harnesses under Git Bash, old kit vs new: `libtest_v2.sh` 46/48 on both (the same 2 Git Bash artefacts: CRLF left by msys sed, USR1 = 30); `chaintest_v2.sh` 89/89 vs 87/89. The 2 new failures encode the old model and are intended: S1 expects MEM_LIMIT 16848 from `NONPARDISO_MB=10240` (now 26908 with `auto` on the tiny example), and S21 expects the one-array "interpolator ... = 4.61 GB" line. `tests/halfspace_eval_test.sh`: 31/31. `tools/halfspace_eval.py` reproduces all 7 stored `acc_eval_*.txt` reports of the WSL gate band for band and verdict for verdict (2 FAIL, 5 PASS; e.g. v3 100 ohm-m worst rho_a 2.91 % at Vul24-19, v2 3 ohm-m diagonal 2.09 % at G7). It FAILS a copy with one Re(Zxy) raised 10 % (worst rho_a 11.99 % at that site and band), a copy with one row missing, and the right data judged at the wrong resistivity. |
 | Kit follow-ups (2026-09-28, later): 06 walltime 4 h, `LAYOUT` hand-over from 06 to 05, 06's outcome-row exit code, site names in the gate report, N_iv behind FEMTIC's `DIV_NUM_RHS_FWD` warning, FEMTIC_LIB_VERSION 4, bash 4.4 / Python 3.6 portability | `tests/c1c2_test.sh` (Git Bash 5.2, gawk 5.0; fakes): 129/129 on the edited kit, sections (d) and (f). Seven mutants of the edited kit, each with one guard switched off, fail the checks written for that guard: the version-3 `femtic_niv_measured` (f1, f2), the T6-only exit column (f3), no `--station-map` (e2), `--time=02:00:00` (f5), no "no layout" refusal (f6a), no `LAYOUT` write (f6d, f6f), no half-layout refusal (f6b, f6h). Against the pre-edit kit it fails 28 of 129, all in the new checks (d3, d4, f1-f6). `tests/portability_test.sh`: 6/6, and 10/10 with Python 3.9.23 (the oldest local interpreter) as `PYTHON_OLD`. No construct newer than bash 4.4 or gawk 4.2 in the 10 shell files. `ast.parse(feature_version=(3, 6))` passes, but that call does not reject the f-string `=` specifier, PEP 701 f-strings or `from __future__ import annotations` (probed on 3.13.5), so the test adds an AST walk; it found 11 of 11 injected constructs and 5 of 5 injected bash/gawk ones. It also found every text-mode `open()` without `encoding=` (4 in the pre-edit evaluator), and the pre-edit evaluator crashed with UnicodeEncodeError on a non-ASCII site name with ASCII stdout (Python 3.6 under `LANG=C`). `tests/halfspace_eval_test.sh`: 31/31 on Python 3.13.5 and on 3.9.23. **Not run on Phoenix's bash 4.4.19 or Python 3.6.8 itself**: run `bash tests/portability_test.sh` and `bash tests/c1c2_test.sh` on p2-log-2 after B1. |
 | Building on Phoenix | Done on p2-log-2, 2026-09-25: all 7 tools, T1 PASS (`discovery/phoenix_build_foss_2026-09-25.log`) |
-| Running FEMTIC on Phoenix (T2/T5 and later) | **Not done yet** (section 3, step 5). The remaining unverified items are listed at the end of section 10. |
+| Running FEMTIC on Phoenix (T2/T5 and later) | **Done 2026-09-28 for the smoke test:** job 16153670 (`SMOKE_ONLY=1`, icelake, p2-cpu-14), T1/T2/T5 PASS on FEMTIC's INV_MT_01 example, femtic.cnv rows 0-2 equal to WSL in all 7 digits, COMPLETED 0:0 in 48 s (`validation/phoenix_2026-09-28/README.md`). Not yet run on a Vulcan mesh (RUNBOOK.md F1, F2). The remaining unverified items are listed at the end of section 10. |
 
 ## 10. Validation tests and their failure criteria
 

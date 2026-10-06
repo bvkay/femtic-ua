@@ -8,8 +8,8 @@
 #SBATCH --time=04:00:00
 #SBATCH --signal=B:USR1@600
 #SBATCH -o slurm-%x-%j.out
-#SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=ben.kay@adelaide.edu.au
+# Mail: none unless asked (no #SBATCH mail lines). run.sh passes --mail-type=NONE, or MAIL=<address> from run.env;
+# by hand: sbatch --mail-type=END,FAIL --mail-user=<your address> ... (command-line options override #SBATCH)
 # =============================================================================
 # 06_forward_only.slurm -- TEST T6, the first Phoenix job on the real mesh: one forward solve of the starting
 # model (ITERATION 0 0) in the production layout of 04, before any inversion is submitted. It measures:
@@ -36,22 +36,23 @@
 #
 # Half-space accuracy gate, START_RHO=<ohm-m>: the run uses a uniform model instead of the starting model. Every
 # block below 1e6 ohm-m is set to START_RHO and the air block is kept (femtic_block_uniform). The model is written
-# to fwd0_<jobid>/ and the inversion directory is not touched. Afterwards $PLAN/tools/halfspace_eval.py compares
+# to fwd0_<jobid>/ and the inversion directory is not touched. Afterwards $KIT/tools/halfspace_eval.py compares
 # result_*_iter0.csv at every site and band of observe.dat with the analytic half-space, and prints PASS/FAIL per
 # limit with the worst site and band. The gate FAILS if |rho_a/rho - 1| > 5 %, |phase - 45 deg| > 1.5 deg or
 # max(|Zxx|,|Zyy|)/|Zxy| > 2 % anywhere, or if a (site, band) of observe.dat has no row. This is the WSL gate
-# (validation/mesh_2026-09-25/halfspace_accuracy.md), at all 21 observe.dat bands. One job per directory (3 ohm-m: gate3):
-#     cd /hpcfs/users/$USER/vulcan_femtic/work/v2/gate100 && sbatch --export=ALL,START_RHO=100 $PLAN/06_forward_only.slurm
-# PLAN (default /hpcfs/users/$USER/FEMTIC_2026/hpc/phoenix_plan) locates the evaluator: a batch job runs from a
-# spooled copy of this script and cannot find its own directory. PYTHON (default python3) runs it (standard
-# library only).
+# (validation/mesh_2026-09-25/halfspace_accuracy.md), at all 21 observe.dat bands. One job per run folder.
+# KIT (default /hpcfs/users/$USER/vulcan_femtic/kit; PLAN is an alias) locates femtic_lib.sh and the evaluator: a
+# batch job runs from a spooled copy of this script and cannot find its own directory. PYTHON (default python3) runs
+# the evaluator (standard library only).
 #
-# Submit from a work directory work/<mesh>/<name>, never from inputs/ (RUNBOOK section 0). Its input files are NOT
-# modified: the run happens in fwd0_<jobid>/ with a copy of control.dat and symlinks to mesh.dat, observe.dat,
-# resistivity_block_iter0.dat (and distortion_iter0.dat when DISTORTION != 0):
-#     cd /hpcfs/users/$USER/vulcan_femtic/work/<mesh>/<name> && sbatch /path/to/06_forward_only.slurm
+# Normally submitted by the kit's run.sh from a run folder $VF/runs/RunNN (VF=/hpcfs/users/$USER/vulcan_femtic),
+# whose run.env says JOB=gate (START_RHO=<ohm-m>) or JOB=forward:
+#     bash $VF/kit/run.sh Run01
+# By hand:  cd $VF/runs/Run01 && sbatch --export=ALL,KIT=$VF/kit,START_RHO=100 $VF/kit/06_forward_only.slurm
+# The run folder's input files are NOT modified: the run happens in fwd0_<jobid>/ with a copy of control.dat and
+# symlinks to mesh.dat, observe.dat, resistivity_block_iter0.dat (and distortion_iter0.dat when DISTORTION != 0).
 # Knobs (sbatch --export=ALL,KNOB=value,...): RANKS THREADS FWD_MB NONPARDISO_MB NIV NEQ MEM_SAFETY_PCT
-#   LAYOUT_CHECK START_RHO PLAN PYTHON MEM_LIMIT_MB RANK0_RESERVE_MB FWD_SOLVER WALL_MARGIN_MIN GUARD_MIN_S WATCH_S
+#   LAYOUT_CHECK START_RHO KIT PYTHON MEM_LIMIT_MB RANK0_RESERVE_MB FWD_SOLVER WALL_MARGIN_MIN GUARD_MIN_S WATCH_S
 #   USE_SRUN SRUN_MPI (defaults below).
 # Partitions (verified 2026-09-25): icelake gives a job at most 72 cpus and 254,952 MiB per node. Above that the only
 # route is highmem (sbatch -p highmem --mem=1900G ..., 2.5 SU/cpu-h). a100cpu gives a job at most 36 cpus and
@@ -87,8 +88,10 @@ set -o pipefail
 JOB_T0=$(date +%s)
 echo "== $(date) job $SLURM_JOB_ID (${SLURM_JOB_NAME:-?}) partition=${SLURM_JOB_PARTITION:-?} node=$(hostname -s)  cwd=$PWD"
 
-BIN=${BIN:-/hpcfs/users/$USER/femtic/bin}
-PLAN=${PLAN:-/hpcfs/users/$USER/FEMTIC_2026/hpc/phoenix_plan}   # locates tools/halfspace_eval.py
+VF=${VF:-/hpcfs/users/$USER/vulcan_femtic}
+BIN=${BIN:-$VF/bin}                     # FEMTIC: $VF/bin is a link to a build (RUNBOOK S1); BIN=<folder> overrides
+KIT=${KIT:-${PLAN:-$VF/kit}}            # the uploaded kit: femtic_lib.sh, VERSION and tools/halfspace_eval.py
+PLAN=$KIT
 INV_DIR=${INV_DIR:-$SLURM_SUBMIT_DIR}
 NONPARDISO_MB=${NONPARDISO_MB:-auto}    # per-rank sensitivity-step arrays, MiB; auto = femtic_mem_model (README section 6)
 FWD_MB=${FWD_MB:-auto}                  # per-rank forward-phase memory, MiB; auto = femtic_fwd_mb_auto
@@ -110,7 +113,10 @@ export USE_SRUN SRUN_MPI
 
 # shellcheck disable=SC1091
 source "$BIN/femtic_env.sh" || { echo "ERROR: $BIN/femtic_env.sh missing -- run 01_build_femtic.sh"; exit 1; }
-[ "${FEMTIC_LIB_VERSION:-0}" -ge 4 ] || { echo "ERROR: $BIN/femtic_lib.sh is version ${FEMTIC_LIB_VERSION:-unset}; this script needs FEMTIC_LIB_VERSION >= 4 (version 2, installed 2026-09-25, misreads PARDISO memory and has no layout rule; version 3 loses N_iv when DIV_NUM_RHS_FWD > N_iv) -- install -m 644 <phoenix_plan>/femtic_lib.sh $BIN/"; exit 1; }
+# shellcheck disable=SC1091
+source "$KIT/femtic_lib.sh" || { echo "ERROR: no kit at $KIT (femtic_lib.sh missing): upload export/kit there, or pass KIT=<kit folder>"; exit 1; }
+[ "${FEMTIC_LIB_VERSION:-0}" -ge 5 ] || { echo "ERROR: $KIT/femtic_lib.sh is version ${FEMTIC_LIB_VERSION:-unset}; this script needs FEMTIC_LIB_VERSION >= 5 (an older kit: upload the current one, made by scripts/make_phoenix_kit.sh)"; exit 1; }
+femtic_kit_banner
 cd "$INV_DIR" || exit 1
 for f in control.dat mesh.dat observe.dat resistivity_block_iter0.dat; do [ -f "$f" ] || { echo "ERROR: $f missing in $INV_DIR"; exit 1; }; done
 mkdir -p logs
@@ -238,6 +244,7 @@ FWD_MEAS=$(awk -v p="${PEAK_KB:-0}" -v r="$RPN" -v k="${PKB:-0}" 'BEGIN { a = (r
 REPORT="$W/fwd0_report.txt"
 {
   echo "FEMTIC forward-only report (T6)   job $SLURM_JOB_ID   $(date '+%F %T')   node $(hostname -s)   partition ${SLURM_JOB_PARTITION:-?}"
+  femtic_kit_banner
   echo "layout: $NRANKS ranks x $NTHR threads, $NNODES node(s), --mem ${NODE_MEM:-?} MiB, toolchain ${FEMTIC_TOOLCHAIN:-?}, FWD_SOLVER '$(femtic_ctl_get control.dat FWD_SOLVER)'"
   echo "model: $([ -n "$START_RHO" ] && echo "uniform START_RHO=$START_RHO ohm-m (half-space gate)" || echo "resistivity_block_iter0.dat of $INV_DIR")"
   echo "femtic exit $RC, wall ${ELAPSED} s, stop ${STOP:-none}, end line: ${END_LINE:-<none>}"
@@ -327,12 +334,12 @@ fi
 GATE=""
 if [ -n "$START_RHO" ]; then
   EV="$PLAN/tools/halfspace_eval.py"
-  # site names (G7, Vul24-19) come from station_map.csv, which is copied with the mesh (README section 3, step 7)
+  # site names (G7, Vul24-19) come from station_map.csv, which scripts/make_run.sh puts in every run folder
   SMAP=(); SNOTE=""
   if [ -f "$INV_DIR/station_map.csv" ]; then SMAP=(--station-map "$INV_DIR/station_map.csv")
-  else SNOTE="NOTE: no station_map.csv in $INV_DIR, so sites are named by FEMTIC station id only; copy mesh/vulcan_v{2,3}/inversion/station_map.csv there"; fi
+  else SNOTE="NOTE: no station_map.csv in $INV_DIR, so sites are named by FEMTIC station id only; make the run folder with scripts/make_run.sh, which copies it"; fi
   if [ ! -f "$EV" ]; then
-    GATE=NOT_EVALUATED; echo "$EV not found (set PLAN=<phoenix_plan directory>)" > "$W/halfspace_eval.txt"
+    GATE=NOT_EVALUATED; echo "$EV not found (set KIT=<kit folder>)" > "$W/halfspace_eval.txt"
   elif ! command -v "$PYTHON" >/dev/null 2>&1; then
     GATE=NOT_EVALUATED; echo "$PYTHON not found (set PYTHON=...)" > "$W/halfspace_eval.txt"
   else

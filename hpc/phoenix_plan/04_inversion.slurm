@@ -9,15 +9,18 @@
 #SBATCH --gres=tmpfs:200G
 #SBATCH --signal=B:USR1@600
 #SBATCH -o slurm-%x-%j.out
-#SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=ben.kay@adelaide.edu.au
+# Mail: none unless asked (no #SBATCH mail lines). run.sh passes --mail-type=NONE, or MAIL=<address> from run.env;
+# by hand: sbatch --mail-type=END,FAIL --mail-user=<your address> ... (command-line options override #SBATCH)
 # =============================================================================
 # 04_inversion.slurm -- FEMTIC hybrid MPI/OpenMP inversion on Phoenix (icelake: 72 cores/node, SMT off)
 #
-# Submit FROM a work directory, work/<mesh>/t4 or inv01, never from inputs/ (RUNBOOK section 0); 06 ran in gate100:
-#     cd /hpcfs/users/$USER/vulcan_femtic/work/v2/inv01 && sbatch /path/to/04_inversion.slurm
-# or let 05_chain.sh submit K dependent copies (it sets AUTO_RESTART=1, and takes the layout from the LAYOUT file
-# that a passing 06 writes, or from an explicit SBATCH_EXTRA; it refuses to fall back on this header's 2 x 36).
+# Normally submitted by the kit's run.sh from a run folder $VF/runs/RunNN (VF=/hpcfs/users/$USER/vulcan_femtic):
+#     bash $VF/kit/run.sh Run03        (run.env JOB=t4: this script once; JOB=inversion: 05_chain.sh)
+# By hand, from the run folder:  cd $VF/runs/Run03 && sbatch --export=ALL,KIT=$VF/kit $VF/kit/04_inversion.slurm
+# 05_chain.sh submits K dependent copies (it sets AUTO_RESTART=1, and takes the layout from an explicit SBATCH_EXTRA,
+# as run.sh passes it, or from the LAYOUT file that a passing 06 writes; it refuses to fall back on this header's 2 x 36).
+# KIT (default $VF/kit) is where femtic_lib.sh is read from: a batch job runs from a spooled copy of this script and
+# cannot find its own directory.
 #
 # ---- partition and memory: RAM is granted PER CPU (scontrol show partition + sbatch --test-only,
 #      00_discover.sh on p2-log-2, 2026-09-25; phoenix_plan/discovery/) ----
@@ -94,9 +97,12 @@ set -o pipefail
 JOB_T0=$(date +%s)
 echo "== $(date) job $SLURM_JOB_ID (${SLURM_JOB_NAME:-?}) partition=${SLURM_JOB_PARTITION:-?} nodes=$SLURM_JOB_NUM_NODES ($SLURM_JOB_NODELIST)  cwd=$PWD"
 
-BIN=${BIN:-/hpcfs/users/$USER/femtic/bin}
+VF=${VF:-/hpcfs/users/$USER/vulcan_femtic}
+BIN=${BIN:-$VF/bin}                     # FEMTIC: $VF/bin is a link to a build (RUNBOOK S1); BIN=<folder> overrides
+KIT=${KIT:-${PLAN:-$VF/kit}}            # the uploaded kit: femtic_lib.sh and VERSION are read from here
+PLAN=$KIT
 INV_DIR=${INV_DIR:-$SLURM_SUBMIT_DIR}
-SCRATCH_SHARED=${SCRATCH_SHARED:-/hpcfs/users/$USER/vulcan_femtic/scratch}
+SCRATCH_SHARED=${SCRATCH_SHARED:-$VF/scratch}
 AUTO_RESTART=${AUTO_RESTART:-0}         # 1 = continue from the highest VALID resistivity_block_iter<N>.dat (05_chain.sh)
 ITER_STEP=${ITER_STEP:-5}               # iterations per job when AUTO_RESTART=1
 ITER_MAX=${ITER_MAX:-}                  # optional absolute cap on the iteration number
@@ -117,7 +123,10 @@ export USE_SRUN SRUN_MPI
 
 # shellcheck disable=SC1091
 source "$BIN/femtic_env.sh" || { echo "ERROR: $BIN/femtic_env.sh missing -- run 01_build_femtic.sh"; exit 1; }
-[ "${FEMTIC_LIB_VERSION:-0}" -ge 4 ] || { echo "ERROR: $BIN/femtic_lib.sh is version ${FEMTIC_LIB_VERSION:-unset}; this script needs FEMTIC_LIB_VERSION >= 4 (version 2, installed 2026-09-25, misreads PARDISO memory and has no layout rule; version 3 loses N_iv when DIV_NUM_RHS_FWD > N_iv) -- install -m 644 <phoenix_plan>/femtic_lib.sh $BIN/"; exit 1; }
+# shellcheck disable=SC1091
+source "$KIT/femtic_lib.sh" || { echo "ERROR: no kit at $KIT (femtic_lib.sh missing): upload export/kit there, or pass KIT=<kit folder>"; exit 1; }
+[ "${FEMTIC_LIB_VERSION:-0}" -ge 5 ] || { echo "ERROR: $KIT/femtic_lib.sh is version ${FEMTIC_LIB_VERSION:-unset}; this script needs FEMTIC_LIB_VERSION >= 5 (an older kit: upload the current one, made by scripts/make_phoenix_kit.sh)"; exit 1; }
+femtic_kit_banner
 cd "$INV_DIR" || exit 1
 for f in control.dat mesh.dat observe.dat; do [ -f "$f" ] || { echo "ERROR: $f missing in $INV_DIR"; exit 1; }; done
 mkdir -p logs

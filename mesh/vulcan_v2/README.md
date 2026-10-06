@@ -293,8 +293,8 @@ Each check re-reads the written files and compares them with the config, the sit
 Hand-edited 2026-09-28: the three steps prep generated on 2026-09-25 are done or superseded.
 
 1. Done on 2026-09-25: the gated mesh chain ran on these inputs, and the half-space accuracy gate ran on the mesh (uniform 3 and 100 ohm-m, OWNER_ELEMENT -1): see mesh_logs/, halfspace/ and validation/mesh_2026-09-25/halfspace_accuracy.md. mesh.dat and resistivity_block_iter0.dat are gitignored (inversion/ of the D:/BEN/FEMTIC_2026 checkout); their md5 is in mesh_logs/products.md5.
-2. Gate result: FAIL at a single point, the diagonal ratio at 200 Hz in 3 ohm-m (2.09 % at site G7, limit 2 %), above observe.dat's highest band of 100 Hz; every other band tested passes, including 100 and 31.5 Hz. v2 has never run in 100 ohm-m: that gate run is step B4a of the runbook below, and it decides docs/STATUS.md D1 (v2 or v3).
-3. From here everything runs on Phoenix, not on the Windows PC or in WSL (Ben, 2026-09-28): follow hpc/phoenix_plan/RUNBOOK_first_inversion.md. Upload mesh.dat and resistivity_block_iter0.dat with inversion/control.dat and inversion/observe.dat, and check them against mesh_logs/products.md5. Do not run hpc/phoenix_plan/03_mesh.slurm on these inputs: it is a different, ungated chain.
+2. Gate result: FAIL at a single point, the diagonal ratio at 200 Hz in 3 ohm-m (2.09 % at site G7, limit 2 %), above observe.dat's highest band of 100 Hz; every other band tested passes, including 100 and 31.5 Hz. v2 has never run in 100 ohm-m: that gate run is Run01 (RUNBOOK.md F1), and with Run02 it decides docs/STATUS.md D1 (v2 or v3).
+3. From here everything runs on Phoenix, not on the Windows PC or in WSL (Ben, 2026-09-28): follow hpc/phoenix_plan/RUNBOOK.md: S4 uploads mesh.dat and resistivity_block_iter0.dat once, and each run takes its control.dat and observe.dat from mesh/vulcan_v2_rot/inversion (R1). Do not run hpc/phoenix_plan/03_mesh.slurm on these inputs: it is a different, ungated chain.
 
 ## Sites
 

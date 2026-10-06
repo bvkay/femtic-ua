@@ -29,6 +29,13 @@ hpc/smoke_*.log
 hpc/slurm-*.out
 hpc/build_*.log
 
+# the Phoenix kit made by scripts/make_phoenix_kit.sh (rebuilt from the commit every time)
+export/
+# run folders (runs/RunNN) are tracked; the shared mesh that run.sh links into them on Phoenix is not
+runs/*/mesh.dat
+runs/*/resistivity_block_iter0.dat
+runs/*/fwd0_*/
+
 # python / jupyter / editors
 __pycache__/
 *.pyc

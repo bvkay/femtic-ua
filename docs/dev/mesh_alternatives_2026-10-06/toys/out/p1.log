@@ -1,0 +1,9 @@
+parsing switches
+success
+parsing switches
+success
+Windows fatal exception: access violation
+
+Current thread 0x00008754 (most recent call first):
+  File "C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35796\scratchpad\alt_mesh\env\Lib\site-packages\tetgen\pytetgen.py", line 865 in tetrahedralize
+  File "C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35796\scratchpad\alt_mesh\toy_tetgen.py", line 82 in <module>

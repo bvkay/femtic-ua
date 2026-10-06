@@ -1,0 +1,5 @@
+SimplexMesh: 31321 cells, 63081 faces, 37103 edges, build 0.037s
+  vol sum rel err 1.1920928955078126e-16  neighbors shape (31321, 4)  boundary face count 878
+  point2index [1239 6183]  interp matrix (2, 31321)
+  has edge curl (63081, 37103)  face areas (63081,)
+TreeMesh: 4992 cells, levels [np.int64(3), np.int64(4), np.int64(5), np.int64(6), np.int64(7), np.int64(8)], min h 4.0 m, build 0.035s, n_hanging_nodes 2780, total_nodes 6793

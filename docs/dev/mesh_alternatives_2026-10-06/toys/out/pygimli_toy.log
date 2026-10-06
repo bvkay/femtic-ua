@@ -1,0 +1,6 @@
+Opening C:\Users\joint\AppData\Local\Temp\tmpsob6sp_n.poly.
+  Segments are connected properly.
+regions: [20, 10]
+import 0.11s  mesh 0.14s  cells 4318 nodes 786 markers [10, 20] boundaries 8738
+neighbour API: [2751, 1614, 869, 1716]
+findCell: 83  cell volume sum: 1000000000.0

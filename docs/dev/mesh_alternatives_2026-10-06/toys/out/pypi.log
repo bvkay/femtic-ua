@@ -1,0 +1,12 @@
+  File "C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35796\scratchpad\alt_mesh\env\Lib\urllib\request.py", line 532, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35796\scratchpad\alt_mesh\env\Lib\urllib\request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35796\scratchpad\alt_mesh\env\Lib\urllib\request.py", line 1392, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35796\scratchpad\alt_mesh\env\Lib\urllib\request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 11001] getaddrinfo failed>

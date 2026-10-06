@@ -301,10 +301,10 @@ Each check re-reads the written files and compares them with the config, the sit
 
 ## Next steps
 
-1. Take the mesh of `mesh/vulcan_v2`: copy its mesh.dat and resistivity_block_iter0.dat next to inversion/observe.dat and check their md5 against `mesh/vulcan_v2/mesh_logs/products.md5`. Do not run the mesh chain or hpc/phoenix_plan/03_mesh.slurm.
+1. Take the mesh of `mesh/vulcan_v2`: its mesh.dat and resistivity_block_iter0.dat (gitignored, in the main checkout's `mesh/vulcan_v2/inversion/`; on Phoenix, the shared mesh folder of hpc/phoenix_plan/RUNBOOK.md S4). Do not run the mesh chain or hpc/phoenix_plan/03_mesh.slurm.
 2. The element and parameter-cell counts are those of `mesh/vulcan_v2/mesh_logs/mesh_stats.txt`; settle INV_METHOD (above).
 3. The half-space gate result of `mesh/vulcan_v2` applies (validation/mesh_2026-09-25/halfspace_accuracy.md).
-4. Upload and run on Phoenix: hpc/phoenix_plan/RUNBOOK_first_inversion.md.
+4. Upload and run on Phoenix: hpc/phoenix_plan/RUNBOOK.md.
 
 ## Sites
 

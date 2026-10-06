@@ -8,8 +8,8 @@
 #SBATCH --time=02:00:00
 #SBATCH --signal=B:USR1@600
 #SBATCH -o slurm-%x-%j.out
-#SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=ben.kay@adelaide.edu.au
+# Mail: none unless asked (no #SBATCH mail lines). run.sh passes --mail-type=NONE, or MAIL=<address> from run.env;
+# by hand: sbatch --mail-type=END,FAIL --mail-user=<your address> ... (command-line options override #SBATCH)
 # =============================================================================
 # 03_mesh.slurm -- tetrahedral mesh generation for FEMTIC (7-step meshGen), serial except for
 # makeTetraMesh's one OpenMP loop.
@@ -36,7 +36,8 @@
 #              2  0.0 0.0  10.0  20 1e9      # earth -> attribute 20
 #            Add a sea seed (e.g. attribute 20 sea / 30 earth as in the AusLAMP example) only if
 #            the domain has ocean. Every attribute must be listed in files/resistivity_attr.dat.
-# Outputs: mesh.dat, resistivity_block_iter0.dat -> copied to $INVDIR
+# Outputs: mesh.dat, resistivity_block_iter0.dat -> copied to $INVDIR (default $MESHDIR/inversion: an ungated mesh
+#          never goes straight to $VF/shared/, where run.sh takes the gated meshes from)
 #
 # Adapted from femticPy/scripts/meshGen.sh (CSIRO). Steps: makeTetraMesh -stp 1..4 ->
 # tetgen -nVpYAakq3.0/0 -> NREFINE x (makeMtr + tetgen -nmpYVrAakq3.0/0) -> TetGen2Femtic.
@@ -51,10 +52,13 @@ set -o pipefail
 JOB_T0=$(date +%s)
 echo "== $(date) job ${SLURM_JOB_ID:-none} (${SLURM_JOB_NAME:-?}) partition=${SLURM_JOB_PARTITION:-?} on $(hostname)  cwd=$PWD"
 
-BIN=${BIN:-/hpcfs/users/$USER/femtic/bin}
-PROJECT=${PROJECT:-/hpcfs/users/$USER/vulcan_femtic}
+VF=${VF:-/hpcfs/users/$USER/vulcan_femtic}
+BIN=${BIN:-$VF/bin}                     # FEMTIC: $VF/bin is a link to a build (RUNBOOK S1); BIN=<folder> overrides
+PROJECT=${PROJECT:-$VF}
+KIT=${KIT:-${PLAN:-$VF/kit}}          # the uploaded kit: femtic_lib.sh is read from here
+PLAN=$KIT
 MESHDIR=${MESHDIR:-$PROJECT/meshGen}
-INVDIR=${INVDIR:-$PROJECT/work/meshgen/inv01}   # an ungated mesh: its own work/<mesh>, never inputs/ or work/v{2,3}
+INVDIR=${INVDIR:-$MESHDIR/inversion}  # an ungated mesh: next to its meshGen, never in shared/ or runs/
 NREFINE=${NREFINE:-5}                 # meshGen.sh uses 5 passes: output.1 .. output.5 -> output.6
 MAX_ELEMENTS=${MAX_ELEMENTS:-500000}  # warning threshold for the Vulcan mesh
 FIX_ELE=${FIX_ELE:-0}                 # 1 = CSIRO fix_output1.py: cap region attribute of output.1.ele at FIX_ELE_MAX
@@ -62,7 +66,10 @@ FIX_ELE_MAX=${FIX_ELE_MAX:-30}
 
 # shellcheck disable=SC1091
 source "$BIN/femtic_env.sh" || { echo "ERROR: $BIN/femtic_env.sh missing -- run 01_build_femtic.sh"; exit 1; }
-[ "${FEMTIC_LIB_VERSION:-0}" -ge 4 ] || { echo "ERROR: $BIN/femtic_lib.sh is version ${FEMTIC_LIB_VERSION:-unset}; this script needs FEMTIC_LIB_VERSION >= 4 (version 2, installed 2026-09-25, misreads PARDISO memory and has no layout rule; version 3 loses N_iv when DIV_NUM_RHS_FWD > N_iv) -- install -m 644 <phoenix_plan>/femtic_lib.sh $BIN/"; exit 1; }
+# shellcheck disable=SC1091
+source "$KIT/femtic_lib.sh" || { echo "ERROR: no kit at $KIT (femtic_lib.sh missing): upload export/kit there, or pass KIT=<kit folder>"; exit 1; }
+[ "${FEMTIC_LIB_VERSION:-0}" -ge 5 ] || { echo "ERROR: $KIT/femtic_lib.sh is version ${FEMTIC_LIB_VERSION:-unset}; this script needs FEMTIC_LIB_VERSION >= 5 (an older kit: upload the current one, made by scripts/make_phoenix_kit.sh)"; exit 1; }
+femtic_kit_banner
 export OMP_NUM_THREADS=${THREADS:-${SLURM_CPUS_PER_TASK:-1}}   # makeTetraMesh has one OpenMP loop; tetgen etc. are serial
 for exe in makeTetraMesh tetgen makeMtr TetGen2Femtic; do
   command -v "$exe" >/dev/null || { echo "ERROR: $exe not on PATH ($BIN)"; exit 1; }

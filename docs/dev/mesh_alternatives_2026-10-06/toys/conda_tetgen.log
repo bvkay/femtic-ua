@@ -1,0 +1,30 @@
+Channels:
+ - conda-forge
+Platform: win-64
+Collecting package metadata (repodata.json): ...working... done
+Solving environment: ...working... done
+
+## Package Plan ##
+
+  environment location: C:\Users\joint\AppData\Local\Temp\claude\D--BEN-FEMTIC-2026--claude-worktrees-femtic-work-9213a4\12c8b723-4a84-4277-90c6-4cb5cbb35796\scratchpad\alt_mesh\env
+
+  added / updated specs:
+    - tetgen=1.6.0
+
+
+The following packages will be downloaded:
+
+    package                    |            build
+    ---------------------------|-----------------
+    tetgen-1.6.0               |       hac47afa_2         454 KB  conda-forge
+    ------------------------------------------------------------
+                                           Total:         454 KB
+
+The following NEW packages will be INSTALLED:
+
+  tetgen             conda-forge/win-64::tetgen-1.6.0-hac47afa_2 
+
+
+Preparing transaction: ...working... done
+Verifying transaction: ...working... done
+Executing transaction: ...working... done

@@ -4,7 +4,8 @@
 #   C1  femtic_pardiso_kb / femtic_pardiso_max_gb read FEMTIC's %g numbers; FEMTIC_LIB_VERSION 3 and the gates
 #   C2  two-array sensitivity-step model (femtic_sens_mem_mb), the layout rule that 04 and 06 enforce
 #       (femtic_layout_check), and 06's half-space gate (START_RHO + tools/halfspace_eval.py)
-#   (d) the version gates: 01 SMOKE_ONLY, 03, 04, 05 and 06 all need FEMTIC_LIB_VERSION >= 4
+#   (d) the version gates: 01 SMOKE_ONLY, 03, 04, 05 and 06 all need FEMTIC_LIB_VERSION >= 5 in their kit (KIT)
+#       (2026-10-06: since version 5 the scripts read femtic_lib.sh from KIT, not from BIN; d1, d2, d4 pass KIT)
 #   (f) follow-ups from the kit verdict: N_iv behind FEMTIC's DIV_NUM_RHS_FWD warning, 06's job_outcomes.tsv exit
 #       column, station names in the gate report, 06's walltime and SU text, and the LAYOUT hand-over to 05
 # No real femtic, mpirun or Slurm: a fake femtic writes the log lines, result csv files and model files that 04
@@ -149,7 +150,7 @@ run04() {   # run04 DIR RANKS_PER_NODE CPUS_PER_TASK [ENV=VAL ...] -> RC, JOB, O
   local d=$1 n=$2 c=$3; shift 3; JOBN=$((JOBN + 1)); JOB=$JOBN; OUT=$d/slurm-04-$JOB.out; mkdir -p "$WORK/tmp_$JOB"
   ( cd "$d" && env "PATH=$BIN:$PATH" SLURM_JOB_ID=$JOB SLURM_JOB_NAME=vulcan_inv01 SLURM_JOB_PARTITION=icelake \
       SLURM_SUBMIT_DIR="$d" SLURM_JOB_NUM_NODES=1 SLURM_JOB_NODELIST=n1 SLURM_NTASKS=$n SLURM_NTASKS_PER_NODE=$n \
-      SLURM_CPUS_PER_TASK=$c SLURM_MEM_PER_NODE=254952 TMPDIR="$WORK/tmp_$JOB" BIN="$BIN" SCRATCH_SHARED="$WORK/shared" \
+      SLURM_CPUS_PER_TASK=$c SLURM_MEM_PER_NODE=254952 TMPDIR="$WORK/tmp_$JOB" BIN="$BIN" KIT="$PLAN" SCRATCH_SHARED="$WORK/shared" \
       WATCH_S=1 "$@" timeout 300 bash "$PLAN/04_inversion.slurm" > "$OUT" 2>&1 ); RC=$?
 }
 calls() { [ -f "$1/fake_calls.txt" ] && wc -l < "$1/fake_calls.txt" | tr -d ' ' || echo 0; }
@@ -244,36 +245,38 @@ if [ -n "${STALE_LIB:-}" ]; then cp "$STALE_LIB" "$B2/femtic_lib.sh"; else sed '
 printf 'export PATH=%s:$PATH FEMTIC_TOOLCHAIN=foss FEMTIC_BIN=%s\n. %s/femtic_lib.sh\n' "$B2" "$B2" "$B2" > "$B2/femtic_env.sh"
 printf '#!/bin/bash\necho "$PWD" >> %s/b2_femtic_calls.txt\nexit 0\n' "$WORK" > "$B2/femtic"; chmod +x "$B2"/*
 echo; echo "version-2 library for (d): $B2/femtic_lib.sh ($(wc -c < "$B2/femtic_lib.sh" | tr -d ' ') B, $(grep -m1 '^FEMTIC_LIB_VERSION=' "$B2/femtic_lib.sh"))"
-GATE_MSG="needs FEMTIC_LIB_VERSION >= "   # 01 SMOKE_ONLY, 03, 04, 05 and 06 all need >= 4
+GATE_MSG="needs FEMTIC_LIB_VERSION >= "   # 01 SMOKE_ONLY, 03, 04, 05 and 06 all need >= 5
+# The scripts read femtic_lib.sh from KIT (version 5 on), so the stale library is passed as KIT=$B2 (B2 holds
+# femtic_lib.sh), and BIN=$B2 keeps the stale copy in BIN too, as Phoenix's femtic/bin still has one.
 crit d1 "04, 06, 03 or 05 runs with a version-2 femtic_lib.sh (must exit 1 with '$GATE_MSG' and start nothing)"
 DD=$(newinv d)
 for s in 04_inversion.slurm 06_forward_only.slurm 03_mesh.slurm; do
   ( cd "$DD" && env "PATH=$B2:$PATH" SLURM_JOB_ID=900 SLURM_SUBMIT_DIR="$DD" SLURM_NTASKS=2 SLURM_CPUS_PER_TASK=36 SLURM_MEM_PER_NODE=254952 \
-      BIN="$B2" TMPDIR="$WORK" MESHDIR="$DD" timeout 300 bash "$PLAN/$s" > "$WORK/d1_$s.out" 2>&1 ); rc=$?
+      BIN="$B2" KIT="$B2" TMPDIR="$WORK" MESHDIR="$DD" timeout 300 bash "$PLAN/$s" > "$WORK/d1_$s.out" 2>&1 ); rc=$?
   eq "d1 $s exit" "$rc" 1; has "d1 $s" "$WORK/d1_$s.out" "$GATE_MSG"
 done
-( env "PATH=$B2:$PATH" BIN="$B2" timeout 300 bash "$PLAN/05_chain.sh" "$DD" 1 1 > "$WORK/d1_05.out" 2>&1 ); rc=$?
+( env "PATH=$B2:$PATH" BIN="$B2" KIT="$B2" timeout 300 bash "$PLAN/05_chain.sh" "$DD" 1 1 > "$WORK/d1_05.out" 2>&1 ); rc=$?
 eq "d1 05_chain.sh exit" "$rc" 1; has "d1 05_chain.sh" "$WORK/d1_05.out" "$GATE_MSG"
 eq "d1 femtic launched by a gated script" "$(cat "$WORK/b2_femtic_calls.txt" 2>/dev/null | wc -l | tr -d ' ')" 0
 crit d2 "01 SMOKE_ONLY=1 runs its tests with a version-2 femtic_lib.sh installed (must stop with '$GATE_MSG')"
 S=$WORK/src; mkdir -p "$S/femtic/examples/INV_MT_01/Tetra"; for f in control.dat mesh.dat observe.dat resistivity_block_iter0.dat; do : > "$S/femtic/examples/INV_MT_01/Tetra/$f"; done
-( env "PATH=$B2:$PATH" SRC="$S" BIN="$B2" SMOKE_ONLY=1 TOOLCHAIN=foss timeout 300 bash "$PLAN/01_build_femtic.sh" > "$WORK/d2_01.out" 2>&1 ); rc=$?
+( env "PATH=$B2:$PATH" SRC="$S" BIN="$B2" KIT="$B2" SMOKE_ONLY=1 TOOLCHAIN=foss timeout 300 bash "$PLAN/01_build_femtic.sh" > "$WORK/d2_01.out" 2>&1 ); rc=$?
 sleep 1; cat "$S"/smoke_foss_*.log >> "$WORK/d2_01.out" 2>/dev/null   # 01 tees into its own log; read both
 eq "d2 01 SMOKE_ONLY exit" "$rc" 1; has "d2 01 SMOKE_ONLY" "$WORK/d2_01.out" "$GATE_MSG"
-crit d3 "the kit's own femtic_lib.sh is not version 4 (the gates of 04/05/06 would then reject the current kit)"
-eq "d3 version" "$(sed -n 's/^FEMTIC_LIB_VERSION=//p' "$PLAN/femtic_lib.sh")" 4
-crit d4 "04, 06 or 05 runs with a version-3 femtic_lib.sh (the 2026-09-28 C1/C2 copy, whose femtic_niv_measured loses N_iv behind FEMTIC's DIV_NUM_RHS_FWD warning): must exit 1 with 'needs FEMTIC_LIB_VERSION >= 4' and start nothing"
+crit d3 "the kit's own femtic_lib.sh is not version 5 (the gates of 04/05/06 would then reject the current kit)"
+eq "d3 version" "$(sed -n 's/^FEMTIC_LIB_VERSION=//p' "$PLAN/femtic_lib.sh")" 5
+crit d4 "04, 06 or 05 runs with a version-4 femtic_lib.sh in its kit (the 2026-09-28 kit, before the kit layout of version 5; one below the gate): must exit 1 with 'needs FEMTIC_LIB_VERSION >= 5' and start nothing"
 B3=$WORK/bin_v3; mkdir -p "$B3"; cp "$BIN"/* "$B3/"
-sed 's/^FEMTIC_LIB_VERSION=.*/FEMTIC_LIB_VERSION=3/' "$BIN/femtic_lib.sh" > "$B3/femtic_lib.sh"
+sed 's/^FEMTIC_LIB_VERSION=.*/FEMTIC_LIB_VERSION=4/' "$BIN/femtic_lib.sh" > "$B3/femtic_lib.sh"
 printf 'export PATH=%s:$PATH FEMTIC_TOOLCHAIN=foss FEMTIC_BIN=%s\n. %s/femtic_lib.sh\n' "$B3" "$B3" "$B3" > "$B3/femtic_env.sh"
 printf '#!/bin/bash\necho "$PWD" >> %s/b3_femtic_calls.txt\nexit 0\n' "$WORK" > "$B3/femtic"; chmod +x "$B3"/*
 for s in 04_inversion.slurm 06_forward_only.slurm; do
   ( cd "$DD" && env "PATH=$B3:$PATH" SLURM_JOB_ID=901 SLURM_SUBMIT_DIR="$DD" SLURM_NTASKS=2 SLURM_CPUS_PER_TASK=36 SLURM_MEM_PER_NODE=254952 \
-      BIN="$B3" TMPDIR="$WORK" timeout 300 bash "$PLAN/$s" > "$WORK/d4_$s.out" 2>&1 ); rc=$?
-  eq "d4 $s exit" "$rc" 1; has "d4 $s" "$WORK/d4_$s.out" "needs FEMTIC_LIB_VERSION >= 4"
+      BIN="$B3" KIT="$B3" TMPDIR="$WORK" timeout 300 bash "$PLAN/$s" > "$WORK/d4_$s.out" 2>&1 ); rc=$?
+  eq "d4 $s exit" "$rc" 1; has "d4 $s" "$WORK/d4_$s.out" "needs FEMTIC_LIB_VERSION >= 5"
 done
-( env "PATH=$B3:$PATH" BIN="$B3" SBATCH_EXTRA='--ntasks-per-node=2 --cpus-per-task=36' timeout 300 bash "$PLAN/05_chain.sh" "$DD" 1 1 > "$WORK/d4_05.out" 2>&1 ); rc=$?
-eq "d4 05_chain.sh exit" "$rc" 1; has "d4 05_chain.sh" "$WORK/d4_05.out" "needs FEMTIC_LIB_VERSION >= 4"
+( env "PATH=$B3:$PATH" BIN="$B3" KIT="$B3" SBATCH_EXTRA='--ntasks-per-node=2 --cpus-per-task=36' timeout 300 bash "$PLAN/05_chain.sh" "$DD" 1 1 > "$WORK/d4_05.out" 2>&1 ); rc=$?
+eq "d4 05_chain.sh exit" "$rc" 1; has "d4 05_chain.sh" "$WORK/d4_05.out" "needs FEMTIC_LIB_VERSION >= 5"
 eq "d4 femtic launched by a gated script" "$(cat "$WORK/b3_femtic_calls.txt" 2>/dev/null | wc -l | tr -d ' ')" 0
 
 # ================================================================ (e) C2: the half-space gate in 06

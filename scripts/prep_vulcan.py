@@ -1543,7 +1543,7 @@ def write_readmes(c, ctx, run_dir, final_dir, ck):
          "| mesh.dat, resistivity_block_iter0.dat | not yet: produced by the mesh chain from ../files |" if not ru else
          "| mesh.dat, resistivity_block_iter0.dat | not in this directory: this run reuses the existing mesh of `%s` "
          "(../files is byte-identical to its inputs, check C17). Copy both files from the main checkout's `%s/inversion/` "
-         "and check their md5 against `%s/mesh_logs/products.md5`. Do not re-mesh. |" % (ru, ru, ru), ""]
+         "(on Phoenix: hpc/phoenix_plan/RUNBOOK.md S4). Do not re-mesh. |" % (ru, ru), ""]
     L += data_sections(c, ctx)
     L += ["## control.dat\n"] + control_listing(os.path.join(run_dir, "inversion", "control.dat"))
     L += ["", "INV_METHOD %d. Normal-matrix sizes: data space N_data^2 = %d^2 x 8 B = %.1f GB; model space "
@@ -1682,13 +1682,13 @@ def write_readmes(c, ctx, run_dir, final_dir, ck):
                       [[r["id"], r["name"], r["criterion"], r["status"] + ": " + r["detail"]]
                        for r in ck.res]))
     L += ["", "## Next steps", ""] + ([
-          "1. Take the mesh of `%s`: copy its mesh.dat and resistivity_block_iter0.dat next to inversion/observe.dat "
-          "and check their md5 against `%s/mesh_logs/products.md5`. Do not run the mesh chain or "
-          "hpc/phoenix_plan/03_mesh.slurm." % (ru, ru),
+          "1. Take the mesh of `%s`: its mesh.dat and resistivity_block_iter0.dat (gitignored, in the main checkout's "
+          "`%s/inversion/`; on Phoenix, the shared mesh folder of hpc/phoenix_plan/RUNBOOK.md S4). Do not run the mesh "
+          "chain or hpc/phoenix_plan/03_mesh.slurm." % (ru, ru),
           "2. The element and parameter-cell counts are those of `%s/mesh_logs/mesh_stats.txt`; settle INV_METHOD "
           "(above)." % ru,
           "3. The half-space gate result of `%s` applies (validation/mesh_2026-09-25/halfspace_accuracy.md)." % ru,
-          "4. Upload and run on Phoenix: hpc/phoenix_plan/RUNBOOK_first_inversion.md.", ""] if ru else [
+          "4. Upload and run on Phoenix: hpc/phoenix_plan/RUNBOOK.md.", ""] if ru else [
           "1. Mesh these inputs with the gated chain, `bash scripts/run_mesh_chain.sh <copy of files/> 5` "
           "(docs/mesh_tetra_pipeline.md; it reads files/region_seeds.dat), and keep the md5 of mesh.dat and "
           "resistivity_block_iter0.dat. hpc/phoenix_plan/03_mesh.slurm is a different, ungated chain: do not "
@@ -1698,7 +1698,7 @@ def write_readmes(c, ctx, run_dir, final_dir, ck):
           "3. Before inverting, pass the half-space accuracy gate of validation/mesh_2026-09-25/"
           "halfspace_accuracy.md: uniform 3 and 100 ohm-m, the OWNER_ELEMENT of inversion/control.dat, and at "
           "most 5 % in rho_a, 1.5 degrees in phase and 2 % in the diagonal ratio at every site and band.",
-          "4. Upload and run on Phoenix: hpc/phoenix_plan/RUNBOOK_first_inversion.md.", ""])
+          "4. Upload and run on Phoenix: hpc/phoenix_plan/RUNBOOK.md.", ""])
     L += site_section(c, ctx)
     with open(os.path.join(run_dir, "README.md"), "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(L) + "\n")

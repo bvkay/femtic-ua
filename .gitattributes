@@ -9,3 +9,15 @@
 *.yml text eol=lf
 *.pdf binary
 *.png binary
+
+# scripts/make_phoenix_kit.sh: 'git archive HEAD hpc/phoenix_plan' leaves these out of the Phoenix kit (export/kit/)
+hpc/phoenix_plan/tests export-ignore
+hpc/phoenix_plan/tests/** export-ignore
+hpc/phoenix_plan/README_phoenix.md export-ignore
+hpc/phoenix_plan/RUNBOOK* export-ignore
+hpc/phoenix_plan/UPLOAD_LIST* export-ignore
+hpc/phoenix_plan/build_*.log export-ignore
+hpc/phoenix_plan/discovery export-ignore
+hpc/phoenix_plan/discovery/** export-ignore
+hpc/phoenix_plan/**/__pycache__ export-ignore
+hpc/phoenix_plan/**/__pycache__/** export-ignore

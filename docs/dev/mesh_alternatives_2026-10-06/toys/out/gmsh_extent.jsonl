@@ -1,0 +1,2 @@
+{"algo": 1, "tets": 26418, "nodes": 4761, "earth_surface_tris": 2372, "site_tri_max_edge_m": [3.8, 3.75, 4.11], "min_edge_m": 2.975, "max_edge_km": 199.8, "vol_rel_err": 0.0, "neg": 0, "t_mesh_s": 0.26, "t_total_s": 0.29}
+{"algo": 10, "tets": 19801, "nodes": 3735, "earth_surface_tris": 2372, "site_tri_max_edge_m": [3.8, 3.75, 4.11], "min_edge_m": 2.975, "max_edge_km": 217.8, "vol_rel_err": 1.1920928955078126e-16, "neg": 0, "t_mesh_s": 0.08, "t_total_s": 0.1}
