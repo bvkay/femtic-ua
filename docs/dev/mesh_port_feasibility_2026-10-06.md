@@ -361,6 +361,46 @@ instead of P3: 43-69, + 8-12 beyond Vulcan's land-only path. P3's days are this 
    TetGen route (STATUS:196, 291-292), and option C needs makeMtr and the tetgen wrapper.
 4. **Order inside P1.** The re-partitioner needs no Phoenix time; B2 waits for G0's .face file, which no run kept (2.3).
 
+### 8.1 Addendum 2026-10-07: local builds shift the designer choice (sections 7 and 8)
+
+**What changed.** Ben decided on 2026-10-07 that students may build meshes on their own machines when the resources
+allow; FEMTIC and the half-space gate stay on Phoenix, and the gate accepts any mesh (D11, STATUS "D11"). The GUI
+design is docs/dev/gui_design_2026-10-06.md section 9. Section 7 weighed (i) and (iii) for builds that in practice
+ran on Phoenix; a student machine turns its "Student install" row into a hard requirement, Windows first. No new
+numbers here: every figure is in sections 2-7 or in the files they cite.
+
+**How it shifts the argument.**
+1. **(i) loses its main advantage for student meshes.** Its strength was fidelity, byte-identical to the gated
+   v2/v3 with the same build (section 7, "Fidelity"). Under D11 a student mesh is a new design that passes its own
+   gate, so fidelity to v2/v3 buys a student nothing; byte identity stays a developer test of the ports.
+2. **(i)'s cost moves to Windows and macOS.** Locally, (i) needs per-OS binaries of makeTetraMesh and, until the
+   makeMtr port passes B4, of makeMtr; hpc/ported/ holds GCC makefiles only (hpc/ported/README.md). Shipping them
+   waits on Usui's licence terms (section 10, risk 4). conda-forge's tetgen exists for every OS but already differs
+   from the chain's build at round 0 (docs/dev/mesh_port_progress.md section 4), so a local (i) build is a new mesh
+   anyway, which point 1 makes harmless.
+3. **(iii)'s install argument becomes a requirement.** One pip wheel, no makeMtr, no per-OS CI (ALT:35, 149). Its
+   risks are unchanged: scale and RAM at 3 M tets, determinism only with 2-D threads = 1, sea and coast
+   (ALT:56, 60, 154), GPL on distribution (ALT:63-65).
+4. **New constraint: one designer for both routes.** The Phoenix route is hpc/phoenix_plan/mesh_chain.sh, a bash
+   TetGen chain with no python (mesh_chain.sh:55). With Gmsh locally and makeTetraMesh on Phoenix, one config would
+   make two kinds of mesh. So if (iii) wins, the Phoenix route must run the same Python driver (a conda env on
+   Phoenix, which the kit avoids today) or stop serving student designs. If (i) wins, the routes share tools and
+   switches and differ only by build (point 2).
+5. **(ii) stays out:** still the costliest, 2.7 % of the time, nothing for D3 (section 7).
+
+**What decides it.** The tests are section 9's; what changes is where two run and what one gates.
+- **TD6 also on a student-class Windows machine**, not only on Phoenix: its 10 min / 8 GB limits are the local
+  budget. If it passes on Phoenix and fails there, (iii) is Phoenix-only and point 4 applies. Ben's PC is not a
+  test machine (STATUS 1.4).
+- **TD7 on Phoenix**, as before: the gate decides accuracy (D11).
+- **(i) per OS:** TD8 stays as written, a developer test (D11), but no longer gates shipping (i) to students: a
+  per-OS difference makes a new mesh, which its own gate judges. What gates it is the driver's doctor reporting a
+  complete backend on that OS and the local chain on chain_proof meeting S1 (check_mesh 17/17) and S2 against
+  Phoenix's Run04 (section 5).
+- **Sequence:** P3 now also picks the student install, so start it as soon as P1 reads Gmsh output (section 8,
+  point 1). The GUI's Local route needs P2's chain driver on either branch; on Windows it stays disabled until (i)'s
+  binaries exist or (iii) passes TD6 there (gui_design section 9.0).
+
 ## 9. Tests that decide (Invariant 10: each states how it fails; all run on Phoenix)
 
 None compares FEMTIC outputs byte for byte: FEMTIC is not bitwise reproducible (STATUS:29-31). Mesh-tool outputs

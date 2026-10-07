@@ -1,14 +1,22 @@
 # conda env for femtic_mesh (src/femtic_mesh): the Python side of the FEMTIC mesh chain.
 #   conda env create -f environment-mesh.yml && conda activate femtic-mesh
 #   pip install -e .        (once pyproject.toml carries the femtic_mesh entry; until then: set PYTHONPATH=src)
+#   python -m femtic_mesh.doctor            (can this machine build a mesh? exit 0 only with a complete chain)
 #   python tests/mesh/run_all.py
-# numpy is the only hard dependency. pandas, scipy and numba are not used by this slice (P1); numba would be
-# needed only for a makeTetraMesh port, which the study rejects (docs/dev/mesh_port_feasibility_2026-10-06.md s4).
-# The tests are plain scripts (no pytest). psutil is optional: the tests use it to report peak RSS.
+# numpy is the only hard dependency of the Python ports (makeMtr, TetGen2Femtic, the re-partitioner) and of the chain
+# driver: they run without tetgen. tetgen (conda-forge, 1.6.0) is the executable the local chain calls for the
+# tetrahedra; conda-forge builds it for win-64, linux-64, linux-aarch64, osx-64 and osx-arm64. It is NOT byte-identical
+# to the chain's own tetgen build (libigl e05aca7 on Phoenix and in WSL; docs/dev/mesh_port_progress.md s4 and P2), so
+# a mesh built with it is a new mesh: the half-space gate on Phoenix is its acceptance test (D11). makeTetraMesh (the
+# designer) has no conda package and no port yet: without it, build on Phoenix, or start from an existing output.poly.
+# TetGen is AGPL-3.0-or-later; the chain only runs it as a separate program.
+# pandas, scipy and numba are not used. The tests are plain scripts (no pytest); psutil is optional (peak RSS figures
+# in the tests, and the RAM the doctor reports; without it the OS is asked directly).
 name: femtic-mesh
 channels:
   - conda-forge
 dependencies:
   - python>=3.10
   - numpy>=1.23        # np.loadtxt's C parser (exact float parsing) arrived in 1.23
-  - psutil             # optional: peak-RSS figures in the tests
+  - tetgen=1.6.0       # the executable (tetgen.exe on Windows); optional for the pure-Python parts
+  - psutil             # optional: peak-RSS figures in the tests, RAM in the doctor

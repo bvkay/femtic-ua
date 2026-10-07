@@ -103,6 +103,38 @@ def expect_fail(what, fn, *a, **k):
     raise AssertionError(f"negative control {what!r} did NOT fail: the check cannot detect this defect")
 
 
+def main_mesh(*rel):
+    """A small file under the mesh data root (logs, inputs): Skip only if absent, whatever FEMTIC_SKIP_V2 says."""
+    root = mesh_data()
+    p = os.path.join(root, *rel) if root else None
+    if p is None or not os.path.exists(p):
+        raise Skip(f"missing {p or os.path.join('<mesh data>', *rel)} (set FEMTIC_MESH_DATA)")
+    return p
+
+
+def mutant(modname, edits):
+    """A copy of module modname with each (old, new) text edit applied (old must occur exactly once): a mutant for
+    a negative control. It imports its siblings as the original does (same package)."""
+    import importlib
+    import types
+    mod = importlib.import_module(modname)
+    src = open(mod.__file__, encoding="utf-8").read()
+    for old, new in edits:
+        if src.count(old) != 1:
+            raise AssertionError(f"mutant of {modname}: {old!r} occurs {src.count(old)} times")
+        src = src.replace(old, new)
+    m = types.ModuleType(modname + "_mutant")
+    m.__package__, m.__file__ = mod.__package__, mod.__file__
+    exec(compile(src, mod.__file__ + " (mutant)", "exec"), m.__dict__)
+    return m
+
+
+def port_env():
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.path.join(REPO, "src") + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+    return env
+
+
 def peak_rss_mb():
     try:
         import psutil

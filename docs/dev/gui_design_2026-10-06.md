@@ -32,6 +32,8 @@ missing without importing it (2.6), and marks the R5 mask as a runbook fix (find
   (RUNBOOK.md:77-81) and open them in the Results tab.
 - **No compute in the GUI process, no modelling on the PC, never WSL** (RUNBOOK.md:10; STATUS.md:94). The GUI never
   runs femtic, tetgen, makeTetraMesh, makeMtr, TetGen2Femtic or mpirun; bash is Git Bash, found explicitly (3).
+  **Phase 2 (Ben, 2026-10-07):** a child process may run the four mesh tools on a student's own machine; FEMTIC,
+  mpirun and WSL never, Ben's PC never: section 9.0.
 - **Thin shell, KISS.** Every action is one existing command typed as a student would (3); no checksum, manifest,
   ledger, run database, auto-refresh or git step is added (STATUS.md:16-21).
 
@@ -59,6 +61,8 @@ missing without importing it (2.6), and marks the R5 mask as a runbook fix (find
    "Build" is just that New-run job (2.4), run on Phoenix like any other run.
    <!-- fixes 2026-10-07: `make_run.sh --job mesh --files DIR [--seeds ...]` is in the committed make_run.sh
    (abbee8a) and the New-run form now offers it (2.4). -->
+   **G2 reopened (Ben, 2026-10-07):** students may build meshes on their own machines; the cut held for Ben's PC
+   only. Phase 2's "Build mesh: Local | Phoenix" is section 9.
 6. **No predicted mesh counts:** the estimator is not in the repo (PIPE:994) and was off 1.3x in tets, 2.7x in cells
    (PIPE:782-783, 793-794); the Mesh tab shows measured counts.
 7. **prep has no --check-config** (PREP:2093-2105): the GUI calls PREP.load_config (PREP:232-434) on a temp file next
@@ -158,6 +162,9 @@ at import, PREP:73-74; femticPy only in a full run, :2166), so every preview is 
   readout, a design rule the GUI would compute and prep does not (thin-shell rule); its one student-reachable case,
   fmax_hz above 100 Hz, is now a widget bound and G6 (finding 12); (c) the Build bullet: G2 is settled, no button. -->
 - **3D**: "Load mesh" opens viewer3d (2.6) on MAIN/<reuse_from>/inversion/ (mesh.dat + iter0 block) or a .vtk.
+- **Phase 2 (2026-10-07):** with mesh.reuse_from null the mesh keys become editable, the plan view and size plot
+  return, prep reports the derivable sizes, and "Build mesh: Local | Phoenix" appears: section 9.1-9.3. The
+  phase-1 behaviour above stays for a config that reuses a mesh.
 
 ### 2.3 FEMTIC
 One row per control.dat key in femticPy's order (FPY:533-572). The four curated rows are editable, the rest never, each
@@ -460,3 +467,244 @@ full only inside T4 (about 3 s, temporary --out) and make_run.sh only inside T12
   make_run.sh itself accepted both mesh lines (exit 0, scratch RUNS). Not in this round: Save as only inside
   config/, launching from MAIN while the editable install points elsewhere, the smoke step reading RUNBOOK's Run06
   line, and the KISS list (journal 2026-10-06).
+
+## 9. Phase 2: mesh design and build, Local | Phoenix (2026-10-07, design only; nothing built)
+<!-- design 2026-10-07 (design agent): reads only; no mesh tool, prep, FEMTIC, mpirun or WSL ran for this section, and
+every figure is copied from the file cited. M/ = D:/BEN/FEMTIC_2026/mesh (gitignored logs of the 2026-09-25 WSL
+builds); STUDY = docs/dev/mesh_port_feasibility_2026-10-06.md; PROG = docs/dev/mesh_port_progress.md; MC =
+hpc/phoenix_plan/mesh_chain.sh; MR = scripts/make_run.sh; RUN = hpc/phoenix_plan/run.sh; CFG and PREP as in the
+header. Line numbers hold for commit 384968c. -->
+
+**Decision (Ben, 2026-10-07).** Students may build a mesh on their own machine when it has the tools and the
+resources. The Mesh tab gets "Build mesh: Local | Phoenix", with detection of the available tools and a resource
+estimate. G2's cut (finding 5) rested on Ben's PC, where nothing may run (RUNBOOK.md:8; STATUS.md 1.4); that rule
+stands for Ben's PC. FEMTIC and the half-space gate stay on Phoenix, and the gate is the acceptance test of every
+mesh (D11, STATUS.md "D11").
+
+### 9.0 What phase 2 depends on, and what it changes
+- **Not in the repo yet.** The chain driver `femtic_mesh.chain` is a proposal (STUDY section 4, chain.py; phase P2
+  in STUDY section 8). Committed src/femtic_mesh holds the readers and writers, the TetGen2Femtic port
+  (byte-identical to the C++ on chain_proof and v2, PROG section 1) and the re-partitioner. A makeMtr port is being
+  written by another session (src/femtic_mesh/makemtr.py, untracked, seen 2026-10-07 20:17); its byte test B4
+  needs G0's output.1-5 from Phoenix (PROG section 10), so until B4 passes, makeMtr counts as a binary-only step.
+- **A complete local backend is one per step.** makeTetraMesh: a C++ binary only (STUDY section 7 rejects a port).
+  tetgen: a TetGen 1.6.0 binary run as a subprocess, never a Python binding (STUDY section 3; conda-forge builds
+  it for win-64, linux-64, osx-64 and osx-arm64). makeMtr: a C++ binary until the port passes B4. TetGen2Femtic:
+  the Python port, or the binary. hpc/ported/ holds GCC makefiles only (hpc/ported/README.md), so no Windows build
+  of makeTetraMesh or makeMtr exists: on a Windows student PC "Local" stays disabled until per-OS binaries or the
+  Gmsh route exist. STUDY section 8.1 (addendum of this date) says which test decides.
+- **Two routes never give the same mesh.** conda-forge tetgen already differs from the chain's build at round 0,
+  1,616 against 1,605 points (PROG section 4), and libm differs between platforms (STUDY section 10, risk 2). Under
+  D11 that is harmless, with one rule: **the gated mesh is the file that was put in shared/**, never "the same
+  design built again on the other route".
+- **Never list, amended for phase 2.** The GUI process still runs no tool. The Local route is one child process,
+  `python -m femtic_mesh.chain <run_dir>`, which runs the four mesh tools on the student's own machine. FEMTIC,
+  mpirun and the gate never run locally, WSL is never a backend (the doctor refuses a WSL or UNC path, 9.2), and on
+  Ben's PC the doctor finds no tools, so "Local" stays disabled there without any special case.
+- **A student machine needs the repository, the EDIs and the env.** Today students work on the PC that holds
+  D:\BEN\FEMTIC_2026 (RUNBOOK.md:3-4). prep reads paths.edi_dir and coords_file (CFG:24-25) even when only mesh keys
+  change, and the driver needs femtic_mesh in the GUI env (pyproject.toml ships both packages; `pip install -e .`).
+  How a student gets these is not designed here (9.7, B1).
+
+### 9.1 The Mesh tab in phase 2: design a new mesh
+- **Two modes, chosen by mesh.reuse_from (CFG:86).** Set: phase 1 as in 2.2, every mesh key read-only (C17,
+  PREP:1335-1359). Null: a new design, mesh keys editable. "New mesh design..." is Save as (3) with
+  mesh.reuse_from written as `null` and a new name and paths.run_dir (CFG:20, 27), default `mesh/<name>`. The name
+  is the mesh's name everywhere: the local folder mesh/<name>/ and, on Phoenix, $VF/shared/mesh_<name>/ (9.3). A
+  name is never reused, like a run name. Save as refuses an existing target (finding 13), so one saved config makes
+  one run_dir, one files/ and one mesh.
+- **Editable keys** (new design only; one widget each, the CFG line of the reference config in brackets):
+  analysis_domain_km x, y, z (88-90); center_km (91); rotation_deg (93); topography.mode flat or dem and dem_file
+  (100-101, a file picker, dem only; prep requires the file, PREP:349-355); control.ellipsoids (111-119) and
+  mtr.ellipsoids (150-158), one table with a "same table for surface and volume" lock, on by default, since v1-v3
+  use one 9-row table for both (PIPE section 8.2 step 4; unlocking can trip prep's rule-3 warning, PREP:1895-1898);
+  observing_sites.circles (132-137); obs_sites.spheres (142-146); resistivity_attr.ellipsoids (166-174);
+  resistivity_attr_sites.circles (179-180); starting_resistivity_ohmm (182).
+- **Read-only, with the reason as tooltip:** control.num_threads, surf_mesh, iter_max (104-106); interpolate and
+  altitude (120-121); sea_depth `null` (122: land only); resistivity_attr air and earth; region_seeds (188-189: the
+  land-only pair, whose attribute set must equal resistivity_attr's, MC:238-239).
+- **"Layers".** The depth layering of a design is set by each ellipsoid row's Earth and air oblateness (fb, fa):
+  the size zone reaches r(1-fb) down and r(1-fa) up (CFG:107-109). The table shows both reaches in km as derived,
+  read-only columns, and the depth section below draws them. FEMTIC's own conforming `LAYERS` facets (PIPE:191) are
+  not in schema prep_vulcan/2 ("not written" there) and need one seed per slab (PIPE:279): out (9.6, 9.7 B5).
+- **Rows are written line by line.** config_io gains set_row, insert_row and delete_row: each touches only that
+  row's line, keeps its trailing comment on an edit, copies the previous row's indentation on an insert, and refuses
+  a table that is not one flow list per line. A ruamel dump would respace 35-36 lines (finding 1). Validation is
+  unchanged: Save as runs PREP.load_config on a temp file (3), so prep's own checks decide, among them nesting
+  (check_nested_ellipsoids, PREP:200-230, called at :385-387) and a domain that straddles 0 (:333).
+- **Previews (restored from the review's cut in 2.2(a)), pyqtgraph, redrawn on every edit, km:** a plan view (east
+  across, north up, as the site map) with the sites, every control/mtr row's outline (semi-axes r and r(1-fh),
+  rotated by rotation_deg about center_km) and the resistivity_attr rows dashed, and a zoom on the selected site with
+  its observing circles; a depth section through the centre with each row's r(1-fb) and r(1-fa); and the size plot,
+  max edge L and cell length B against radius on log axes for the control/mtr, obs-sphere, observing-circle and
+  resistivity_attr tables. The previews draw config values; they compute no rule.
+- **Predicted sizes, where PIPE's rules make them derivable, come from prep, not from the GUI.** The thin-shell rule
+  that cut the GUI's delta_min/20 readout (2.2(b)) still holds, so this is G6 grown: a prep function
+  `design_report(c, sites)` beside design_warnings (PREP:1880-1901), printed by Check and Run prep as well, so a
+  student without the GUI sees the same lines. The Mesh tab shows them as a table, one row per rule:
+
+| # | figure (from the config alone) | rule and source | warns when |
+|---|---|---|---|
+| R1 | largest site triangle: at most 1.5 x observing circle-1 edge t1 | PIPE:573; measured max 12.58 / 4.21 / 4.12 m for t1 = 15 / 4 / 2.75 m (v1 / v2 / v3, PIPE 8.2 src note) | 1.5 t1 > delta_min/20 at fmax_hz in 3 ohm-m ("may exceed"; v2 is such a case and passed at 100 Hz, h/delta 0.048); t1 itself above it ("exceeds") |
+| R2 | distance from the sites to each side face and to the bottom, in skin depths at the lowest selected band, 100 ohm-m | PIPE:485 (at least 3 delta); v1-v3: 3.10 side, 3.14 bottom at 0.001 Hz (M/vulcan_v3/mesh_logs/mesh_stats.txt:174) | below 3 |
+| R3 | air thickness against the horizontal half-width | PIPE:486 | thinner |
+| R4 | size growth between successive ellipsoid rows, (L2 - L1)/(r2 - r1) | PIPE:495 (0.2-0.3 in the Earth; v1-v3 0.100-0.225) | above 0.3 |
+| R5 | cell length against element size per row, B / L | PIPE:417 (B at least 1.5-2 L); v1-v3 1.5-3 | below 1.5 |
+| R6 | prep's existing warnings: core coverage, rule 3, rotation | PREP:1880-1901 | as now |
+
+- **Counts are not predicted.** No estimator is in the repo (PIPE:994), and the old one was off 1.3x in tets and
+  2.7x in cells (PIPE:793-794); finding 6 stands. The tab shows the measured counts of v1, v2 and v3 as references
+  (M/vulcan_v*/mesh_logs/mesh_stats.txt:1-2), with their one design difference, the site sizes (observing circle 1:
+  15 / 4 / 2.75 m; resistivity_attr.dat is identical, PIPE:794), and "counts: known after the build".
+- **prep writes files/.** Run prep (2.1) on the saved design writes <run_dir>/files/, the 10 inputs that MC:65 and
+  MR:53 name, region_seeds.dat included (PREP:1836-1876), and <run_dir>/inversion/ with control.dat, observe.dat
+  and station_map.csv. C17 reports N/A (PREP:1341). No new prep command.
+
+### 9.2 "Build mesh": Local | Phoenix
+- **One group box under the previews**, enabled only when the design is saved (finding 13), mesh.reuse_from is null,
+  <run_dir>/files/ holds all 10 inputs (MC:65), and <run_dir>/config_used.yml, which prep copies byte for byte
+  (PREP:2176), equals the open config (so files/ is this design's, not an earlier one's; a plain byte compare of two
+  local files, no student step). Route by two radio buttons; Phoenix is the default.
+- **"Check this PC"** runs the driver's own doctor through the JobRunner (3), as a student would type it:
+  `python -m femtic_mesh.chain --doctor <run_dir>`. Its exit code alone enables "Local" (0 = complete backend,
+  3 = incomplete); its text goes to the console and to a read-only pane, and its last line is the disabled button's
+  tooltip. Nothing runs at start-up; the result holds for the session (Check again re-runs it).
+- **What the doctor reports** (driver code, femtic_mesh; the GUI parses nothing but the exit code):
+  - one line per step, `STEP <tool> binary <path>`, `STEP <tool> python <module>` or `STEP <tool> MISSING (<why>)`.
+    Search order: the folder in FEMTIC_MESH_BIN, then the env's own bin (sys.prefix/Library/bin on Windows, where
+    conda-forge puts tetgen.exe; sys.prefix/bin elsewhere), then PATH. A candidate under System32, WindowsApps or a
+    UNC path (`\\wsl$`, `\\wsl.localhost`, `//host`) is never a backend (the rule of find_bash, jobs.py:34, and
+    config_io.local_path). Python ports count when they import: TetGen2Femtic's now, makeMtr's after B4;
+  - **it never runs a tool** (presence and the executable bit only), so it is safe on any machine, Ben's PC
+    included; a broken binary fails loudly at its first step instead;
+  - `MACHINE cores N  RAM free X of Y GiB  disk free Z GB at <run_dir>` (psutil when importable, else
+    "RAM unknown"; never a refusal);
+  - the reference needs below, with their sources, and a last line `DOCTOR: COMPLETE` or
+    `DOCTOR: INCOMPLETE (<missing steps>)`.
+- **Resource estimate: the measured WSL builds on Ben's PC**, not a prediction (counts are not predictable, 9.1).
+  The chain is serial: tetgen runs at 96-101 % of one core; only makeTetraMesh step 3 is parallel, 1.1 s on v2 at
+  545 % (M/vulcan_v2/mesh_logs/timev_table.tsv). Cores barely matter; single-core speed and free RAM do.
+
+| class | tets | wall time | peak RSS | source |
+|---|---|---|---|---|
+| chain_proof | 27,501 | about 1 s | 16 MB (tetgen) | M/chain_proof/logs/timings.tsv |
+| v1-class (site triangles 15 m) | 1,534,902 | 257.5 s (4.3 min) | 584 MiB | M/vulcan_v1/mesh_logs/timev_table.tsv, chain_total row |
+| v2-class (4 m) | 2,446,095 | 359.8 s (6.0 min), tetgen 319.5 s of it | 956 MiB (tetgen round 2, 979,196 KB) | M/vulcan_v2/mesh_logs/timev_table.tsv, timings.tsv; STUDY section 1 |
+| v3-class (2.75 m) | 3,068,130 | 1,022.2 s (17 min) | 1,211 MiB | M/vulcan_v3/mesh_logs/timev_table.tsv |
+
+- **Also:** the TetGen2Femtic port takes 15.2-15.9 s and 577-582 MB on v2 (PROG section 1), after tetgen has exited;
+  the v2 build wrote about 3 GB (M/vulcan_v2/mesh_logs/chain_total.timev: 5,829,736 output blocks of 512 B; STUDY
+  section 11) and keeps about 2 GB in intermediates/ (RUNBOOK.md:113 for Run05); a later 3D view adds 683 MB (2.6).
+  Other machines will be faster or slower: the table is a class guide. The GUI shows it beside the design's circle-1
+  edge, so the student can place the design in a class and choose Local or Phoenix.
+- **LOCAL** runs `python -m femtic_mesh.chain <run_dir>` through the JobRunner (argv [sys.executable, "-m",
+  "femtic_mesh.chain", <run_dir>], cwd the repository root, as 3 says). What the GUI relies on from the driver (P2
+  work in femtic_mesh, specified here only that far):
+  - **the chain of MC**, step for step: makeTetraMesh -stp 1-4, the seeds into output.poly, tetgen -nVpYAakq3.0/0,
+    five rounds of makeMtr and tetgen -nmpYVrAakq3.0/0, TetGen2Femtic, with MC's checks (seeded attribute set, air
+    on the top plane only, one .mtr value per node, element counts agree, volumes sum to the box; MC:45-51). Also
+    STUDY's N3 controls, which MC lacks: a makeTetraMesh ITER_MAX line (STUDY section 2.4) and a stray output.i.b.*
+    (STUDY section 3). No FIX_OUTPUT1, five rounds always (MC:62);
+  - **prep's layout, not MC's:** reads <run_dir>/files/, works in <run_dir>/intermediates/, puts mesh.dat and
+    resistivity_block_iter0.dat into <run_dir>/inversion/ (beside observe.dat, where 2.2's 3D button and a later
+    mesh.reuse_from look), the VTK into <run_dir>/vtk/, and logs into <run_dir>/mesh_logs/, among them
+    mesh_summary.txt with MC's two lines, `MESH COUNTS: nodes N  tets N  cells N  surface_faces N  outer_faces N`
+    and `MESH CHAIN DONE: OK, exit 0 (...)` or `... FAILED, exit N at <step>: ...` (MC:42-43, 95, 120-121). One
+    format for both routes, so one reader serves a local build and a copied-back Phoenix run;
+  - **input_md5.txt and products.md5 in mesh_logs/,** as the WSL builds left them: developer records, no student step
+    (STATUS.md 1.7), and what C17 needs (PREP:1336-1338) when a later config reuses this mesh;
+  - **refusals before any write** (exit 1, nothing changed): an earlier build, i.e. any of
+    <run_dir>/inversion/mesh.dat, <run_dir>/inversion/resistivity_block_iter0.dat, <run_dir>/intermediates/ or
+    <run_dir>/mesh_logs/mesh_summary.txt (MC:156-158), so mesh/vulcan_v1-v3 can never be overwritten; a
+    missing input; and an incomplete backend (exit 3, the doctor's lines). Exit 2 is usage. A cancelled or failed
+    build leaves intermediates/ for the logs; the GUI says to move it away before building again and deletes
+    nothing.
+- **Cancel kills the tree.** Phase 1's cancel() kills the QProcess (jobs.py:176-184); on Windows that ends the
+  driver and leaves tetgen running. Phase 2: on Windows `taskkill /T /F /PID <pid>`, elsewhere the driver starts in
+  its own session and cancel() kills the group (T21).
+- **PHOENIX** switches to the Runs tab's New-run form (2.4), prefilled `--job mesh --files <run_dir>/files --purpose
+  "Build mesh <name> on Phoenix"`, which types MR's own mesh line (MR:6, 21-27); --layout and --time stay empty
+  (make_run.sh's 1x8 and 04:00:00, MR:59). The rest is the RUNBOOK: R2 WinSCP, R3 run.sh, R4 status.sh, and F3's
+  check that status.sh shows `MESH CHAIN DONE: OK` (RUNBOOK.md:111-117). The built mesh stays in
+  $VF/runs/RunNN/ (MC:37) and needs no upload (9.3).
+
+### 9.3 After the build: counts, 3D, and the gate on Phoenix
+- **Counts summary.** On exit 0 the tab reads <run_dir>/mesh_logs/mesh_summary.txt and shows its MESH COUNTS line
+  as a table beside v1-v3's counts (9.1), with the wall time from its DONE line. A failed build shows the DONE
+  line (it names the step) and the path of intermediates/logs/<step>.log. readers.mesh_stats_lines
+  (readers.py:117) also learns the MESH COUNTS line, since a local build has no mesh_stats.txt (that is
+  scripts/mesh_stats.py's file, which needs scipy, not in the GUI env).
+- **3D.** "Open 3D viewer" opens <run_dir>/inversion/mesh.dat with its iteration-0 block (2.6; about 6 s and 683 MB
+  at v2 class). Nothing else is offered: whether the mesh is good enough is the gate's question (D11), and R1 of 9.1
+  was the cheap check before the build.
+- **Into shared/, local route** (a new RUNBOOK step, S6, once per mesh, written like S4, RUNBOOK.md:44-47):
+  on Phoenix `mkdir $VF/shared/mesh_<name>` (no -p: it fails if the name was used, which is the never-reuse rule's
+  only guard), then WinSCP <run_dir>\inversion\mesh.dat and resistivity_block_iter0.dat into it (about 312 MB at
+  v2 class, RUNBOOK.md:147), then `ls -l $VF/shared/mesh_<name>`. Fails if: a size differs from the local one; the
+  Mesh tab shows both local sizes in bytes for this. No checksum (D0).
+- **Into shared/, Phoenix route:** `mkdir $VF/shared/mesh_<name> && cp $VF/runs/RunNN/mesh.dat
+  $VF/runs/RunNN/resistivity_block_iter0.dat $VF/shared/mesh_<name>/`, then the same `ls -l` against the run's
+  copies. To look at it on the PC, WinSCP the two files into <run_dir>\inversion\ by hand (R5's mask skips them by
+  design, RUNBOOK.md:74).
+- **The gate run folders.** Two New-run jobs, as RUNBOOK F1 (RUNBOOK.md:88-91): `--job gate --mesh <name> --data
+  <run_dir>/inversion --start-rho 100`, and again with 3, each with a layout (v2-class 3x24, v3-class 2x36 as now;
+  run.sh's memory rule reads the shared mesh itself and refuses a layout that does not fit, STATUS.md 1.2). Both
+  PASS on all 21 bands: the mesh is usable (D11). Either FAIL: change the design under a new name (PIPE:799-807,
+  which knob to turn).
+- **Kit change this needs.** MR:61 and RUN:100 accept only v2 and v3. Both must accept a name (letters, digits,
+  `_`; v2 and v3 stay valid) and keep refusing a missing or empty shared mesh file, which run.sh already does
+  (STATUS.md 1.2). run.sh is in the kit, so this is a new kit export (STATUS.md 1.2) and RUNBOOK S6.
+
+### 9.4 Tests (each states "This test fails if ..." and shows its failing case first; on Ben's PC only fakes run)
+| # | where | This test fails if ... | failing case shown first |
+|---|---|---|---|
+| T14 | config_io, no Qt | set_row, insert_row or delete_row on mesh.control.ellipsoids changes a byte of CFG outside that row's line, the table read back differs from the rows meant, or an edited row loses its comment | a ruamel load and dump (35-36 lines change, finding 1) |
+| T15 | gui_smoke | a mesh widget is editable while mesh.reuse_from is set, or either Build route is enabled while reuse_from is set, edits are unsaved, files/ lacks one of MC:65's 10 inputs, or config_used.yml differs from the open config | CFG (reuse_from set) with a complete files/ copied into a temp run_dir |
+| T16 | prep's design_report, no Qt; needs M/ (NOT RUN, exit 2, without it; never PASS) | a measured largest site triangle of v1, v2 or v3 (12.58 / 4.21 / 4.12 m, M/vulcan_v*/mesh_logs/mesh_stats.json, per-site tri_max_edge) exceeds R1's bound for its config (22.5 / 6.0 / 4.125 m; v3 is 0.4 mm under it, so the 1.5 factor is the real limit); R2 at 0.001 Hz, 100 ohm-m differs from line 174 of each mesh_stats.txt (3.10 side, 3.14 bottom) in the second decimal; or R4 or R5 warns on v1-v3 (0.100-0.225 and 1.5-3, inside the limits) | R1 without the 1.5 factor (v2 4.21 > 4.0 m and v3 4.12 > 2.75 m must show as exceedances); R2 in 60 ohm-m |
+| T17 | femtic_mesh, doctor, fakes | --doctor exits 0 while a step has no backend, or non-zero with all four; a fake tool that writes a marker when run leaves a marker (the doctor ran a tool); a candidate under System32, WindowsApps or a UNC path counts as a backend; the last line is not exactly DOCTOR: COMPLETE or DOCTOR: INCOMPLETE (...) | a doctor that resolves names with shutil.which alone, on a PATH whose first tetgen is a WindowsApps fake |
+| T18 | femtic_mesh, driver, fakes that copy tests/mesh/data/chain_proof_round0 as each round's output | any of these ends other than exit 1 with a DONE line naming the right step: a makeMtr fake that exits 0 and writes nothing, a .mtr with the wrong count, a stray output.i.b.node, an ITER_MAX line in makeTetraMesh.log, seeds whose attributes differ from resistivity_attr.dat; or a run_dir with an earlier build is not refused before any write (its files compared byte for byte) | the WSL chain's `[ -f output.i.mtr ]` (run_mesh_chain.sh:182), which passes the first case |
+| T19 | real tools: a Phoenix login node with $VF/bin (as MC:20-21) and a conda env with femtic_mesh, or a student's Linux machine; NOT RUN (exit 2) elsewhere, never PASS, never on Ben's PC | on chain_proof's inputs with the same binaries, the driver's and MC's mesh.dat or resistivity_block_iter0.dat differ by one byte (cmp), or their MESH COUNTS lines differ. Run twice: TetGen2Femtic binary (driver parity), then the port (B2 on real files, PROG section 4) | the driver with 4 rounds, which must differ |
+| T20 | gui_smoke, JobRunner recorder | Local records anything but [sys.executable, "-m", "femtic_mesh.chain", <run_dir>]; Local is enabled after a doctor that exited 3, whatever its text; Phoenix does not type MR's mesh line for <run_dir>/files character for character; the counts shown differ from a fake mesh_summary.txt; any upload, socket or tool call is recorded (T6, T11) | a GUI that enables Local when the text contains "COMPLETE" ("INCOMPLETE" contains it) |
+| T21 | jobs, real QProcess, light | a fake tool that sleeps 60 s under the driver is still alive 5 s after cancel() | phase 1's cancel(), expected to leave the child running on Windows |
+| T22 | pc_scripts_test.sh, run_sh_test.sh | make_run.sh accepts `--mesh ../x`, `--mesh v2/..` or an empty name, or refuses `--mesh vulcan_v4_bk`; run.sh submits MESH=<name> whose $VF/shared/mesh_<name> lacks either file | today's MR:61 (refuses every new name), then a mutant without the name pattern (accepts ../x) |
+
+- **Acceptance is not a GUI test:** the two gates of 9.3 on the mesh in shared/ (D11; RUNBOOK F1's "Fails if").
+- T16-T19 live with prep and femtic_mesh (tests/mesh), T22 with the kit (STATUS.md 1.9); the GUI suite gains T14,
+  T15, T20 and T21.
+
+### 9.5 Order of work (milestones after M5)
+| M | content | needs | demo |
+|---|---|---|---|
+| M6 | 9.1 (modes, row writer, previews, prep's design_report and G6), 9.2's Phoenix route, 9.3's counts reader, the kit names and RUNBOOK S6 | prep and kit changes only; no mesh tool | a copy of v2's design with circle 1 at 3 m: R1 to R6 shown, Run prep writes files/, the New-run form types the mesh line |
+| M7 | 9.2's Local route: Check this PC, Build, cancel of the tree | femtic_mesh.chain and --doctor (P2) | T19 on a Phoenix login node; then a v2-class design on a student's Linux machine |
+| M8 | Local on Windows student PCs | STUDY section 8.1: (i) Windows binaries or (iii) Gmsh, each behind its test | doctor COMPLETE on a Windows PC that is not Ben's |
+
+M6 is useful on its own: every design goes to Phoenix as a mesh run today (MR:6). M7 and M8 add speed of iteration
+(about 6 min locally for a v2-class design against a queue, a Phoenix job and two WinSCP steps), not a new ability.
+
+### 9.6 What stays out
+- **Editing an existing gated mesh in place.** With mesh.reuse_from set the mesh keys stay read-only (C17); a change
+  is a new name, a new folder, a new mesh and a new gate. The driver refuses a folder with an earlier build, so
+  v1-v3 and any gated student mesh cannot be overwritten.
+- **Any automatic upload or download** (the Never list): the student moves files with WinSCP; the GUI shows which
+  two files, their sizes and the target folder (9.3).
+- FEMTIC, mpirun and the gate on a student machine; WSL as a backend; any run on Ben's PC.
+- Installing mesh tools from the GUI: the doctor reports, the student or Ben installs.
+- LAYERS facets, sea, lakes and coast lines (land only, CFG:122; femtic_mesh raises NotImplementedError for them,
+  STUDY section 5), DEM editing (dem mode only picks a file), FIX_OUTPUT1, a round count other than 5.
+- Predicted tetrahedron or cell counts (9.1), and any automatic class-to-layout choice (run.sh's rule decides).
+- A post-build site-triangle measurement (scripts/mesh_stats.py needs scipy; R1 is the check before the build).
+- A re-partition-only route (femtic_mesh.repartition, PROG section 5): a new block file on an unchanged mesh.dat
+  would need no new gate (a uniform model ignores the cells), but which cell rule to use is Ben's D3 call first.
+
+### 9.7 For Ben
+- **B1. Student machines.** Local needs the repository, the 120 EDIs and the env on each student's own machine;
+  RUNBOOK.md:3-4 assumes the one PC. Without a plan for that, phase 2 is M6 only.
+- **B2. The Never list** is amended as 9.0 says (pointer in the list): the GUI's child process may run the four mesh
+  tools on a student's own machine; FEMTIC and mpirun never; never on Ben's PC. Confirm.
+- **B3. Windows backends:** per-OS binaries of makeTetraMesh and makeMtr, or wait for Gmsh (STUDY section 8.1).
+  Shipping Usui's binaries needs his licence terms, not recorded in this repo (STUDY section 10, risk 4).
+- **B4. Mesh names** in shared/: `mesh_<name>`, never reused, `mkdir` without -p as the guard (9.3). A kit change.
+- **B5. "Layers"** here means each size zone's depth reach (9.1). Conforming LAYERS facets need prep schema /3 and
+  seeds per slab: wanted?
+- **B6. G6:** the rules R1-R5 go into prep (design_report), which phase 2 assumes. Confirm.

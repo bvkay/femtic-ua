@@ -1,3 +1,17 @@
+<!-- PAUSED 2026-10-07 by Ben after the mesh-build Local|Phoenix slice. Resume order, in this sequence:
+  1. Phoenix (Ben): S1-S4 with kit abbee8a, then Run04 -> Run05 (mesh references; copy back intermediates/ to
+     mesh/phoenix_RunNN), then Run01 -> Run02 (v2 gates, decides D1), then Run03 (T4 memory test).
+  2. GUI (Ben): M5 demo on screen and over Remote Desktop; decide Save-as-only and the repo licence.
+  3. Port P2 fixes before any GUI M7 work (verdict 2026-10-07, not ready): reconcile gui_design section 9 with the
+     femtic_mesh code (doctor is `python -m femtic_mesh.doctor`, exit 2 when incomplete; output layout; env vars);
+     chain.py earlier-build guard must refuse prep-layout folders (mesh/vulcan_vN); add the makeTetraMesh ITER_MAX
+     log check; refuse UNC/WSL paths in backends; doctor must not advise Local at Vulcan size until a v2-size
+     conda-forge tetgen run is timed somewhere allowed. Then B4: cmp the makeMtr port against Run04's .mtr files.
+  4. Decisions B1 (how students get the repo, EDIs and env onto their machines) and B3 (Windows backends: per-OS
+     makeTetraMesh binaries vs the Gmsh route, TD6 on a student-class Windows machine) before GUI phase 2 beyond M6.
+  5. Open GUI cosmetics: axis '(x0.001)' SI prefix, misfit colour scale from min, integer iteration axis.
+  Tetgen on this PC during 2026-10-06/07: 19 runs, all on the 4,705-node chain_proof case, never on v2. -->
+
 <!--
 docs/STATUS.md - the living "where we are" page for the Vulcan FEMTIC project.
 Rewrite it at every milestone or end of session. History goes in docs/journal/.
@@ -177,6 +191,11 @@ against the version-5 kit, as expected; rerun it only at 06d044f (ARCH/README.md
 - **Open:** confirm Results (relayed scope, design finding 14) and Save-as-only; licence (MIT headers, none chosen); the
   form lacks `--job mesh` (in abbee8a); G1, G6 (G4 closed by abbee8a's R5 mask); the verifier's nits (journal).
 
+### 1.11 Mesh builds: Local | Phoenix (D12, Ben 2026-10-07; uncommitted; docs/journal/2026-10-07_local_or_hpc_p2.md)
+- **Decided: students may build meshes on their own machines if resources allow; the GUI gets "Build mesh: Local | Phoenix"** with tool detection and a resource estimate (docs/dev/gui_design_2026-10-06.md s9, design only; G2's cut rested on Ben's PC only). FEMTIC and the half-space gate stay on Phoenix; the gate accepts any mesh (D11), and the gated mesh is the file uploaded to shared/.
+- **P2 first slice exists (src/femtic_mesh: makemtr, backends, doctor, checks, chain):** `python -m femtic_mesh.doctor` exits 0 only with designer, tetgen, sizing and convert, else 2 (this PC: 2; no makeTetraMesh, tetgen only via --tetgen); `python -m femtic_mesh.chain RUN_DIR [--from-poly P] [--dry-run]` builds. Real conda-forge tetgen on chain_proof: 4,798 / 28,039 vs WSL 4,705 / 27,501 (+2.0 %), check_mesh 17/17; tests 27 / 0 / 2 skip.
+- **Not ready (verifier 34 upheld, 3 refuted, 9 missed):** gui_design s9.0/9.2 contradict the code (doctor command and exits, output layout); no Windows/macOS makeTetraMesh, so Local is --from-poly only; a prep-layout folder is not guarded (chain.py:39); no ITER_MAX check (N3); no UNC/WSL path refusal (backends.py:96).
+
 ## 2. Decisions
 
 ### D0. Decided 2026-10-06 (Ben): KISS and the folder model (1.1)
@@ -237,6 +256,7 @@ The half-space gate on Phoenix is the acceptance test for any Python mesh toolch
 5. Run01 and Run02 (R2-R6, F1); Run03 only after both PASS, and send back F2's grep output.
 6. D8 decided 2026-10-06 (students build once); D9 default no e-mail.
 7. GUI (1.10): confirm Results and Save-as-only, then try it on screen before any student does (worktree root, `conda activate femtic_gui`, `femtic-gui config/vulcan_mesh_v2_rot.yml`: Data, Runs, Mesh > 3D, once over Remote Desktop); commit it with pyproject.toml (src/femtic_mesh is already in abbee8a).
+8. Mesh builds (1.11): answer B1 (student machines) and B3 (Windows backends) first; meanwhile build M6 only (design editor + Phoenix route). Before M7: reconcile gui_design s9 with the P2 code, fix the chain.py:39 guard, N3 and the path refusal, and time one v2-size conda-forge tetgen run on Phoenix or a student's Linux machine.
 
 ### (a) PC, light only
 - L1. After any kit or RUNBOOK edit, rerun the five kit tests (walk, run_sh, pc_scripts, c1c2, portability; 1.9). Worth

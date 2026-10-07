@@ -1,4 +1,4 @@
-# Mesh port progress: P1, the first slice of `femtic_mesh` (2026-10-06)
+# Mesh port progress: P1 and the first slice of P2 of `femtic_mesh` (2026-10-06, 2026-10-07)
 
 Plan: docs/dev/mesh_port_feasibility_2026-10-06.md (the study; "study" below), phase P1 (section 8). This page
 records what exists, what the tests showed, and what P2 needs. Ben's checkout `D:/BEN/FEMTIC_2026/mesh` (M/ below)
@@ -397,3 +397,190 @@ checkout's shared .git got a new mtime, content unchanged (verify-pack ok). Appl
 --mem=27G everywhere, `--allow-empty` in both tests. Still open: G0's check_mesh.py score, the gui_design citation.
 
 **Ready for Ben: yes,** with the --mem decision and the F3 Fails-if wording settled before Run04 is submitted.
+
+## P2, first slice (2026-10-07): makeMtr port, tool detection, and the chain driver for local builds
+
+**Why now (Ben, 2026-10-07):** students may build meshes on their own machines when resources allow. The GUI gets
+"Build mesh: Local | Phoenix", with detection of the available tools and a resource estimate; the earlier cut of the
+Build button (GUI finding G2) rested on Ben's PC only. FEMTIC itself and the half-space gate stay on Phoenix, and the
+gate is the acceptance test of any locally built mesh (D11). Nothing in this slice ran makeTetraMesh, makeMtr,
+TetGen2Femtic, FEMTIC, mpirun or WSL on this PC; tetgen ran twelve times, on chain_proof only (P2.3).
+
+### P2.1 Summary
+- **makeMtr port (`femtic_mesh.makemtr`): every comparison that is possible here passes; byte identity of a .mtr is
+  not tested, because no C++ .mtr exists.** MAIN/mesh/chain_proof kept only logs/makeMtr_1-5.log and .time (no
+  intermediates), and the C++ binary may not run here. What was compared instead:
+  - **the C++'s own logs, line for line:** the port's stdout equals mesh/chain_proof/logs/makeMtr_1.log (66 lines)
+    and mesh/vulcan_v2/mesh_logs/makeMtr_1.log (863 lines: 9 ellipsoids, 120 sites of 5 spheres) in every line but
+    the two count lines, which carry each build's own tetgen counts (port 1,616 / 7,938; C++ 1,605 / 7,879). In the
+    real chain run (P2.3) the same holds for rounds 1-5 against makeMtr_1-5.log;
+  - **the statistics the task asked for:** makeMtr prints only the node and element counts (main.cpp:405-435); it
+    prints no minimum or maximum size, so the node count is the only statistic its log gives. The port's .mtr of
+    each real round has as many rows as its .node file, range 0.5-100 km (the site and outer edge lengths);
+  - **12 values derived by hand** from the C++ formulas (shell boundaries, site spheres on both sides of z = 0,
+    three transition shells, two points between the spheres of a Vulcan five-sphere site with the sqrt(3) quirk);
+  - **an independent formula** (ray length |v| / sqrt(q) to each ellipsoid; a site's value from its smallest sphere
+    holding the node): 0 text differences in 1,616 + 4,705 + 401,334 real nodes (chain_proof round 1, the
+    chain_proof and v2 final meshes) and 44,000 points around Vulcan's sites and in its 9 oblate shells;
+  - **the C++ error messages** (7 cases, exit 1, no .mtr) and the study's N5 limits at v2 size: 1.81-1.99 s and
+    372-382 MB peak for 401,334 nodes and 2,446,095 elements, against the C++'s round 5 (424,462 nodes) 1.87 s and
+    179 MB (limits: 2 x the time, 1 GB). The study's brute force (no pruning) takes 11.4 s and fails the limit.
+- **Tool detection (`femtic_mesh.backends`, `python -m femtic_mesh.doctor`):** for each chain step the doctor names
+  the tool it would use (C++ binary in the bin folder or on PATH, the conda-forge tetgen, or a Python port) and
+  every other candidate, the machine (cores, RAM: psutil, else the OS) and the measured cost of a v2- and a v3-size
+  build. Exit 0 only with a complete chain; exit 2 names what is missing, the Phoenix route (RUNBOOK F3) and, when
+  only the designer is missing, the local route from an existing output.poly. **On this PC: exit 2** (designer
+  missing; tetgen found only when `--tetgen` names the ALT study's conda-forge exe, which is not on PATH).
+- **The chain driver (`python -m femtic_mesh.chain RUN_DIR`) does what hpc/phoenix_plan/mesh_chain.sh does.** On the
+  same fake tools and inputs, the driver and the kit's mesh_chain.sh (run by Git Bash) make the same tool calls in
+  the same order with the same switches, and write the same mesh_summary.txt (both lines), the same intermediates/
+  file set, and the same output.poly, region_seeds.used, refinement.tsv, input_md5.txt, summary.txt and timings
+  columns; for a full chain and four failing ones (P2.4).
+- **With the real conda-forge tetgen and both ports, the rounds after makeTetraMesh build chain_proof:** 4,798 nodes
+  and 28,039 tets against WSL's 4,705 and 27,501 (+2.0 % each, inside the study's 5 % band S2), 17/17 on the
+  independent validation/mesh_2026-09-25/check_mesh.py, in 2.2 s with a 49 MB peak. The difference is the tetgen
+  build, as P1 found at round 0; it is reported, not hidden (P2.3).
+- **Tests:** 27 pass, 0 fail, 2 skip (`python tests/mesh/run_all.py`, 163 s; the skips are the G0 hook and the
+  opt-in real-tetgen test). With `FEMTIC_SKIP_V2=1`: 21 pass, 8 skip, 57 s.
+
+### P2.2 What exists (new in this slice)
+
+| Path | Lines | What it does |
+|---|---|---|
+| src/femtic_mesh/makemtr.py | 270 | the port: `size_field` (ellipsoids, sites, observation lines, sea), `make_mtr`, the CLI `python -m femtic_mesh.makemtr ROOT` (the C++'s `makeMtr ROOT`: same inputs in the current folder, same .mtr, same stdout, LF on every OS) |
+| src/femtic_mesh/io/makemtr_inputs.py | 184 | makeMtr.param and obs_site.dat read as the C++ streams read them, the log echoed in the C++'s number formats |
+| src/femtic_mesh/LICENSE_makeMtr.txt | | MIT notice of makeMtr at df8e207 (Copyright (c) 2021 Yoshiya Usui) |
+| src/femtic_mesh/backends.py | 281 | `locate` (the tool per step and every candidate), `machine` (cores, RAM), `estimate` (local or Phoenix), `run_step` (exit code, wall time, peak RSS of one command), `tools_lines` |
+| src/femtic_mesh/checks.py | 264 | mesh_chain.sh's checks as functions: preflight, seeds, attribute sets, air on top, volume sum, `mesh_counts` |
+| src/femtic_mesh/chain.py | 350 | the driver: `run(...)` and `python -m femtic_mesh.chain RUN_DIR [--from-poly P] [--tetgen EXE] [--bin DIR] [--prefer binary or python] [--dry-run]` |
+| src/femtic_mesh/doctor.py | 110 | `python -m femtic_mesh.doctor`; `report()` for the GUI; `dry_run()` behind the chain's `--dry-run` |
+| tests/mesh/test_makemtr.py, test_chain.py, test_chain_real.py, fake_tools.py | | P2.4 |
+| environment-mesh.yml | | adds `tetgen=1.6.0` from conda-forge: the executable, optional for the pure-Python parts |
+
+**How a step runs.** Every tool step is a separate process (a C++ binary, the conda-forge tetgen, or
+`python -m femtic_mesh.<port>`), run in intermediates/ with its output in logs/<step>.log. The driver records exit
+code, wall time and peak RSS in timings.tsv and logs/<step>.timev: `os.wait4`'s ru_maxrss on Linux and macOS, the
+process's PeakWorkingSetSize on Windows (read through its handle after it exits; for a .cmd wrapper this is
+cmd.exe's). A port needs no install: the driver puts src/ on the step's PYTHONPATH.
+
+### P2.3 The real tetgen run (chain_proof, rounds after makeTetraMesh)
+
+**The run.** `chain.run` with `--from-poly MAIN/mesh/chain_proof/logs/output.poly.before_seed` (makeTetraMesh's
+unseeded PLC), MAIN's chain_proof inputs, the WSL run's seeds (`0.0 0.0 -40.0 10 1e9`, `0.0 0.0 10.0 20 1e9`;
+validation/mesh_2026-09-25/chain_proof.md section 3), the conda-forge tetgen-1.6.0-hac47afa_2 (win-64; ALT study env)
+and both ports (`--prefer python`). Switches as mesh_chain.sh: `-nVpYAakq3.0/0 output.poly`, then
+`-nmpYVrAakq3.0/0 output.i` five times.
+- **tetgen budget:** two chains of six calls (the run below and its negative control), each call 0.07-0.20 s. The
+  test ran once and was not rerun, to stay within "a handful of runs"; it runs only when FEMTIC_MESH_TETGEN is set.
+  Edits after it: line wrapping, the test moved into test_chain_real.py, and chain.run gained a handler that still
+  writes a DONE line on an unexpected exception (no change to a normal run). The fake-tool tests reran after each.
+- **Round 0 is byte-identical to P1's run** (md5 of output.1.node/.ele/.face/.neigh equal the fixture's
+  c35ed63f / 3d6713cb / 1ce3cac9 / 1966b810): the conda-forge tetgen is deterministic between runs here.
+- **The seeded PLC equals MAIN's output.poly** as parsed (points, facets, regions); only the spacing of the two region
+  lines differs (the WSL run appended them by hand).
+
+| mesh | here: nodes / tets | WSL (libigl e05aca7) | difference |
+|---|---|---|---|
+| output.1 | 1,616 / 7,938 | 1,605 / 7,879 | +0.7 % / +0.7 % |
+| output.2 | 3,430 / 19,606 | 3,279 / 18,587 | +4.6 % / +5.5 % |
+| output.3 | 4,564 / 26,673 | 4,416 / 25,714 | +3.4 % / +3.7 % |
+| output.4 | 4,614 / 26,863 | 4,832 / 28,269 | -4.5 % / -5.0 % |
+| output.5 | 4,804 / 28,030 | 4,654 / 27,186 | +3.2 % / +3.1 % |
+| output.6 (final) | 4,798 / 28,039 | 4,705 / 27,501 | +2.0 % / +2.0 % |
+
+- `MESH COUNTS: nodes 4798  tets 28039  cells 3918  surface_faces 2070  outer_faces 644` (WSL: 3,842 cells, the same
+  2,070 Earth-surface and 644 outer faces, which the PLC fixes); `MESH CHAIN DONE: OK, exit 0`;
+  check_mesh.py 17/17 (volume sum relative error 1.5e-15).
+- **Rounds differ by up to 5.5 % on their way (rounds 2 and 4); the final mesh by 2.0 %.** The criterion is on the
+  final mesh only (study S2); a per-round 5 % band would have failed round 2 without any port fault.
+- **Negative control:** the same chain with a makeMtr that ignores the sites (obs_site.dat read as no sites, the
+  "missing count reads as 0" hazard) ends at 4,010 / 23,131 (-14.8 % / -15.9 %) and fails the band.
+- **Timings and peak RSS (Windows, this PC):** tetgen rounds 0.07-0.20 s and 12-17 MB; the makeMtr port 0.16-0.18 s
+  and 33-37 MB per round; the TetGen2Femtic port 0.37 s and 49 MB; 2.2 s in all. WSL took 1.07 s for the same steps
+  (mesh/chain_proof/logs/timings.tsv): at this size Python's start-up (about 0.15 s a step) is most of the time. At
+  v2 size the ports were measured alone: makeMtr 1.8-2.0 s and 380 MB (P2.1), TetGen2Femtic 15.2-15.9 s and 582 MB
+  (section 4); the conda-forge tetgen at v2 size is unmeasured (it may not run here on v2).
+
+### P2.4 Tests (Invariant 10: each states how it fails and shows its failing case first)
+
+| Test | Fails if | Negative control shown |
+|---|---|---|
+| makemtr: log_matches_cpp_chain_proof | the port's stdout differs from the C++ makeMtr_1.log outside the two count lines, or those do not hold each build's tetgen counts | one site radius 1.000 -> 1.001 |
+| makemtr: log_matches_cpp_v2 | the same against vulcan_v2's makeMtr_1.log (863 lines) | one earth oblateness 0.73 -> 0.74 |
+| makemtr: hand_derived_values | any of 12 hand-derived sizes differs, or the CLI's .mtr text does | transition based on L[k]; the sqrt(3) quirk "fixed" |
+| makemtr: values_match_independent_formula | a 7-digit difference from the independent formula that is neither a rounding boundary (1e-12) nor a surface tie | the same two mutants (858 and 20,438 unexplained nodes) |
+| makemtr: cli_error_paths | exit 0, a .mtr, or a message other than the C++'s, in 7 error cases | the healthy case |
+| makemtr: v2_size_time_and_memory | more than 2 x the C++ round-5 time (3.74 s) or 1 GB at v2 size, or values differ from size_field | no bounding-box pruning: 11.4 s |
+| chain: fake_chain_equals_mesh_chain_sh | the driver and mesh_chain.sh differ (exit, DONE line, calls, mesh_summary.txt, products, intermediates) on a full and four failing chains | round switches without 'a'; tetgen's output.2.mtr not kept apart (the WSL hole) |
+| chain: fake_chain_failures | a failing step (makeTetraMesh exit 1 or error line, tetgen exit 1, makeMtr exit 1, short or truncated .mtr, stray output.1.b.node) does not exit 1 with its reason, leaves a product, or a refusal (no designer, no tetgen, an earlier build) writes anything | the healthy run |
+| chain: dry_run_and_doctor | the dry run writes, or plans the wrong steps; the doctor's exit and words are wrong; the OS RAM fallback is more than 1 % off psutil; estimate advises local below twice the v2 peak | the incomplete tool set; a fallback misreading the unit |
+| chain_real: real_tetgen_chain (opt-in) | not DONE OK; the seeded PLC differs from MAIN's; a makeMtr_i.log differs from the C++'s outside its counts; final counts more than 5 % from WSL; check_mesh.py fails | makeMtr ignoring the sites: -14.8 % |
+
+The equivalence test runs the kit's mesh_chain.sh itself (SLURM_JOB_ID set, the kit's femtic_lib.sh), so it also
+checks that a change to mesh_chain.sh is followed in chain.py. It needs Git Bash on Windows (`C:/Program
+Files/Git/bin/bash.exe`, never the WSL launcher), or bash elsewhere; without it the test is a SKIP. Git Bash's md5sum
+writes `hash *name`; the test reads it as `hash  name`, which is what the driver and Phoenix's md5sum write.
+
+### P2.5 Deviations from the C++ and from mesh_chain.sh, and limits
+- **makeMtr port.** No partial .mtr on an error (the C++ leaves one with a full header). Refused where the C++ would
+  misread: a .node file with attributes or markers, a count written as a decimal, a value missing before the end of
+  a file. Not compiled in the chain's build and not ported: `_FINE_SURF`. Ported but exercised by no C++ log or
+  golden: the sea ellipses and the observation lines (no Vulcan or chain_proof input has either); they follow the C++
+  line by line, including the line end points overwriting each other (ObservationLine.cpp:55-74).
+  atan2, tan and hypot come from numpy (this platform's C library): no text difference appeared in 408k real and 44k
+  synthetic nodes, but the study's risk 2 (libm drift at a rounding boundary) stands until G0's .mtr files arrive.
+- **The driver.** Left out: Slurm and login-node logic and job_outcomes.tsv (kit-only), and FIX_OUTPUT1 (a no-op
+  with correct seeds; the attribute-set check catches the stray regions it hid; chain_proof.md gotcha 3). Stricter:
+  a .mtr whose rows differ from its header, and a stray output.i.b.node or .ele (tetgen -m would take it as a
+  background mesh), fail the chain where mesh_chain.sh would go on. tools.txt names each step's backend and records
+  a C++ executable's md5, as mesh_chain.sh does (a record, not a check). On Windows the step logs keep tetgen's
+  CRLF; every file the driver writes is LF.
+- **The designer.** makeTetraMesh is C++ only, so a full local build needs its binary (Linux and WSL builds exist;
+  none for Windows or macOS). Without it the driver refuses with "designer missing: use Phoenix (Run with --job
+  mesh) or wait for the Gmsh route", unless `--from-poly` gives makeTetraMesh's output.poly.
+- **Size rule.** Every new module is at most 350 lines; io/tetgen.py (P1, unchanged here) has 359.
+
+### P2.6 For the GUI ("Build mesh: Local | Phoenix") and for Ben
+- **Hooks.** `doctor.report(bin_dir, tetgen, prefer, out)` returns (exit code, missing steps) and prints the table;
+  `backends.locate`, `backends.machine` and `backends.estimate(size)` give the same facts as data;
+  `chain.run(run_dir, ..., progress=callback)` calls back with each step name and returns rc, the DONE line and the
+  counts; `doctor.dry_run(...)` is the plan with nothing written. The Phoenix route stays `make_run.sh --job mesh`.
+- **The estimate is a reference table, not a prediction.** A v2-size build took 348.5 s with a 956 MB peak (tetgen)
+  and a v3-size one 987 s and 1,211 MB, in WSL with the gcc tools; the ports peak at 582 MB at v2 size. The advice
+  is "local" when free RAM is at least twice the larger peak (1.9 GB for v2, 2.4 GB for v3), so RAM rules out few
+  machines. Wall time with the conda-forge tetgen at Vulcan size is unknown: it may not run on v2 here.
+- **What a student can do locally today (facts):** the rounds after makeTetraMesh, from an output.poly made
+  elsewhere, with conda-forge tetgen and the two ports (shown on chain_proof); a full build only with a makeTetraMesh
+  binary for their OS, which exists for Linux and WSL only. The doctor says which applies.
+- **Advice (not tested):**
+  1. The local route is useful now mainly for rebuilds that keep the PLC (sizing changes in makeMtr.param or
+     obs_site.dat, a D3 cell change) and for students on Linux. For a full local build on Windows or macOS, the
+     cheapest step is per-OS makeTetraMesh CI binaries (study section 2.1, 2-4 days), not a port.
+  2. A locally built mesh is a different mesh from Phoenix's, even from the same inputs (+2.0 % on chain_proof): it
+     must pass the half-space gate on Phoenix before an inversion uses it (D11), and it must be uploaded as a new
+     shared mesh (RUNBOOK S4), not over v2.
+  3. Do not offer the local button for Vulcan sizes until one v2-size conda-forge tetgen run (on Phoenix, or on a
+     machine where it is allowed) has measured its time and memory.
+
+### P2.7 For Fable: pyproject.toml and LICENSES.md (not edited here)
+```toml
+[project.scripts]                 # merge with the GUI's
+femtic-mesh-doctor = "femtic_mesh.doctor:main"
+femtic-mesh-chain = "femtic_mesh.chain:main"
+femtic-makemtr = "femtic_mesh.makemtr:main"
+
+[tool.setuptools.package-data]
+femtic_mesh = ["LICENSE_TetGen2Femtic.txt", "LICENSE_makeMtr.txt"]
+```
+LICENSES.md: makeMtr at df8e207 is MIT, "Copyright (c) 2021 Yoshiya Usui" (its LICENSE at that commit, in a clone in
+the study's scratchpad); the port carries it in src/femtic_mesh/LICENSE_makeMtr.txt. conda-forge tetgen is
+AGPL-3.0-or-later; the chain only runs it as a separate program.
+
+### P2.8 Next steps
+1. When Run04 returns from Phoenix with `intermediates/output.1-5.{node,ele}` and every `.mtr`: run the makeMtr port
+   on each output.i and `cmp` its .mtr with Phoenix's (study B4/TD5; allow +-1 in the 7th digit at a shell node).
+   That is the byte test this slice could not make.
+2. Ben: decide whether the GUI offers "Local" now (rebuild rounds from an output.poly) or only once makeTetraMesh
+   binaries exist for Windows and macOS (P2.6, advice 1).
+3. One measured v2-size run of the conda-forge tetgen where allowed, to replace "unknown" in the estimate.
+4. The rest of P2: `spec` and the input writers (B1), and a Gmsh prototype for P3 (study section 8, point 1).
